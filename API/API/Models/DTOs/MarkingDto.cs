@@ -1,0 +1,44 @@
+namespace API.Models.DTOs
+{
+    public class MarkingDto
+    {
+        public int Id { get; set; }
+        public int ScriptId { get; set; }
+        public int ExaminerId { get; set; }
+        public int? DepartmentId { get; set; }
+        public string MarksJson { get; set; }
+        public string SectionMarksJson { get; set; }
+        public decimal TotalMarks { get; set; }
+        public decimal MaxMarks { get; set; }
+        public decimal Percentage { get; set; }
+        public string Remarks { get; set; }
+        public string Status { get; set; }
+        public DateTime StartedAt { get; set; }
+        public DateTime? SubmittedAt { get; set; }
+    }
+
+    public class SubmitMarkingRequest
+    {
+        public int ScriptId { get; set; }
+        public int ExaminerId { get; set; }
+        public string MarksJson { get; set; }
+        public string SectionMarksJson { get; set; }
+        public decimal TotalMarks { get; set; }
+        public string Remarks { get; set; }
+    }
+
+    public class QuestionMarkDto
+    {
+        public int QuestionNo { get; set; }
+        public decimal MarksObtained { get; set; }
+        public string Remarks { get; set; }
+    }
+
+    public class SectionMarkDto
+    {
+        public string SectionId { get; set; }
+        public decimal MarksObtained { get; set; }
+        public decimal MaxMarks { get; set; }
+        public List<QuestionMarkDto> Questions { get; set; } = new List<QuestionMarkDto>();
+    }
+}
