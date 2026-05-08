@@ -11,8 +11,8 @@ namespace API.Models
         public int Id { get; set; }
         public int ExaminerId { get; set; }
         public User Examiner { get; set; }
-        public int? DepartmentId { get; set; }
-        public Department Department { get; set; }
+        public int? SubjectConfigId { get; set; }
+        public SubjectConfig SubjectConfig { get; set; }
         public bool IsActive { get; set; } = true;
     }
 }
