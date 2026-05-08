@@ -11,15 +11,12 @@ namespace API.Models
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; }
         public string ScriptId { get; set; }
+        public string Barcode { get; set; }
         public int PaperId { get; set; }
         public Paper Paper { get; set; }
-        public int DepartmentId { get; set; } 
-        public Department Department { get; set; }
-        public DateTime ExamDate { get; set; }
-        public string ScannedImageUrl { get; set; }
+        public string CleanPdfUrl { get; set; }
         public string Status { get; set; } = "pending"; // pending, in_progress, completed
-        public int? AssignedExaminerId { get; set; }
-        public User AssignedExaminer { get; set; }
+        public bool IsReEvaluationRequested { get; set; }
         public decimal TotalMarks { get; set; } = 0;
         public decimal MaxMarks { get; set; } = 100;
         public decimal Percentage { get; set; } = 0;

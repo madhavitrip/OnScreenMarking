@@ -12,5 +12,7 @@ namespace API.Models
         public int UniversityId { get; set; }
         public string UniversityName { get; set; }
         public bool IsActive { get; set; }
+        public ICollection<Department> Departments { get; set; }
+public ICollection<Project> Projects { get; set; }
     }
 }

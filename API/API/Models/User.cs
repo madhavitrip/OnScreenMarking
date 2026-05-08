@@ -20,7 +20,8 @@ namespace API.Models
         public string Address { get; set; }
         public int? DepartmentId { get; set; }
         public Department Department { get; set; }
-        
+        public int UniversityId {get; set;}
+        public University University {get; set;}
         // Navigation properties
         public ICollection<ExaminerExpertise> Expertise { get; set; } = new List<ExaminerExpertise>();
         public ICollection<Script> AssignedScripts { get; set; } = new List<Script>();
