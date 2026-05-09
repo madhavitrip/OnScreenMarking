@@ -21,10 +21,12 @@ namespace API.Models
         public bool IsActive { get; set; } = true;
         public int ProjectId { get; set; }
         public Project Project { get; set; }
-        public ICollection<Section> Sections { get; set; } = new List<Section>();
-        public string CatchNo {get; set;}
+        public string CatchNo { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-        public ICollection<Script> Scripts { get; set; }
+        
+        // Navigation properties
+        public ICollection<Section> Sections { get; set; } = new List<Section>();
+        public ICollection<Script> Scripts { get; set; } = new List<Script>();
     }
 }

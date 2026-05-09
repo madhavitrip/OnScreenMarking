@@ -18,16 +18,16 @@ namespace API.Models
         public string ProfileImage { get; set; }
         public string Phone { get; set; }
         public string Address { get; set; }
+        public int? UniversityId { get; set; }
+        public University University { get; set; }
         public int? DepartmentId { get; set; }
         public Department Department { get; set; }
-        public int UniversityId {get; set;}
-        public University University {get; set;}
-        // Navigation properties
-        public ICollection<ExaminerExpertise> Expertise { get; set; } = new List<ExaminerExpertise>();
-        public ICollection<Script> AssignedScripts { get; set; } = new List<Script>();
-        public ICollection<Marking> Markings { get; set; } = new List<Marking>();
-        
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        
+        // Navigation properties
+        public ICollection<ExaminerExpertise> Expertise { get; set; } = new List<ExaminerExpertise>();
+        public ICollection<Allocation> Allocations { get; set; } = new List<Allocation>();
+        public ICollection<Marking> Markings { get; set; } = new List<Marking>();
     }
 }

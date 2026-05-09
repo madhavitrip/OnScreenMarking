@@ -22,7 +22,6 @@ namespace API.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<ScriptDto>>> GetScripts(
             [FromQuery] string status = null,
-            [FromQuery] string subject = null,
             [FromQuery] int? paperId = null,
             [FromQuery] int page = 1,
             [FromQuery] int limit = 10)
@@ -34,15 +33,11 @@ namespace API.Controllers
                 if (!string.IsNullOrEmpty(status))
                     query = query.Where(s => s.Status == status);
 
-                if (!string.IsNullOrEmpty(subject))
-                    query = query.Where(s => s.Subject == subject);
-
                 if (paperId.HasValue)
                     query = query.Where(s => s.PaperId == paperId.Value);
 
                 var total = await query.CountAsync();
                 var scripts = await query
-                    .Include(s => s.AssignedExaminer)
                     .Include(s => s.Paper)
                     .Skip((page - 1) * limit)
                     .Take(limit)
@@ -53,15 +48,11 @@ namespace API.Controllers
                 {
                     Id = s.Id,
                     ScriptId = s.ScriptId,
-                    RollNo = s.RollNo,
-                    StudentName = s.StudentName,
+                    Barcode = s.Barcode,
                     PaperId = s.PaperId,
-                    Subject = s.Subject,
-                    ExamDate = s.ExamDate,
-                    ScannedImageUrl = s.ScannedImageUrl,
+                    CleanPdfUrl = s.CleanPdfUrl,
                     Status = s.Status,
-                    AssignedExaminerId = s.AssignedExaminerId,
-                    AssignedExaminerName = s.AssignedExaminer?.Name,
+                    IsReEvaluationRequested = s.IsReEvaluationRequested,
                     TotalMarks = s.TotalMarks,
                     MaxMarks = s.MaxMarks,
                     Percentage = s.Percentage,
@@ -87,7 +78,6 @@ namespace API.Controllers
             try
             {
                 var script = await _context.Scripts
-                    .Include(s => s.AssignedExaminer)
                     .Include(s => s.Paper)
                     .FirstOrDefaultAsync(s => s.Id == id);
 
@@ -98,15 +88,11 @@ namespace API.Controllers
                 {
                     Id = script.Id,
                     ScriptId = script.ScriptId,
-                    RollNo = script.RollNo,
-                    StudentName = script.StudentName,
+                    Barcode = script.Barcode,
                     PaperId = script.PaperId,
-                    Subject = script.Subject,
-                    ExamDate = script.ExamDate,
-                    ScannedImageUrl = script.ScannedImageUrl,
+                    CleanPdfUrl = script.CleanPdfUrl,
                     Status = script.Status,
-                    AssignedExaminerId = script.AssignedExaminerId,
-                    AssignedExaminerName = script.AssignedExaminer?.Name,
+                    IsReEvaluationRequested = script.IsReEvaluationRequested,
                     TotalMarks = script.TotalMarks,
                     MaxMarks = script.MaxMarks,
                     Percentage = script.Percentage,
@@ -139,12 +125,9 @@ namespace API.Controllers
                 var script = new Script
                 {
                     ScriptId = scriptDto.ScriptId,
-                    RollNo = scriptDto.RollNo,
-                    StudentName = scriptDto.StudentName,
+                    Barcode = scriptDto.Barcode,
                     PaperId = scriptDto.PaperId,
-                    Subject = scriptDto.Subject,
-                    ExamDate = scriptDto.ExamDate,
-                    ScannedImageUrl = scriptDto.ScannedImageUrl,
+                    CleanPdfUrl = scriptDto.CleanPdfUrl,
                     Status = "pending",
                     MaxMarks = scriptDto.MaxMarks
                 };
@@ -205,14 +188,23 @@ namespace API.Controllers
                 if (examiner == null)
                     return BadRequest(new { success = false, message = "Examiner not found" });
 
-                script.AssignedExaminerId = request.ExaminerId;
-                script.Status = "in_progress";
+                // Create allocation
+                var allocation = new Allocation
+                {
+                    ScriptId = id,
+                    ExaminerId = request.ExaminerId,
+                    AllocatedAt = DateTime.UtcNow,
+                    Status = "allocated"
+                };
+
+                _context.Allocations.Add(allocation);
+                script.Status = "allocated";
                 script.UpdatedAt = DateTime.UtcNow;
 
                 _context.Scripts.Update(script);
                 await _context.SaveChangesAsync();
 
-                return Ok(new { success = true, message = "Script assigned successfully" });
+                return Ok(new { success = true, message = "Script assigned successfully", allocationId = allocation.AllocationId });
             }
             catch (Exception ex)
             {
@@ -225,9 +217,13 @@ namespace API.Controllers
         {
             try
             {
+                var allocations = await _context.Allocations
+                    .Where(a => a.ExaminerId == examinerId)
+                    .Select(a => a.ScriptId)
+                    .ToListAsync();
+
                 var scripts = await _context.Scripts
-                    .Where(s => s.AssignedExaminerId == examinerId)
-                    .Include(s => s.AssignedExaminer)
+                    .Where(s => allocations.Contains(s.Id))
                     .Include(s => s.Paper)
                     .OrderByDescending(s => s.CreatedAt)
                     .ToListAsync();
@@ -236,15 +232,11 @@ namespace API.Controllers
                 {
                     Id = s.Id,
                     ScriptId = s.ScriptId,
-                    RollNo = s.RollNo,
-                    StudentName = s.StudentName,
+                    Barcode = s.Barcode,
                     PaperId = s.PaperId,
-                    Subject = s.Subject,
-                    ExamDate = s.ExamDate,
-                    ScannedImageUrl = s.ScannedImageUrl,
+                    CleanPdfUrl = s.CleanPdfUrl,
                     Status = s.Status,
-                    AssignedExaminerId = s.AssignedExaminerId,
-                    AssignedExaminerName = s.AssignedExaminer?.Name,
+                    IsReEvaluationRequested = s.IsReEvaluationRequested,
                     TotalMarks = s.TotalMarks,
                     MaxMarks = s.MaxMarks,
                     Percentage = s.Percentage,
@@ -267,7 +259,6 @@ namespace API.Controllers
             {
                 var scripts = await _context.Scripts
                     .Where(s => s.PaperId == paperId)
-                    .Include(s => s.AssignedExaminer)
                     .Include(s => s.Paper)
                     .OrderByDescending(s => s.CreatedAt)
                     .ToListAsync();
@@ -276,15 +267,11 @@ namespace API.Controllers
                 {
                     Id = s.Id,
                     ScriptId = s.ScriptId,
-                    RollNo = s.RollNo,
-                    StudentName = s.StudentName,
+                    Barcode = s.Barcode,
                     PaperId = s.PaperId,
-                    Subject = s.Subject,
-                    ExamDate = s.ExamDate,
-                    ScannedImageUrl = s.ScannedImageUrl,
+                    CleanPdfUrl = s.CleanPdfUrl,
                     Status = s.Status,
-                    AssignedExaminerId = s.AssignedExaminerId,
-                    AssignedExaminerName = s.AssignedExaminer?.Name,
+                    IsReEvaluationRequested = s.IsReEvaluationRequested,
                     TotalMarks = s.TotalMarks,
                     MaxMarks = s.MaxMarks,
                     Percentage = s.Percentage,

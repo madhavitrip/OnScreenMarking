@@ -8,13 +8,17 @@ namespace API.Models
     public class Subject
     {
         [Key]
-[DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public int SubjectId {get;set;}
-        public string SubjectName {get;set;}
-        public int DepartmentId {get;set;}
-        public Department Department {get;set;}
-        public bool IsActive {get;set;}
-         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-         public ICollection<Paper> Papers { get; set; }
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int SubjectId { get; set; }
+        public string SubjectName { get; set; }
+        public int DepartmentId { get; set; }
+        public Department Department { get; set; }
+        public bool IsActive { get; set; } = true;
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        
+        // Navigation properties
+        public ICollection<Paper> Papers { get; set; } = new List<Paper>();
+        public ICollection<ExaminerExpertise> ExaminerExpertises { get; set; } = new List<ExaminerExpertise>();
     }
 }

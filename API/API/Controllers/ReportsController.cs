@@ -67,12 +67,22 @@ namespace API.Controllers
 
                 foreach (var department in departments)
                 {
-                    var total = await _context.Markings.CountAsync(m => m.DepartmentId == department.DepartmentId);
-                    var evaluated = await _context.Markings.CountAsync(m => m.DepartmentId == department.DepartmentId && m.Status == "submitted");
-                    var pending = await _context.Markings.CountAsync(m => m.DepartmentId == department.DepartmentId && m.Status == "draft");
+                    var subjects = await _context.Subjects
+                        .Where(s => s.DepartmentId == department.DepartmentId)
+                        .Select(s => s.SubjectId)
+                        .ToListAsync();
+
+                    var papers = await _context.Papers
+                        .Where(p => subjects.Contains(p.SubjectId))
+                        .Select(p => p.PaperId)
+                        .ToListAsync();
+
+                    var scripts = await _context.Scripts
+                        .Where(s => papers.Contains(s.PaperId))
+                        .ToListAsync();
 
                     var markings = await _context.Markings
-                        .Where(m => m.DepartmentId == department.DepartmentId && m.Status == "submitted")
+                        .Where(m => scripts.Select(s => s.Id).Contains(m.ScriptId) && m.Status == "submitted")
                         .ToListAsync();
 
                     decimal totalMarks = markings.Sum(m => m.TotalMarks);
@@ -81,11 +91,11 @@ namespace API.Controllers
                     departmentStats.Add(new
                     {
                         department = department.Name,
-                        total,
-                        evaluated,
-                        pending,
+                        total = scripts.Count,
+                        evaluated = markings.Count,
+                        pending = scripts.Count - markings.Count,
                         avgScore = Math.Round(avgScore, 2),
-                        progress = total > 0 ? Math.Round((evaluated / (decimal)total) * 100, 2) : 0
+                        progress = scripts.Count > 0 ? Math.Round((markings.Count / (decimal)scripts.Count) * 100, 2) : 0
                     });
                 }
 
@@ -105,7 +115,6 @@ namespace API.Controllers
             {
                 var examiners = await _context.Users
                     .Where(u => u.UserType == "examiner")
-                    .Include(u => u.Department)
                     .ToListAsync();
 
                 var performanceData = new List<object>();
@@ -123,7 +132,6 @@ namespace API.Controllers
                     {
                         examiner = examiner.Name,
                         email = examiner.Email,
-                        department = examiner.Department?.Name,
                         scriptsEvaluated = markings.Count,
                         avgMarks = Math.Round(avgMarks, 2),
                         accuracy = "95%"
@@ -172,17 +180,17 @@ namespace API.Controllers
                 var markings = await _context.Markings
                     .Where(m => m.ExaminerId == examinerId && m.Status == "submitted")
                     .Include(m => m.Script)
-                    .Include(m => m.Department)
+                    .Include(m => m.Allocation)
                     .ToListAsync();
 
                 decimal totalMarks = markings.Sum(m => m.TotalMarks);
                 decimal avgMarks = markings.Count > 0 ? totalMarks / markings.Count : 0;
 
-                var departmentBreakdown = markings
-                    .GroupBy(m => m.Department?.Name ?? "Unassigned")
+                var subjectBreakdown = markings
+                    .GroupBy(m => m.Script?.Paper?.Subject?.SubjectName ?? "Unassigned")
                     .Select(g => new
                     {
-                        department = g.Key,
+                        subject = g.Key,
                         count = g.Count(),
                         totalMarks = g.Sum(m => m.TotalMarks)
                     })
@@ -195,7 +203,7 @@ namespace API.Controllers
                     {
                         totalScriptsEvaluated = markings.Count,
                         averageMarks = Math.Round(avgMarks, 2),
-                        departmentBreakdown,
+                        subjectBreakdown,
                         markings
                     }
                 });

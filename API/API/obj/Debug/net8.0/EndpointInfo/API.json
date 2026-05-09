@@ -1,10 +1,335 @@
 {
-  "openapi": "3.0.1",
+  "openapi": "3.0.4",
   "info": {
     "title": "API",
     "version": "1.0"
   },
   "paths": {
+    "/api/Allocation": {
+      "get": {
+        "tags": [
+          "Allocation"
+        ],
+        "parameters": [
+          {
+            "name": "examinerId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "scriptId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Allocation"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Allocation"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Allocation"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Allocation"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AllocationDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AllocationDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/AllocationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/Allocation"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Allocation"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Allocation"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Allocation/{id}": {
+      "get": {
+        "tags": [
+          "Allocation"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/Allocation"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Allocation"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Allocation"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Allocation/{id}/start": {
+      "put": {
+        "tags": [
+          "Allocation"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Allocation/{id}/submit": {
+      "put": {
+        "tags": [
+          "Allocation"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Allocation/{id}/cancel": {
+      "put": {
+        "tags": [
+          "Allocation"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Allocation/examiner/{examinerId}": {
+      "get": {
+        "tags": [
+          "Allocation"
+        ],
+        "parameters": [
+          {
+            "name": "examinerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Allocation"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Allocation"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Allocation"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Allocation/script/{scriptId}": {
+      "get": {
+        "tags": [
+          "Allocation"
+        ],
+        "parameters": [
+          {
+            "name": "scriptId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/Allocation"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Allocation"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Allocation"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/health": {
       "get": {
         "tags": [
@@ -12,7 +337,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Success",
+            "description": "OK",
             "content": {
               "application/json": {
                 "schema": {
@@ -50,7 +375,7 @@
         },
         "responses": {
           "200": {
-            "description": "Success",
+            "description": "OK",
             "content": {
               "text/plain": {
                 "schema": {
@@ -98,7 +423,7 @@
         },
         "responses": {
           "200": {
-            "description": "Success",
+            "description": "OK",
             "content": {
               "text/plain": {
                 "schema": {
@@ -113,6 +438,229 @@
               "text/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Department": {
+      "get": {
+        "tags": [
+          "Department"
+        ],
+        "parameters": [
+          {
+            "name": "universityId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Department"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Department"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Department"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Department"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Department"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Department"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/Department"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/Department"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Department"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Department"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Department/{id}": {
+      "get": {
+        "tags": [
+          "Department"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/Department"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Department"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Department"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Department"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Department"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Department"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/Department"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Department/{id}/subjects": {
+      "get": {
+        "tags": [
+          "Department"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Subject"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Subject"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Subject"
+                  }
                 }
               }
             }
@@ -130,7 +678,6 @@
             "name": "examinerId",
             "in": "path",
             "required": true,
-            "style": "simple",
             "schema": {
               "type": "integer",
               "format": "int32"
@@ -139,7 +686,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Success",
+            "description": "OK",
             "content": {
               "text/plain": {
                 "schema": {
@@ -170,17 +717,16 @@
         }
       }
     },
-    "/api/ExaminerExpertise/department/{departmentId}": {
+    "/api/ExaminerExpertise/subject/{subjectId}": {
       "get": {
         "tags": [
           "ExaminerExpertise"
         ],
         "parameters": [
           {
-            "name": "departmentId",
+            "name": "subjectId",
             "in": "path",
             "required": true,
-            "style": "simple",
             "schema": {
               "type": "integer",
               "format": "int32"
@@ -189,7 +735,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Success",
+            "description": "OK",
             "content": {
               "text/plain": {
                 "schema": {
@@ -246,7 +792,7 @@
         },
         "responses": {
           "200": {
-            "description": "Success",
+            "description": "OK",
             "content": {
               "text/plain": {
                 "schema": {
@@ -278,7 +824,6 @@
             "name": "id",
             "in": "path",
             "required": true,
-            "style": "simple",
             "schema": {
               "type": "integer",
               "format": "int32"
@@ -306,7 +851,7 @@
         },
         "responses": {
           "200": {
-            "description": "Success"
+            "description": "OK"
           }
         }
       },
@@ -319,7 +864,6 @@
             "name": "id",
             "in": "path",
             "required": true,
-            "style": "simple",
             "schema": {
               "type": "integer",
               "format": "int32"
@@ -328,7 +872,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Success"
+            "description": "OK"
           }
         }
       }
@@ -359,7 +903,7 @@
         },
         "responses": {
           "200": {
-            "description": "Success",
+            "description": "OK",
             "content": {
               "text/plain": {
                 "schema": {
@@ -391,7 +935,6 @@
             "name": "id",
             "in": "path",
             "required": true,
-            "style": "simple",
             "schema": {
               "type": "integer",
               "format": "int32"
@@ -400,7 +943,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Success",
+            "description": "OK",
             "content": {
               "text/plain": {
                 "schema": {
@@ -430,7 +973,6 @@
             "name": "id",
             "in": "path",
             "required": true,
-            "style": "simple",
             "schema": {
               "type": "integer",
               "format": "int32"
@@ -458,7 +1000,7 @@
         },
         "responses": {
           "200": {
-            "description": "Success"
+            "description": "OK"
           }
         }
       }
@@ -473,7 +1015,6 @@
             "name": "id",
             "in": "path",
             "required": true,
-            "style": "simple",
             "schema": {
               "type": "integer",
               "format": "int32"
@@ -482,7 +1023,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Success"
+            "description": "OK"
           }
         }
       }
@@ -497,7 +1038,6 @@
             "name": "examinerId",
             "in": "path",
             "required": true,
-            "style": "simple",
             "schema": {
               "type": "integer",
               "format": "int32"
@@ -506,7 +1046,6 @@
           {
             "name": "status",
             "in": "query",
-            "style": "form",
             "schema": {
               "type": "string"
             }
@@ -514,7 +1053,6 @@
           {
             "name": "page",
             "in": "query",
-            "style": "form",
             "schema": {
               "type": "integer",
               "format": "int32",
@@ -524,7 +1062,6 @@
           {
             "name": "limit",
             "in": "query",
-            "style": "form",
             "schema": {
               "type": "integer",
               "format": "int32",
@@ -534,7 +1071,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Success",
+            "description": "OK",
             "content": {
               "text/plain": {
                 "schema": {
@@ -575,7 +1112,6 @@
             "name": "scriptId",
             "in": "path",
             "required": true,
-            "style": "simple",
             "schema": {
               "type": "integer",
               "format": "int32"
@@ -584,7 +1120,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Success",
+            "description": "OK",
             "content": {
               "text/plain": {
                 "schema": {
@@ -613,9 +1149,16 @@
         ],
         "parameters": [
           {
-            "name": "subjectConfigId",
+            "name": "subjectId",
             "in": "query",
-            "style": "form",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "projectId",
+            "in": "query",
             "schema": {
               "type": "integer",
               "format": "int32"
@@ -624,7 +1167,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Success",
+            "description": "OK",
             "content": {
               "text/plain": {
                 "schema": {
@@ -679,7 +1222,7 @@
         },
         "responses": {
           "200": {
-            "description": "Success",
+            "description": "OK",
             "content": {
               "text/plain": {
                 "schema": {
@@ -711,7 +1254,6 @@
             "name": "id",
             "in": "path",
             "required": true,
-            "style": "simple",
             "schema": {
               "type": "integer",
               "format": "int32"
@@ -720,7 +1262,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Success",
+            "description": "OK",
             "content": {
               "text/plain": {
                 "schema": {
@@ -750,7 +1292,6 @@
             "name": "id",
             "in": "path",
             "required": true,
-            "style": "simple",
             "schema": {
               "type": "integer",
               "format": "int32"
@@ -778,7 +1319,7 @@
         },
         "responses": {
           "200": {
-            "description": "Success"
+            "description": "OK"
           }
         }
       },
@@ -791,7 +1332,6 @@
             "name": "id",
             "in": "path",
             "required": true,
-            "style": "simple",
             "schema": {
               "type": "integer",
               "format": "int32"
@@ -800,7 +1340,531 @@
         ],
         "responses": {
           "200": {
-            "description": "Success"
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Papers/{id}/sections": {
+      "get": {
+        "tags": [
+          "Papers"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Section"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Section"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Section"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Project": {
+      "get": {
+        "tags": [
+          "Project"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "universityId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Project"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Project"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Project"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Project"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/Project"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Project"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Project"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Project/{id}": {
+      "get": {
+        "tags": [
+          "Project"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/Project"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Project"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Project"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Project"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Project/{id}/papers": {
+      "get": {
+        "tags": [
+          "Project"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Paper"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Paper"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Paper"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Question": {
+      "get": {
+        "tags": [
+          "Question"
+        ],
+        "parameters": [
+          {
+            "name": "sectionId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Question"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Question"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Question"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Question"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuestionDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuestionDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuestionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/Question"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Question"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Question"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Question/{id}": {
+      "get": {
+        "tags": [
+          "Question"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/Question"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Question"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Question"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Question"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuestionDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuestionDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuestionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Question"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Question/{id}/marks": {
+      "get": {
+        "tags": [
+          "Question"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/QuestionMark"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/QuestionMark"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/QuestionMark"
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -812,7 +1876,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Success"
+            "description": "OK"
           }
         }
       }
@@ -824,7 +1888,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Success"
+            "description": "OK"
           }
         }
       }
@@ -836,7 +1900,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Success"
+            "description": "OK"
           }
         }
       }
@@ -851,7 +1915,6 @@
             "name": "examinerId",
             "in": "path",
             "required": true,
-            "style": "simple",
             "schema": {
               "type": "integer",
               "format": "int32"
@@ -860,7 +1923,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Success"
+            "description": "OK"
           }
         }
       }
@@ -874,15 +1937,6 @@
           {
             "name": "status",
             "in": "query",
-            "style": "form",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "subject",
-            "in": "query",
-            "style": "form",
             "schema": {
               "type": "string"
             }
@@ -890,7 +1944,6 @@
           {
             "name": "paperId",
             "in": "query",
-            "style": "form",
             "schema": {
               "type": "integer",
               "format": "int32"
@@ -899,7 +1952,6 @@
           {
             "name": "page",
             "in": "query",
-            "style": "form",
             "schema": {
               "type": "integer",
               "format": "int32",
@@ -909,7 +1961,6 @@
           {
             "name": "limit",
             "in": "query",
-            "style": "form",
             "schema": {
               "type": "integer",
               "format": "int32",
@@ -919,7 +1970,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Success",
+            "description": "OK",
             "content": {
               "text/plain": {
                 "schema": {
@@ -974,7 +2025,7 @@
         },
         "responses": {
           "200": {
-            "description": "Success",
+            "description": "OK",
             "content": {
               "text/plain": {
                 "schema": {
@@ -1006,7 +2057,6 @@
             "name": "id",
             "in": "path",
             "required": true,
-            "style": "simple",
             "schema": {
               "type": "integer",
               "format": "int32"
@@ -1015,7 +2065,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Success",
+            "description": "OK",
             "content": {
               "text/plain": {
                 "schema": {
@@ -1045,7 +2095,6 @@
             "name": "id",
             "in": "path",
             "required": true,
-            "style": "simple",
             "schema": {
               "type": "integer",
               "format": "int32"
@@ -1073,7 +2122,7 @@
         },
         "responses": {
           "200": {
-            "description": "Success"
+            "description": "OK"
           }
         }
       }
@@ -1088,7 +2137,6 @@
             "name": "id",
             "in": "path",
             "required": true,
-            "style": "simple",
             "schema": {
               "type": "integer",
               "format": "int32"
@@ -1116,7 +2164,7 @@
         },
         "responses": {
           "200": {
-            "description": "Success"
+            "description": "OK"
           }
         }
       }
@@ -1131,7 +2179,6 @@
             "name": "examinerId",
             "in": "path",
             "required": true,
-            "style": "simple",
             "schema": {
               "type": "integer",
               "format": "int32"
@@ -1140,7 +2187,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Success",
+            "description": "OK",
             "content": {
               "text/plain": {
                 "schema": {
@@ -1181,7 +2228,6 @@
             "name": "paperId",
             "in": "path",
             "required": true,
-            "style": "simple",
             "schema": {
               "type": "integer",
               "format": "int32"
@@ -1190,7 +2236,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Success",
+            "description": "OK",
             "content": {
               "text/plain": {
                 "schema": {
@@ -1221,20 +2267,30 @@
         }
       }
     },
-    "/api/SubjectConfig": {
+    "/api/Section": {
       "get": {
         "tags": [
-          "SubjectConfig"
+          "Section"
+        ],
+        "parameters": [
+          {
+            "name": "paperId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
         ],
         "responses": {
           "200": {
-            "description": "Success",
+            "description": "OK",
             "content": {
               "text/plain": {
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/SubjectConfig"
+                    "$ref": "#/components/schemas/Section"
                   }
                 }
               },
@@ -1242,7 +2298,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/SubjectConfig"
+                    "$ref": "#/components/schemas/Section"
                   }
                 }
               },
@@ -1250,7 +2306,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/SubjectConfig"
+                    "$ref": "#/components/schemas/Section"
                   }
                 }
               }
@@ -1260,44 +2316,44 @@
       },
       "post": {
         "tags": [
-          "SubjectConfig"
+          "Section"
         ],
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/SubjectConfig"
+                "$ref": "#/components/schemas/SectionDto"
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/SubjectConfig"
+                "$ref": "#/components/schemas/SectionDto"
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/SubjectConfig"
+                "$ref": "#/components/schemas/SectionDto"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Success",
+            "description": "OK",
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/SubjectConfig"
+                  "$ref": "#/components/schemas/Section"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SubjectConfig"
+                  "$ref": "#/components/schemas/Section"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SubjectConfig"
+                  "$ref": "#/components/schemas/Section"
                 }
               }
             }
@@ -1305,17 +2361,16 @@
         }
       }
     },
-    "/api/SubjectConfig/{id}": {
+    "/api/Section/{id}": {
       "get": {
         "tags": [
-          "SubjectConfig"
+          "Section"
         ],
         "parameters": [
           {
             "name": "id",
             "in": "path",
             "required": true,
-            "style": "simple",
             "schema": {
               "type": "integer",
               "format": "int32"
@@ -1324,21 +2379,21 @@
         ],
         "responses": {
           "200": {
-            "description": "Success",
+            "description": "OK",
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/SubjectConfig"
+                  "$ref": "#/components/schemas/Section"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SubjectConfig"
+                  "$ref": "#/components/schemas/Section"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SubjectConfig"
+                  "$ref": "#/components/schemas/Section"
                 }
               }
             }
@@ -1347,14 +2402,13 @@
       },
       "put": {
         "tags": [
-          "SubjectConfig"
+          "Section"
         ],
         "parameters": [
           {
             "name": "id",
             "in": "path",
             "required": true,
-            "style": "simple",
             "schema": {
               "type": "integer",
               "format": "int32"
@@ -1365,37 +2419,36 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/SubjectConfig"
+                "$ref": "#/components/schemas/SectionDto"
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/SubjectConfig"
+                "$ref": "#/components/schemas/SectionDto"
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/SubjectConfig"
+                "$ref": "#/components/schemas/SectionDto"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Success"
+            "description": "OK"
           }
         }
       },
       "delete": {
         "tags": [
-          "SubjectConfig"
+          "Section"
         ],
         "parameters": [
           {
             "name": "id",
             "in": "path",
             "required": true,
-            "style": "simple",
             "schema": {
               "type": "integer",
               "format": "int32"
@@ -1404,22 +2457,21 @@
         ],
         "responses": {
           "200": {
-            "description": "Success"
+            "description": "OK"
           }
         }
       }
     },
-    "/api/SubjectConfig/department/{departmentId}": {
+    "/api/Section/{id}/questions": {
       "get": {
         "tags": [
-          "SubjectConfig"
+          "Section"
         ],
         "parameters": [
           {
-            "name": "departmentId",
+            "name": "id",
             "in": "path",
             "required": true,
-            "style": "simple",
             "schema": {
               "type": "integer",
               "format": "int32"
@@ -1428,13 +2480,13 @@
         ],
         "responses": {
           "200": {
-            "description": "Success",
+            "description": "OK",
             "content": {
               "text/plain": {
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/SubjectConfig"
+                    "$ref": "#/components/schemas/Question"
                   }
                 }
               },
@@ -1442,7 +2494,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/SubjectConfig"
+                    "$ref": "#/components/schemas/Question"
                   }
                 }
               },
@@ -1450,7 +2502,747 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/SubjectConfig"
+                    "$ref": "#/components/schemas/Question"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Section/question/{questionId}": {
+      "put": {
+        "tags": [
+          "Section"
+        ],
+        "parameters": [
+          {
+            "name": "questionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuestionDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuestionDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuestionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Session": {
+      "get": {
+        "tags": [
+          "Session"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Session"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Session"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Session"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Session"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/Session"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Session"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Session"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Session/{id}": {
+      "get": {
+        "tags": [
+          "Session"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/Session"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Session"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Session"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Session"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Session/{id}/projects": {
+      "get": {
+        "tags": [
+          "Session"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Project"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Project"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Project"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Subject": {
+      "get": {
+        "tags": [
+          "Subject"
+        ],
+        "parameters": [
+          {
+            "name": "departmentId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Subject"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Subject"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Subject"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Subject"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubjectDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubjectDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubjectDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/Subject"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Subject"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Subject"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Subject/{id}": {
+      "get": {
+        "tags": [
+          "Subject"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/Subject"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Subject"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Subject"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Subject"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubjectDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubjectDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubjectDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Subject/{id}/papers": {
+      "get": {
+        "tags": [
+          "Subject"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Paper"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Paper"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Paper"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Subject/{id}/examiners": {
+      "get": {
+        "tags": [
+          "Subject"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ExaminerExpertise"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ExaminerExpertise"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ExaminerExpertise"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Universities": {
+      "get": {
+        "tags": [
+          "Universities"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/University"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/University"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/University"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Universities"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/University"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/University"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/University"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/University"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/University"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/University"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Universities/{id}": {
+      "get": {
+        "tags": [
+          "Universities"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/University"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/University"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/University"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Universities"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/University"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/University"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/University"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Universities/{id}/departments": {
+      "get": {
+        "tags": [
+          "Universities"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Department"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Department"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Department"
                   }
                 }
               }
@@ -1467,7 +3259,7 @@
         "operationId": "GetWeatherForecast",
         "responses": {
           "200": {
-            "description": "Success",
+            "description": "OK",
             "content": {
               "text/plain": {
                 "schema": {
@@ -1501,13 +3293,95 @@
   },
   "components": {
     "schemas": {
-      "AssignScriptRequest": {
+      "Allocation": {
         "type": "object",
         "properties": {
+          "allocationId": {
+            "type": "integer",
+            "format": "int32"
+          },
           "scriptId": {
             "type": "integer",
             "format": "int32"
           },
+          "script": {
+            "$ref": "#/components/schemas/Script"
+          },
+          "examinerId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "examiner": {
+            "$ref": "#/components/schemas/User"
+          },
+          "allocatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "submittedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "timeTakenSeconds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "status": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "AllocationDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "scriptId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "examinerId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "allocatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "submittedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "timeTakenSeconds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "status": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "AssignScriptRequest": {
+        "type": "object",
+        "properties": {
           "examinerId": {
             "type": "integer",
             "format": "int32"
@@ -1562,18 +3436,63 @@
           "isActive": {
             "type": "boolean"
           },
-          "subjectConfigs": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/SubjectConfig"
-            },
-            "nullable": true
+          "universityId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "university": {
+            "$ref": "#/components/schemas/University"
           },
           "createdAt": {
             "type": "string",
             "format": "date-time"
           },
           "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "subjects": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Subject"
+            },
+            "nullable": true
+          },
+          "users": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/User"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ExaminerExpertise": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "examinerId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "examiner": {
+            "$ref": "#/components/schemas/User"
+          },
+          "subjectId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "subject": {
+            "$ref": "#/components/schemas/Subject"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "createdAt": {
             "type": "string",
             "format": "date-time"
           }
@@ -1591,10 +3510,9 @@
             "type": "integer",
             "format": "int32"
           },
-          "departmentId": {
+          "subjectId": {
             "type": "integer",
-            "format": "int32",
-            "nullable": true
+            "format": "int32"
           },
           "isActive": {
             "type": "boolean"
@@ -1616,6 +3534,84 @@
         },
         "additionalProperties": false
       },
+      "Marking": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "scriptId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "script": {
+            "$ref": "#/components/schemas/Script"
+          },
+          "examinerId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "examiner": {
+            "$ref": "#/components/schemas/User"
+          },
+          "allocationId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "allocation": {
+            "$ref": "#/components/schemas/Allocation"
+          },
+          "totalMarks": {
+            "type": "number",
+            "format": "double"
+          },
+          "maxMarks": {
+            "type": "number",
+            "format": "double"
+          },
+          "percentage": {
+            "type": "number",
+            "format": "double"
+          },
+          "remarks": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "nullable": true
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "evaluatedPdfUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "submittedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "questionMarks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuestionMark"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "MarkingDto": {
         "type": "object",
         "properties": {
@@ -1631,18 +3627,9 @@
             "type": "integer",
             "format": "int32"
           },
-          "departmentId": {
+          "allocationId": {
             "type": "integer",
-            "format": "int32",
-            "nullable": true
-          },
-          "marksJson": {
-            "type": "string",
-            "nullable": true
-          },
-          "sectionMarksJson": {
-            "type": "string",
-            "nullable": true
+            "format": "int32"
           },
           "totalMarks": {
             "type": "number",
@@ -1679,16 +3666,16 @@
       "Paper": {
         "type": "object",
         "properties": {
-          "id": {
+          "paperId": {
             "type": "integer",
             "format": "int32"
           },
-          "subjectConfigId": {
+          "subjectId": {
             "type": "integer",
             "format": "int32"
           },
-          "subjectConfig": {
-            "$ref": "#/components/schemas/SubjectConfig"
+          "subject": {
+            "$ref": "#/components/schemas/Subject"
           },
           "paperCode": {
             "type": "string",
@@ -1717,11 +3704,15 @@
           "isActive": {
             "type": "boolean"
           },
-          "sections": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Section"
-            },
+          "projectId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "project": {
+            "$ref": "#/components/schemas/Project"
+          },
+          "catchNo": {
+            "type": "string",
             "nullable": true
           },
           "createdAt": {
@@ -1731,6 +3722,20 @@
           "updatedAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "sections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Section"
+            },
+            "nullable": true
+          },
+          "scripts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Script"
+            },
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -1738,11 +3743,15 @@
       "PaperDto": {
         "type": "object",
         "properties": {
-          "id": {
+          "paperId": {
             "type": "integer",
             "format": "int32"
           },
-          "subjectConfigId": {
+          "subjectId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "projectId": {
             "type": "integer",
             "format": "int32"
           },
@@ -1769,6 +3778,77 @@
           "description": {
             "type": "string",
             "nullable": true
+          },
+          "catchNo": {
+            "type": "string",
+            "nullable": true
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "Project": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "projectName": {
+            "type": "string",
+            "nullable": true
+          },
+          "sessionId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "session": {
+            "$ref": "#/components/schemas/Session"
+          },
+          "universityId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "university": {
+            "$ref": "#/components/schemas/University"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "papers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Paper"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProjectDto": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "projectName": {
+            "type": "string",
+            "nullable": true
+          },
+          "sessionId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "universityId": {
+            "type": "integer",
+            "format": "int32"
           },
           "isActive": {
             "type": "boolean"
@@ -1779,7 +3859,7 @@
       "Question": {
         "type": "object",
         "properties": {
-          "id": {
+          "questionId": {
             "type": "integer",
             "format": "int32"
           },
@@ -1795,12 +3875,105 @@
             "format": "int32"
           },
           "marks": {
-            "type": "integer",
-            "format": "int32"
+            "type": "number",
+            "format": "double"
           },
           "type": {
             "type": "string",
             "nullable": true
+          },
+          "isOptional": {
+            "type": "boolean"
+          },
+          "optionalGroupCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "questionMarks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuestionMark"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "QuestionDto": {
+        "type": "object",
+        "properties": {
+          "questionId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "sectionId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "questionNo": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "marks": {
+            "type": "number",
+            "format": "double"
+          },
+          "type": {
+            "type": "string",
+            "nullable": true
+          },
+          "isOptional": {
+            "type": "boolean"
+          },
+          "optionalGroupCode": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "QuestionMark": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "markingId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "marking": {
+            "$ref": "#/components/schemas/Marking"
+          },
+          "questionId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "question": {
+            "$ref": "#/components/schemas/Question"
+          },
+          "marksAwarded": {
+            "type": "number",
+            "format": "double"
+          },
+          "isSkipped": {
+            "type": "boolean"
+          },
+          "remarks": {
+            "type": "string",
+            "nullable": true
+          },
+          "isAttempted": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
           }
         },
         "additionalProperties": false
@@ -1824,6 +3997,11 @@
             "type": "string",
             "nullable": true
           },
+          "universityId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
           "departmentId": {
             "type": "integer",
             "format": "int32",
@@ -1835,6 +4013,89 @@
           },
           "address": {
             "type": "string",
+            "nullable": true
+          },
+          "profileImage": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "Script": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "scriptId": {
+            "type": "string",
+            "nullable": true
+          },
+          "barcode": {
+            "type": "string",
+            "nullable": true
+          },
+          "paperId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "paper": {
+            "$ref": "#/components/schemas/Paper"
+          },
+          "cleanPdfUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "nullable": true
+          },
+          "isReEvaluationRequested": {
+            "type": "boolean"
+          },
+          "totalMarks": {
+            "type": "number",
+            "format": "double"
+          },
+          "maxMarks": {
+            "type": "number",
+            "format": "double"
+          },
+          "percentage": {
+            "type": "number",
+            "format": "double"
+          },
+          "remarks": {
+            "type": "string",
+            "nullable": true
+          },
+          "submittedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "allocations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Allocation"
+            },
+            "nullable": true
+          },
+          "markings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Marking"
+            },
             "nullable": true
           }
         },
@@ -1851,11 +4112,7 @@
             "type": "string",
             "nullable": true
           },
-          "rollNo": {
-            "type": "string",
-            "nullable": true
-          },
-          "studentName": {
+          "barcode": {
             "type": "string",
             "nullable": true
           },
@@ -1863,15 +4120,7 @@
             "type": "integer",
             "format": "int32"
           },
-          "subject": {
-            "type": "string",
-            "nullable": true
-          },
-          "examDate": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "scannedImageUrl": {
+          "cleanPdfUrl": {
             "type": "string",
             "nullable": true
           },
@@ -1879,14 +4128,8 @@
             "type": "string",
             "nullable": true
           },
-          "assignedExaminerId": {
-            "type": "integer",
-            "format": "int32",
-            "nullable": true
-          },
-          "assignedExaminerName": {
-            "type": "string",
-            "nullable": true
+          "isReEvaluationRequested": {
+            "type": "boolean"
           },
           "totalMarks": {
             "type": "number",
@@ -1915,10 +4158,6 @@
       "ScriptStatusUpdateRequest": {
         "type": "object",
         "properties": {
-          "scriptId": {
-            "type": "integer",
-            "format": "int32"
-          },
           "status": {
             "type": "string",
             "nullable": true
@@ -1944,16 +4183,54 @@
           "paper": {
             "$ref": "#/components/schemas/Paper"
           },
-          "subjectConfigId": {
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "totalQuestions": {
             "type": "integer",
             "format": "int32"
           },
-          "subjectConfig": {
-            "$ref": "#/components/schemas/SubjectConfig"
+          "totalMarks": {
+            "type": "integer",
+            "format": "int32"
           },
-          "sectionId": {
+          "startQuestion": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "endQuestion": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "createdAt": {
             "type": "string",
+            "format": "date-time"
+          },
+          "questions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Question"
+            },
             "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "SectionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "paperId": {
+            "type": "integer",
+            "format": "int32"
           },
           "name": {
             "type": "string",
@@ -1971,22 +4248,79 @@
             "type": "integer",
             "format": "int32"
           },
+          "startQuestion": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "endQuestion": {
+            "type": "integer",
+            "format": "int32"
+          },
           "questions": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/Question"
+              "$ref": "#/components/schemas/QuestionDto"
             },
             "nullable": true
           }
         },
         "additionalProperties": false
       },
-      "SubjectConfig": {
+      "Session": {
         "type": "object",
         "properties": {
-          "id": {
+          "sessionId": {
             "type": "integer",
             "format": "int32"
+          },
+          "sessionName": {
+            "type": "string",
+            "nullable": true
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "projects": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Project"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "SessionDto": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "sessionName": {
+            "type": "string",
+            "nullable": true
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "Subject": {
+        "type": "object",
+        "properties": {
+          "subjectId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "subjectName": {
+            "type": "string",
+            "nullable": true
           },
           "departmentId": {
             "type": "integer",
@@ -1995,38 +4329,8 @@
           "department": {
             "$ref": "#/components/schemas/Department"
           },
-          "code": {
-            "type": "string",
-            "nullable": true
-          },
-          "name": {
-            "type": "string",
-            "nullable": true
-          },
-          "totalMarks": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "duration": {
-            "type": "integer",
-            "format": "int32"
-          },
           "isActive": {
             "type": "boolean"
-          },
-          "papers": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Paper"
-            },
-            "nullable": true
-          },
-          "sections": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Section"
-            },
-            "nullable": true
           },
           "createdAt": {
             "type": "string",
@@ -2035,6 +4339,41 @@
           "updatedAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "papers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Paper"
+            },
+            "nullable": true
+          },
+          "examinerExpertises": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExaminerExpertise"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "SubjectDto": {
+        "type": "object",
+        "properties": {
+          "subjectId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "subjectName": {
+            "type": "string",
+            "nullable": true
+          },
+          "departmentId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "isActive": {
+            "type": "boolean"
           }
         },
         "additionalProperties": false
@@ -2042,7 +4381,7 @@
       "SubmitMarkingRequest": {
         "type": "object",
         "properties": {
-          "scriptId": {
+          "allocationId": {
             "type": "integer",
             "format": "int32"
           },
@@ -2050,20 +4389,144 @@
             "type": "integer",
             "format": "int32"
           },
-          "marksJson": {
-            "type": "string",
-            "nullable": true
-          },
-          "sectionMarksJson": {
-            "type": "string",
-            "nullable": true
-          },
           "totalMarks": {
             "type": "number",
             "format": "double"
           },
           "remarks": {
             "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "University": {
+        "type": "object",
+        "properties": {
+          "universityId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "universityName": {
+            "type": "string",
+            "nullable": true
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "departments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Department"
+            },
+            "nullable": true
+          },
+          "projects": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Project"
+            },
+            "nullable": true
+          },
+          "users": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/User"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "passwordHash": {
+            "type": "string",
+            "nullable": true
+          },
+          "userType": {
+            "type": "string",
+            "nullable": true
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "profileImage": {
+            "type": "string",
+            "nullable": true
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true
+          },
+          "address": {
+            "type": "string",
+            "nullable": true
+          },
+          "universityId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "university": {
+            "$ref": "#/components/schemas/University"
+          },
+          "departmentId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "department": {
+            "$ref": "#/components/schemas/Department"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expertise": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExaminerExpertise"
+            },
+            "nullable": true
+          },
+          "allocations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Allocation"
+            },
+            "nullable": true
+          },
+          "markings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Marking"
+            },
             "nullable": true
           }
         },
@@ -2088,6 +4551,11 @@
             "type": "string",
             "nullable": true
           },
+          "universityId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
           "departmentId": {
             "type": "integer",
             "format": "int32",
@@ -2098,6 +4566,10 @@
             "nullable": true
           },
           "address": {
+            "type": "string",
+            "nullable": true
+          },
+          "profileImage": {
             "type": "string",
             "nullable": true
           }
@@ -2128,5 +4600,55 @@
         "additionalProperties": false
       }
     }
-  }
+  },
+  "tags": [
+    {
+      "name": "Allocation"
+    },
+    {
+      "name": "API"
+    },
+    {
+      "name": "Auth"
+    },
+    {
+      "name": "Department"
+    },
+    {
+      "name": "ExaminerExpertise"
+    },
+    {
+      "name": "Marking"
+    },
+    {
+      "name": "Papers"
+    },
+    {
+      "name": "Project"
+    },
+    {
+      "name": "Question"
+    },
+    {
+      "name": "Reports"
+    },
+    {
+      "name": "Scripts"
+    },
+    {
+      "name": "Section"
+    },
+    {
+      "name": "Session"
+    },
+    {
+      "name": "Subject"
+    },
+    {
+      "name": "Universities"
+    },
+    {
+      "name": "WeatherForecast"
+    }
+  ]
 }

@@ -3,76 +3,120 @@
   "WorkspaceRootPath": "D:\\OnScreenMarking\\API\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{B5AB51ED-2B4C-4E9A-B494-C26712FEBE6E}|API\\API.csproj|d:\\onscreenmarking\\api\\api\\models\\subjectconfig.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{B5AB51ED-2B4C-4E9A-B494-C26712FEBE6E}|API\\API.csproj|solutionrelative:api\\models\\subjectconfig.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\OnScreenMarking\\API\\API\\Migrations\\20260509124721_Optionals added.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:API\\Migrations\\20260509124721_Optionals added.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{B5AB51ED-2B4C-4E9A-B494-C26712FEBE6E}|API\\API.csproj|d:\\onscreenmarking\\api\\api\\models\\university.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{B5AB51ED-2B4C-4E9A-B494-C26712FEBE6E}|API\\API.csproj|solutionrelative:api\\models\\university.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|d:\\onscreenmarking\\api\\api\\models\\subjectconfig.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|solutionrelative:api\\models\\subjectconfig.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{B5AB51ED-2B4C-4E9A-B494-C26712FEBE6E}|API\\API.csproj|d:\\onscreenmarking\\api\\api\\models\\user.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{B5AB51ED-2B4C-4E9A-B494-C26712FEBE6E}|API\\API.csproj|solutionrelative:api\\models\\user.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|d:\\onscreenmarking\\api\\api\\controllers\\sectioncontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|solutionrelative:api\\controllers\\sectioncontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{B5AB51ED-2B4C-4E9A-B494-C26712FEBE6E}|API\\API.csproj|d:\\onscreenmarking\\api\\api\\models\\dtos\\subjectconfigdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{B5AB51ED-2B4C-4E9A-B494-C26712FEBE6E}|API\\API.csproj|solutionrelative:api\\models\\dtos\\subjectconfigdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|d:\\onscreenmarking\\api\\api\\models\\script.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|solutionrelative:api\\models\\script.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{B5AB51ED-2B4C-4E9A-B494-C26712FEBE6E}|API\\API.csproj|d:\\onscreenmarking\\api\\api\\models\\department.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{B5AB51ED-2B4C-4E9A-B494-C26712FEBE6E}|API\\API.csproj|solutionrelative:api\\models\\department.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|d:\\onscreenmarking\\api\\api\\models\\paper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|solutionrelative:api\\models\\paper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{B5AB51ED-2B4C-4E9A-B494-C26712FEBE6E}|API\\API.csproj|d:\\onscreenmarking\\api\\api\\models\\examinerexpertise.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{B5AB51ED-2B4C-4E9A-B494-C26712FEBE6E}|API\\API.csproj|solutionrelative:api\\models\\examinerexpertise.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|d:\\onscreenmarking\\api\\api\\models\\department.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|solutionrelative:api\\models\\department.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{B5AB51ED-2B4C-4E9A-B494-C26712FEBE6E}|API\\API.csproj|d:\\onscreenmarking\\api\\api\\models\\marking.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{B5AB51ED-2B4C-4E9A-B494-C26712FEBE6E}|API\\API.csproj|solutionrelative:api\\models\\marking.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|d:\\onscreenmarking\\api\\api\\models\\user.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|solutionrelative:api\\models\\user.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{B5AB51ED-2B4C-4E9A-B494-C26712FEBE6E}|API\\API.csproj|d:\\onscreenmarking\\api\\api\\models\\paper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{B5AB51ED-2B4C-4E9A-B494-C26712FEBE6E}|API\\API.csproj|solutionrelative:api\\models\\paper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|d:\\onscreenmarking\\api\\api\\controllers\\authcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|solutionrelative:api\\controllers\\authcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{B5AB51ED-2B4C-4E9A-B494-C26712FEBE6E}|API\\API.csproj|d:\\onscreenmarking\\api\\api\\models\\role.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{B5AB51ED-2B4C-4E9A-B494-C26712FEBE6E}|API\\API.csproj|solutionrelative:api\\models\\role.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|d:\\onscreenmarking\\api\\api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|solutionrelative:api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{B5AB51ED-2B4C-4E9A-B494-C26712FEBE6E}|API\\API.csproj|d:\\onscreenmarking\\api\\api\\models\\script.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{B5AB51ED-2B4C-4E9A-B494-C26712FEBE6E}|API\\API.csproj|solutionrelative:api\\models\\script.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|d:\\onscreenmarking\\api\\api\\models\\dtos\\authdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|solutionrelative:api\\models\\dtos\\authdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{B5AB51ED-2B4C-4E9A-B494-C26712FEBE6E}|API\\API.csproj|d:\\onscreenmarking\\api\\api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{B5AB51ED-2B4C-4E9A-B494-C26712FEBE6E}|API\\API.csproj|solutionrelative:api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|d:\\onscreenmarking\\api\\api\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|solutionrelative:api\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{B5AB51ED-2B4C-4E9A-B494-C26712FEBE6E}|API\\API.csproj|d:\\onscreenmarking\\api\\api\\controllers\\reportscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{B5AB51ED-2B4C-4E9A-B494-C26712FEBE6E}|API\\API.csproj|solutionrelative:api\\controllers\\reportscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|d:\\onscreenmarking\\api\\api\\controllers\\allocationcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|solutionrelative:api\\controllers\\allocationcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{B5AB51ED-2B4C-4E9A-B494-C26712FEBE6E}|API\\API.csproj|d:\\onscreenmarking\\api\\api\\data\\applicationdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{B5AB51ED-2B4C-4E9A-B494-C26712FEBE6E}|API\\API.csproj|solutionrelative:api\\data\\applicationdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|d:\\onscreenmarking\\api\\api\\controllers\\projectcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|solutionrelative:api\\controllers\\projectcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{B5AB51ED-2B4C-4E9A-B494-C26712FEBE6E}|API\\API.csproj|d:\\onscreenmarking\\api\\api\\controllers\\examinerexpertisecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{B5AB51ED-2B4C-4E9A-B494-C26712FEBE6E}|API\\API.csproj|solutionrelative:api\\controllers\\examinerexpertisecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|d:\\onscreenmarking\\api\\api\\controllers\\universitiescontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|solutionrelative:api\\controllers\\universitiescontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{B5AB51ED-2B4C-4E9A-B494-C26712FEBE6E}|API\\API.csproj|d:\\onscreenmarking\\api\\api\\controllers\\markingcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{B5AB51ED-2B4C-4E9A-B494-C26712FEBE6E}|API\\API.csproj|solutionrelative:api\\controllers\\markingcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|d:\\onscreenmarking\\api\\api\\controllers\\reportscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|solutionrelative:api\\controllers\\reportscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{B5AB51ED-2B4C-4E9A-B494-C26712FEBE6E}|API\\API.csproj|d:\\onscreenmarking\\api\\api\\models\\dtos\\authdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{B5AB51ED-2B4C-4E9A-B494-C26712FEBE6E}|API\\API.csproj|solutionrelative:api\\models\\dtos\\authdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|d:\\onscreenmarking\\api\\api\\data\\applicationdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|solutionrelative:api\\data\\applicationdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{B5AB51ED-2B4C-4E9A-B494-C26712FEBE6E}|API\\API.csproj|d:\\onscreenmarking\\api\\api\\api.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
-      "RelativeMoniker": "D:0:0:{B5AB51ED-2B4C-4E9A-B494-C26712FEBE6E}|API\\API.csproj|solutionrelative:api\\api.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
+      "AbsoluteMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|d:\\onscreenmarking\\api\\api\\controllers\\scriptscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|solutionrelative:api\\controllers\\scriptscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{B5AB51ED-2B4C-4E9A-B494-C26712FEBE6E}|API\\API.csproj|d:\\onscreenmarking\\api\\api\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
-      "RelativeMoniker": "D:0:0:{B5AB51ED-2B4C-4E9A-B494-C26712FEBE6E}|API\\API.csproj|solutionrelative:api\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+      "AbsoluteMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|d:\\onscreenmarking\\api\\api\\models\\dtos\\subjectconfigdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|solutionrelative:api\\models\\dtos\\subjectconfigdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|d:\\onscreenmarking\\api\\api\\models\\dtos\\markingdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|solutionrelative:api\\models\\dtos\\markingdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|d:\\onscreenmarking\\api\\api\\models\\marking.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|solutionrelative:api\\models\\marking.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|d:\\onscreenmarking\\api\\api\\controllers\\markingcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|solutionrelative:api\\controllers\\markingcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|d:\\onscreenmarking\\api\\api\\controllers\\examinerexpertisecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|solutionrelative:api\\controllers\\examinerexpertisecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|d:\\onscreenmarking\\api\\api\\models\\examinerexpertise.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|solutionrelative:api\\models\\examinerexpertise.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|d:\\onscreenmarking\\api\\api\\models\\allocation.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|solutionrelative:api\\models\\allocation.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|d:\\onscreenmarking\\api\\api\\controllers\\weatherforecastcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|solutionrelative:api\\controllers\\weatherforecastcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|d:\\onscreenmarking\\api\\api\\controllers\\paperscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|solutionrelative:api\\controllers\\paperscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|d:\\onscreenmarking\\api\\api\\models\\university.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|solutionrelative:api\\models\\university.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|d:\\onscreenmarking\\api\\api\\models\\role.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|solutionrelative:api\\models\\role.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|d:\\onscreenmarking\\api\\api\\api.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
+      "RelativeMoniker": "D:0:0:{CBFA08EA-AECE-205F-7B85-326FD0B81BAD}|API\\API.csproj|solutionrelative:api\\api.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
     }
   ],
   "DocumentGroupContainers": [
@@ -82,120 +126,55 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 7,
+          "SelectedChildIndex": 0,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 3,
-              "Title": "SubjectConfigDto.cs",
-              "DocumentMoniker": "D:\\OnScreenMarking\\API\\API\\Models\\DTOs\\SubjectConfigDto.cs",
-              "RelativeDocumentMoniker": "API\\Models\\DTOs\\SubjectConfigDto.cs",
-              "ToolTip": "D:\\OnScreenMarking\\API\\API\\Models\\DTOs\\SubjectConfigDto.cs",
-              "RelativeToolTip": "API\\Models\\DTOs\\SubjectConfigDto.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "DocumentIndex": 0,
+              "Title": "20260509124721_Optionals added.cs",
+              "DocumentMoniker": "D:\\OnScreenMarking\\API\\API\\Migrations\\20260509124721_Optionals added.cs",
+              "RelativeDocumentMoniker": "API\\Migrations\\20260509124721_Optionals added.cs",
+              "ToolTip": "D:\\OnScreenMarking\\API\\API\\Migrations\\20260509124721_Optionals added.cs",
+              "RelativeToolTip": "API\\Migrations\\20260509124721_Optionals added.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAAaAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-30T07:35:55.724Z",
+              "WhenOpened": "2026-05-09T12:47:21.214Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
-              "Title": "Paper.cs",
-              "DocumentMoniker": "D:\\OnScreenMarking\\API\\API\\Models\\Paper.cs",
-              "RelativeDocumentMoniker": "API\\Models\\Paper.cs",
-              "ToolTip": "D:\\OnScreenMarking\\API\\API\\Models\\Paper.cs*",
-              "RelativeToolTip": "API\\Models\\Paper.cs*",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABEAAAA0AAAAAAAAAA==",
+              "DocumentIndex": 2,
+              "Title": "SectionController.cs",
+              "DocumentMoniker": "D:\\OnScreenMarking\\API\\API\\Controllers\\SectionController.cs",
+              "RelativeDocumentMoniker": "API\\Controllers\\SectionController.cs",
+              "ToolTip": "D:\\OnScreenMarking\\API\\API\\Controllers\\SectionController.cs",
+              "RelativeToolTip": "API\\Controllers\\SectionController.cs",
+              "ViewState": "AgIAAD4AAAAAAAAAAAAwwGMAAAA5AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-30T07:33:19.269Z",
+              "WhenOpened": "2026-05-09T12:13:26.074Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "User.cs",
+              "DocumentMoniker": "D:\\OnScreenMarking\\API\\API\\Models\\User.cs",
+              "RelativeDocumentMoniker": "API\\Models\\User.cs",
+              "ToolTip": "D:\\OnScreenMarking\\API\\API\\Models\\User.cs",
+              "RelativeToolTip": "API\\Models\\User.cs",
+              "ViewState": "AgIAAAYAAAAAAAAAAAAqwBcAAAAyAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-04-29T09:35:47.357Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 5,
-              "Title": "ExaminerExpertise.cs",
-              "DocumentMoniker": "D:\\OnScreenMarking\\API\\API\\Models\\ExaminerExpertise.cs",
-              "RelativeDocumentMoniker": "API\\Models\\ExaminerExpertise.cs",
-              "ToolTip": "D:\\OnScreenMarking\\API\\API\\Models\\ExaminerExpertise.cs*",
-              "RelativeToolTip": "API\\Models\\ExaminerExpertise.cs*",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAA8AAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-30T07:31:09.232Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 1,
-              "Title": "University.cs",
-              "DocumentMoniker": "D:\\OnScreenMarking\\API\\API\\Models\\University.cs",
-              "RelativeDocumentMoniker": "API\\Models\\University.cs",
-              "ToolTip": "D:\\OnScreenMarking\\API\\API\\Models\\University.cs*",
-              "RelativeToolTip": "API\\Models\\University.cs*",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAoAAAA8AAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-30T07:29:56.904Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 10,
-              "Title": "Program.cs",
-              "DocumentMoniker": "D:\\OnScreenMarking\\API\\API\\Program.cs",
-              "RelativeDocumentMoniker": "API\\Program.cs",
-              "ToolTip": "D:\\OnScreenMarking\\API\\API\\Program.cs",
-              "RelativeToolTip": "API\\Program.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA4AAAA+AAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-30T06:01:17.963Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 15,
-              "Title": "AuthDto.cs",
-              "DocumentMoniker": "D:\\OnScreenMarking\\API\\API\\Models\\DTOs\\AuthDto.cs",
-              "RelativeDocumentMoniker": "API\\Models\\DTOs\\AuthDto.cs",
-              "ToolTip": "D:\\OnScreenMarking\\API\\API\\Models\\DTOs\\AuthDto.cs",
-              "RelativeToolTip": "API\\Models\\DTOs\\AuthDto.cs",
-              "ViewState": "AgIAABMAAAAAAAAAAAAAwAAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-29T10:08:36.247Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 8,
-              "Title": "Role.cs",
-              "DocumentMoniker": "D:\\OnScreenMarking\\API\\API\\Models\\Role.cs",
-              "RelativeDocumentMoniker": "API\\Models\\Role.cs",
-              "ToolTip": "D:\\OnScreenMarking\\API\\API\\Models\\Role.cs*",
-              "RelativeToolTip": "API\\Models\\Role.cs*",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAgAAAA7AAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-29T11:26:21.254Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "SubjectConfig.cs",
-              "DocumentMoniker": "D:\\OnScreenMarking\\API\\API\\Models\\SubjectConfig.cs",
-              "RelativeDocumentMoniker": "API\\Models\\SubjectConfig.cs",
-              "ToolTip": "D:\\OnScreenMarking\\API\\API\\Models\\SubjectConfig.cs*",
-              "RelativeToolTip": "API\\Models\\SubjectConfig.cs*",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAADAAAAA9AAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-29T11:21:08.689Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 4,
               "Title": "Department.cs",
               "DocumentMoniker": "D:\\OnScreenMarking\\API\\API\\Models\\Department.cs",
               "RelativeDocumentMoniker": "API\\Models\\Department.cs",
-              "ToolTip": "D:\\OnScreenMarking\\API\\API\\Models\\Department.cs*",
-              "RelativeToolTip": "API\\Models\\Department.cs*",
+              "ToolTip": "D:\\OnScreenMarking\\API\\API\\Models\\Department.cs",
+              "RelativeToolTip": "API\\Models\\Department.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAoAAAA7AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-04-29T11:17:38.437Z",
@@ -203,112 +182,320 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 9,
+              "DocumentIndex": 4,
+              "Title": "Paper.cs",
+              "DocumentMoniker": "D:\\OnScreenMarking\\API\\API\\Models\\Paper.cs",
+              "RelativeDocumentMoniker": "API\\Models\\Paper.cs",
+              "ToolTip": "D:\\OnScreenMarking\\API\\API\\Models\\Paper.cs",
+              "RelativeToolTip": "API\\Models\\Paper.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABcAAAArAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-04-30T07:33:19.269Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
               "Title": "Script.cs",
               "DocumentMoniker": "D:\\OnScreenMarking\\API\\API\\Models\\Script.cs",
               "RelativeDocumentMoniker": "API\\Models\\Script.cs",
-              "ToolTip": "D:\\OnScreenMarking\\API\\API\\Models\\Script.cs*",
-              "RelativeToolTip": "API\\Models\\Script.cs*",
-              "ViewState": "AgIAAA4AAAAAAAAAAAAwwA4AAAAvAAAAAAAAAA==",
+              "ToolTip": "D:\\OnScreenMarking\\API\\API\\Models\\Script.cs",
+              "RelativeToolTip": "API\\Models\\Script.cs",
+              "ViewState": "AgIAAAYAAAAAAAAAAAAAABwAAABaAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-04-29T11:14:08.305Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "User.cs",
-              "DocumentMoniker": "D:\\OnScreenMarking\\API\\API\\Models\\User.cs",
-              "RelativeDocumentMoniker": "API\\Models\\User.cs",
-              "ToolTip": "D:\\OnScreenMarking\\API\\API\\Models\\User.cs*",
-              "RelativeToolTip": "API\\Models\\User.cs*",
-              "ViewState": "AgIAAAsAAAAAAAAAAAAQwAwAAAAoAAAAAAAAAA==",
+              "DocumentIndex": 1,
+              "Title": "SubjectConfig.cs",
+              "DocumentMoniker": "D:\\OnScreenMarking\\API\\API\\Models\\SubjectConfig.cs",
+              "RelativeDocumentMoniker": "API\\Models\\SubjectConfig.cs",
+              "ToolTip": "D:\\OnScreenMarking\\API\\API\\Models\\SubjectConfig.cs",
+              "RelativeToolTip": "API\\Models\\SubjectConfig.cs",
+              "ViewState": "AgIAABIAAAAAAAAAAAAowCUAAAAWAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-29T09:35:47.357Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 6,
-              "Title": "Marking.cs",
-              "DocumentMoniker": "D:\\OnScreenMarking\\API\\API\\Models\\Marking.cs",
-              "RelativeDocumentMoniker": "API\\Models\\Marking.cs",
-              "ToolTip": "D:\\OnScreenMarking\\API\\API\\Models\\Marking.cs*",
-              "RelativeToolTip": "API\\Models\\Marking.cs*",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAoAAAA8AAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-29T11:13:59.988Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 13,
-              "Title": "ExaminerExpertiseController.cs",
-              "DocumentMoniker": "D:\\OnScreenMarking\\API\\API\\Controllers\\ExaminerExpertiseController.cs",
-              "RelativeDocumentMoniker": "API\\Controllers\\ExaminerExpertiseController.cs",
-              "ToolTip": "D:\\OnScreenMarking\\API\\API\\Controllers\\ExaminerExpertiseController.cs",
-              "RelativeToolTip": "API\\Controllers\\ExaminerExpertiseController.cs",
-              "ViewState": "AgIAAAwAAAAAAAAAAAAmwBwAAAAxAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-30T05:35:24.648Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 14,
-              "Title": "MarkingController.cs",
-              "DocumentMoniker": "D:\\OnScreenMarking\\API\\API\\Controllers\\MarkingController.cs",
-              "RelativeDocumentMoniker": "API\\Controllers\\MarkingController.cs",
-              "ToolTip": "D:\\OnScreenMarking\\API\\API\\Controllers\\MarkingController.cs",
-              "RelativeToolTip": "API\\Controllers\\MarkingController.cs",
-              "ViewState": "AgIAAAIBAAAAAAAAAAAAwBQBAAA4AAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-30T05:38:50.489Z",
+              "WhenOpened": "2026-04-29T11:21:08.689Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 11,
-              "Title": "ReportsController.cs",
-              "DocumentMoniker": "D:\\OnScreenMarking\\API\\API\\Controllers\\ReportsController.cs",
-              "RelativeDocumentMoniker": "API\\Controllers\\ReportsController.cs",
-              "ToolTip": "D:\\OnScreenMarking\\API\\API\\Controllers\\ReportsController.cs",
-              "RelativeToolTip": "API\\Controllers\\ReportsController.cs",
-              "ViewState": "AgIAAIcAAAAAAAAAAAAAwJMAAAAjAAAAAAAAAA==",
+              "Title": "AllocationController.cs",
+              "DocumentMoniker": "D:\\OnScreenMarking\\API\\API\\Controllers\\AllocationController.cs",
+              "RelativeDocumentMoniker": "API\\Controllers\\AllocationController.cs",
+              "ToolTip": "D:\\OnScreenMarking\\API\\API\\Controllers\\AllocationController.cs",
+              "RelativeToolTip": "API\\Controllers\\AllocationController.cs",
+              "ViewState": "AgIAAG4AAAAAAAAAAAAYwIAAAABgAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-30T06:00:43.781Z",
+              "WhenOpened": "2026-05-09T06:22:13.247Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 12,
+              "Title": "ProjectController.cs",
+              "DocumentMoniker": "D:\\OnScreenMarking\\API\\API\\Controllers\\ProjectController.cs",
+              "RelativeDocumentMoniker": "API\\Controllers\\ProjectController.cs",
+              "ToolTip": "D:\\OnScreenMarking\\API\\API\\Controllers\\ProjectController.cs",
+              "RelativeToolTip": "API\\Controllers\\ProjectController.cs",
+              "ViewState": "AgIAADwAAAAAAAAAAAAwwJUAAAAtAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-09T05:53:53.289Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 13,
+              "Title": "UniversitiesController.cs",
+              "DocumentMoniker": "D:\\OnScreenMarking\\API\\API\\Controllers\\UniversitiesController.cs",
+              "RelativeDocumentMoniker": "API\\Controllers\\UniversitiesController.cs",
+              "ToolTip": "D:\\OnScreenMarking\\API\\API\\Controllers\\UniversitiesController.cs",
+              "RelativeToolTip": "API\\Controllers\\UniversitiesController.cs",
+              "ViewState": "AgIAAHAAAAAAAAAAAAAAAHkAAAAJAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-08T12:24:40.021Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 15,
               "Title": "ApplicationDbContext.cs",
               "DocumentMoniker": "D:\\OnScreenMarking\\API\\API\\Data\\ApplicationDbContext.cs",
               "RelativeDocumentMoniker": "API\\Data\\ApplicationDbContext.cs",
               "ToolTip": "D:\\OnScreenMarking\\API\\API\\Data\\ApplicationDbContext.cs",
               "RelativeToolTip": "API\\Data\\ApplicationDbContext.cs",
-              "ViewState": "AgIAAEAAAAAAAAAAAAAYwEoAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAACcAAAAAAAAAAAAYwDoAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-04-30T06:00:49.915Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 17,
+              "DocumentIndex": 7,
+              "Title": "AuthController.cs",
+              "DocumentMoniker": "D:\\OnScreenMarking\\API\\API\\Controllers\\AuthController.cs",
+              "RelativeDocumentMoniker": "API\\Controllers\\AuthController.cs",
+              "ToolTip": "D:\\OnScreenMarking\\API\\API\\Controllers\\AuthController.cs",
+              "RelativeToolTip": "API\\Controllers\\AuthController.cs",
+              "ViewState": "AgIAAHAAAAAAAAAAAAAYwIIAAAAsAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-08T12:27:32.908Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 9,
+              "Title": "AuthDto.cs",
+              "DocumentMoniker": "D:\\OnScreenMarking\\API\\API\\Models\\DTOs\\AuthDto.cs",
+              "RelativeDocumentMoniker": "API\\Models\\DTOs\\AuthDto.cs",
+              "ToolTip": "D:\\OnScreenMarking\\API\\API\\Models\\DTOs\\AuthDto.cs",
+              "RelativeToolTip": "API\\Models\\DTOs\\AuthDto.cs",
+              "ViewState": "AgIAAAEAAAAAAAAAAAArwAsAAAApAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-04-29T10:08:36.247Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
+              "Title": "Program.cs",
+              "DocumentMoniker": "D:\\OnScreenMarking\\API\\API\\Program.cs",
+              "RelativeDocumentMoniker": "API\\Program.cs",
+              "ToolTip": "D:\\OnScreenMarking\\API\\API\\Program.cs",
+              "RelativeToolTip": "API\\Program.cs",
+              "ViewState": "AgIAABQAAAAAAAAAAAAAAB8AAAAcAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-04-30T06:01:17.963Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 16,
+              "Title": "ScriptsController.cs",
+              "DocumentMoniker": "D:\\OnScreenMarking\\API\\API\\Controllers\\ScriptsController.cs",
+              "RelativeDocumentMoniker": "API\\Controllers\\ScriptsController.cs",
+              "ToolTip": "D:\\OnScreenMarking\\API\\API\\Controllers\\ScriptsController.cs",
+              "RelativeToolTip": "API\\Controllers\\ScriptsController.cs",
+              "ViewState": "AgIAALwAAAAAAAAAAAAYwMkAAAAzAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-09T05:45:05.408Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 14,
+              "Title": "ReportsController.cs",
+              "DocumentMoniker": "D:\\OnScreenMarking\\API\\API\\Controllers\\ReportsController.cs",
+              "RelativeDocumentMoniker": "API\\Controllers\\ReportsController.cs",
+              "ToolTip": "D:\\OnScreenMarking\\API\\API\\Controllers\\ReportsController.cs",
+              "RelativeToolTip": "API\\Controllers\\ReportsController.cs",
+              "ViewState": "AgIAAHQAAAAAAAAAAAAYwJAAAABWAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-04-30T06:00:43.781Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 10,
               "Title": "appsettings.json",
               "DocumentMoniker": "D:\\OnScreenMarking\\API\\API\\appsettings.json",
               "RelativeDocumentMoniker": "API\\appsettings.json",
               "ToolTip": "D:\\OnScreenMarking\\API\\API\\appsettings.json",
               "RelativeToolTip": "API\\appsettings.json",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAsAAAAKAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
               "WhenOpened": "2026-04-29T09:43:22.997Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 16,
-              "Title": "API",
+              "DocumentIndex": 18,
+              "Title": "MarkingDto.cs",
+              "DocumentMoniker": "D:\\OnScreenMarking\\API\\API\\Models\\DTOs\\MarkingDto.cs",
+              "RelativeDocumentMoniker": "API\\Models\\DTOs\\MarkingDto.cs",
+              "ToolTip": "D:\\OnScreenMarking\\API\\API\\Models\\DTOs\\MarkingDto.cs",
+              "RelativeToolTip": "API\\Models\\DTOs\\MarkingDto.cs",
+              "ViewState": "AgIAAAkAAAAAAAAAAIA1wBkAAAAgAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-09T05:38:53.218Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 21,
+              "Title": "ExaminerExpertiseController.cs",
+              "DocumentMoniker": "D:\\OnScreenMarking\\API\\API\\Controllers\\ExaminerExpertiseController.cs",
+              "RelativeDocumentMoniker": "API\\Controllers\\ExaminerExpertiseController.cs",
+              "ToolTip": "D:\\OnScreenMarking\\API\\API\\Controllers\\ExaminerExpertiseController.cs",
+              "RelativeToolTip": "API\\Controllers\\ExaminerExpertiseController.cs",
+              "ViewState": "AgIAAFcAAAAAAAAAAAAYwGkAAAAxAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-04-30T05:35:24.648Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 22,
+              "Title": "ExaminerExpertise.cs",
+              "DocumentMoniker": "D:\\OnScreenMarking\\API\\API\\Models\\ExaminerExpertise.cs",
+              "RelativeDocumentMoniker": "API\\Models\\ExaminerExpertise.cs",
+              "ToolTip": "D:\\OnScreenMarking\\API\\API\\Models\\ExaminerExpertise.cs",
+              "RelativeToolTip": "API\\Models\\ExaminerExpertise.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAA8AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-04-30T07:31:09.232Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 23,
+              "Title": "Allocation.cs",
+              "DocumentMoniker": "D:\\OnScreenMarking\\API\\API\\Models\\Allocation.cs",
+              "RelativeDocumentMoniker": "API\\Models\\Allocation.cs",
+              "ToolTip": "D:\\OnScreenMarking\\API\\API\\Models\\Allocation.cs",
+              "RelativeToolTip": "API\\Models\\Allocation.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA8AAAAnAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-09T05:38:05.689Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 19,
+              "Title": "Marking.cs",
+              "DocumentMoniker": "D:\\OnScreenMarking\\API\\API\\Models\\Marking.cs",
+              "RelativeDocumentMoniker": "API\\Models\\Marking.cs",
+              "ToolTip": "D:\\OnScreenMarking\\API\\API\\Models\\Marking.cs",
+              "RelativeToolTip": "API\\Models\\Marking.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA8AAAAqAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-04-29T11:13:59.988Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 17,
+              "Title": "SubjectConfigDto.cs",
+              "DocumentMoniker": "D:\\OnScreenMarking\\API\\API\\Models\\DTOs\\SubjectConfigDto.cs",
+              "RelativeDocumentMoniker": "API\\Models\\DTOs\\SubjectConfigDto.cs",
+              "ToolTip": "D:\\OnScreenMarking\\API\\API\\Models\\DTOs\\SubjectConfigDto.cs",
+              "RelativeToolTip": "API\\Models\\DTOs\\SubjectConfigDto.cs",
+              "ViewState": "AgIAADMAAAAAAAAAAAAQwEAAAAAjAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-04-30T07:35:55.724Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 27,
+              "Title": "Role.cs",
+              "DocumentMoniker": "D:\\OnScreenMarking\\API\\API\\Models\\Role.cs",
+              "RelativeDocumentMoniker": "API\\Models\\Role.cs",
+              "ToolTip": "D:\\OnScreenMarking\\API\\API\\Models\\Role.cs",
+              "RelativeToolTip": "API\\Models\\Role.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA0AAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-04-29T11:26:21.254Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 20,
+              "Title": "MarkingController.cs",
+              "DocumentMoniker": "D:\\OnScreenMarking\\API\\API\\Controllers\\MarkingController.cs",
+              "RelativeDocumentMoniker": "API\\Controllers\\MarkingController.cs",
+              "ToolTip": "D:\\OnScreenMarking\\API\\API\\Controllers\\MarkingController.cs",
+              "RelativeToolTip": "API\\Controllers\\MarkingController.cs",
+              "ViewState": "AgIAAC8AAAAAAAAAAAAYwEEAAAAUAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-04-30T05:38:50.489Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 26,
+              "Title": "University.cs",
+              "DocumentMoniker": "D:\\OnScreenMarking\\API\\API\\Models\\University.cs",
+              "RelativeDocumentMoniker": "API\\Models\\University.cs",
+              "ToolTip": "D:\\OnScreenMarking\\API\\API\\Models\\University.cs",
+              "RelativeToolTip": "API\\Models\\University.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAoAAAA8AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-04-30T07:29:56.904Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 25,
+              "Title": "PapersController.cs",
+              "DocumentMoniker": "D:\\OnScreenMarking\\API\\API\\Controllers\\PapersController.cs",
+              "RelativeDocumentMoniker": "API\\Controllers\\PapersController.cs",
+              "ToolTip": "D:\\OnScreenMarking\\API\\API\\Controllers\\PapersController.cs",
+              "RelativeToolTip": "API\\Controllers\\PapersController.cs",
+              "ViewState": "AgIAAIQAAAAAAAAAAAAIwAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-08T12:24:48.697Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 24,
+              "Title": "WeatherForecastController.cs",
+              "DocumentMoniker": "D:\\OnScreenMarking\\API\\API\\Controllers\\WeatherForecastController.cs",
+              "RelativeDocumentMoniker": "API\\Controllers\\WeatherForecastController.cs",
+              "ToolTip": "D:\\OnScreenMarking\\API\\API\\Controllers\\WeatherForecastController.cs",
+              "RelativeToolTip": "API\\Controllers\\WeatherForecastController.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-08T12:26:58.832Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 28,
+              "Title": "API.csproj",
               "DocumentMoniker": "D:\\OnScreenMarking\\API\\API\\API.csproj",
               "RelativeDocumentMoniker": "API\\API.csproj",
               "ToolTip": "D:\\OnScreenMarking\\API\\API\\API.csproj",

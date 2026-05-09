@@ -9,27 +9,52 @@ namespace API.Data
         {
         }
 
+        // DbSet entries for all models
         public DbSet<User> Users { get; set; }
         public DbSet<Department> Departments { get; set; }
-        public DbSet<SubjectConfig> SubjectConfigs { get; set; }
+        public DbSet<University> Universities { get; set; }
+        public DbSet<Subject> Subjects { get; set; }
+        public DbSet<Session> Sessions { get; set; }
+        public DbSet<Project> Projects { get; set; }
         public DbSet<Paper> Papers { get; set; }
         public DbSet<Section> Sections { get; set; }
         public DbSet<Question> Questions { get; set; }
+        public DbSet<QuestionMark> QuestionMarks { get; set; }
         public DbSet<ExaminerExpertise> ExaminerExpertises { get; set; }
         public DbSet<Script> Scripts { get; set; }
+        public DbSet<Allocation> Allocations { get; set; }
         public DbSet<Marking> Markings { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
+            // University configuration
+            modelBuilder.Entity<University>()
+                .HasKey(u => u.UniversityId);
+            modelBuilder.Entity<University>()
+                .HasMany(u => u.Departments)
+                .WithOne(d => d.University)
+                .HasForeignKey(d => d.UniversityId)
+                .OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<University>()
+                .HasMany(u => u.Projects)
+                .WithOne(p => p.University)
+                .HasForeignKey(p => p.UniversityId)
+                .OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<University>()
+                .HasMany(u => u.Users)
+                .WithOne(u => u.University)
+                .HasForeignKey(u => u.UniversityId)
+                .OnDelete(DeleteBehavior.Cascade);
+
             // Department configuration
             modelBuilder.Entity<Department>()
                 .HasKey(d => d.DepartmentId);
             modelBuilder.Entity<Department>()
-                .HasMany(d => d.SubjectConfigs)
-                .WithOne(sc => sc.Department)
-                .HasForeignKey(sc => sc.DepartmentId)
+                .HasMany(d => d.Subjects)
+                .WithOne(s => s.Department)
+                .HasForeignKey(s => s.DepartmentId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             // User configuration
@@ -39,43 +64,61 @@ namespace API.Data
                 .HasIndex(u => u.Email)
                 .IsUnique();
             modelBuilder.Entity<User>()
-                .HasOne(u => u.Department)
-                .WithMany()
-                .HasForeignKey(u => u.DepartmentId)
-                .OnDelete(DeleteBehavior.SetNull);
+                .HasOne(u => u.University)
+                .WithMany(u => u.Users)
+                .HasForeignKey(u => u.UniversityId)
+                .OnDelete(DeleteBehavior.Cascade);
             modelBuilder.Entity<User>()
                 .HasMany(u => u.Expertise)
                 .WithOne(ee => ee.Examiner)
                 .HasForeignKey(ee => ee.ExaminerId)
                 .OnDelete(DeleteBehavior.Cascade);
             modelBuilder.Entity<User>()
-                .HasMany(u => u.AssignedScripts)
-                .WithOne(s => s.AssignedExaminer)
-                .HasForeignKey(s => s.AssignedExaminerId)
-                .OnDelete(DeleteBehavior.SetNull);
+                .HasMany(u => u.Allocations)
+                .WithOne(a => a.Examiner)
+                .HasForeignKey(a => a.ExaminerId)
+                .OnDelete(DeleteBehavior.Cascade);
             modelBuilder.Entity<User>()
                 .HasMany(u => u.Markings)
                 .WithOne(m => m.Examiner)
                 .HasForeignKey(m => m.ExaminerId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // SubjectConfig configuration
-            modelBuilder.Entity<SubjectConfig>()
-                .HasKey(sc => sc.Id);
-            modelBuilder.Entity<SubjectConfig>()
-                .HasMany(sc => sc.Papers)
-                .WithOne(p => p.SubjectConfig)
-                .HasForeignKey(p => p.SubjectConfigId)
+            // Session configuration
+            modelBuilder.Entity<Session>()
+                .HasKey(s => s.SessionId);
+            modelBuilder.Entity<Session>()
+                .HasMany(s => s.Projects)
+                .WithOne(p => p.Session)
+                .HasForeignKey(p => p.SessionId)
                 .OnDelete(DeleteBehavior.Cascade);
-            modelBuilder.Entity<SubjectConfig>()
-                .HasMany(sc => sc.Sections)
-                .WithOne(s => s.SubjectConfig)
-                .HasForeignKey(s => s.SubjectConfigId)
+
+            // Project configuration
+            modelBuilder.Entity<Project>()
+                .HasKey(p => p.ProjectId);
+            modelBuilder.Entity<Project>()
+                .HasMany(p => p.Papers)
+                .WithOne(p => p.Project)
+                .HasForeignKey(p => p.ProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Subject configuration
+            modelBuilder.Entity<Subject>()
+                .HasKey(s => s.SubjectId);
+            modelBuilder.Entity<Subject>()
+                .HasMany(s => s.Papers)
+                .WithOne(p => p.Subject)
+                .HasForeignKey(p => p.SubjectId)
+                .OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<Subject>()
+                .HasMany(s => s.ExaminerExpertises)
+                .WithOne(ee => ee.Subject)
+                .HasForeignKey(ee => ee.SubjectId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             // Paper configuration
             modelBuilder.Entity<Paper>()
-                .HasKey(p => p.Id);
+                .HasKey(p => p.PaperId);
             modelBuilder.Entity<Paper>()
                 .HasIndex(p => p.PaperCode)
                 .IsUnique();
@@ -84,23 +127,11 @@ namespace API.Data
                 .WithOne(s => s.Paper)
                 .HasForeignKey(s => s.PaperId)
                 .OnDelete(DeleteBehavior.Cascade);
-
-            // ExaminerExpertise configuration
-            modelBuilder.Entity<ExaminerExpertise>()
-                .HasKey(ee => ee.Id);
-            modelBuilder.Entity<ExaminerExpertise>()
-                .HasOne(ee => ee.Examiner)
-                .WithMany(u => u.Expertise)
-                .HasForeignKey(ee => ee.ExaminerId)
+            modelBuilder.Entity<Paper>()
+                .HasMany(p => p.Scripts)
+                .WithOne(s => s.Paper)
+                .HasForeignKey(s => s.PaperId)
                 .OnDelete(DeleteBehavior.Cascade);
-            modelBuilder.Entity<ExaminerExpertise>()
-                .HasOne(ee => ee.Department)
-                .WithMany()
-                .HasForeignKey(ee => ee.DepartmentId)
-                .OnDelete(DeleteBehavior.SetNull);
-            modelBuilder.Entity<ExaminerExpertise>()
-                .HasIndex(ee => new { ee.ExaminerId, ee.DepartmentId })
-                .IsUnique();
 
             // Section configuration
             modelBuilder.Entity<Section>()
@@ -113,7 +144,19 @@ namespace API.Data
 
             // Question configuration
             modelBuilder.Entity<Question>()
-                .HasKey(q => q.Id);
+                .HasKey(q => q.QuestionId);
+            modelBuilder.Entity<Question>()
+                .HasMany(q => q.QuestionMarks)
+                .WithOne(qm => qm.Question)
+                .HasForeignKey(qm => qm.QuestionId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // ExaminerExpertise configuration
+            modelBuilder.Entity<ExaminerExpertise>()
+                .HasKey(ee => ee.Id);
+            modelBuilder.Entity<ExaminerExpertise>()
+                .HasIndex(ee => new { ee.ExaminerId, ee.SubjectId })
+                .IsUnique();
 
             // Script configuration
             modelBuilder.Entity<Script>()
@@ -122,22 +165,36 @@ namespace API.Data
                 .HasIndex(s => s.ScriptId)
                 .IsUnique();
             modelBuilder.Entity<Script>()
-                .HasOne(s => s.Paper)
-                .WithMany()
-                .HasForeignKey(s => s.PaperId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .HasMany(s => s.Allocations)
+                .WithOne(a => a.Script)
+                .HasForeignKey(a => a.ScriptId)
+                .OnDelete(DeleteBehavior.Cascade);
             modelBuilder.Entity<Script>()
-                .HasOne(s => s.AssignedExaminer)
-                .WithMany(u => u.AssignedScripts)
-                .HasForeignKey(s => s.AssignedExaminerId)
-                .OnDelete(DeleteBehavior.SetNull);
+                .HasMany(s => s.Markings)
+                .WithOne(m => m.Script)
+                .HasForeignKey(m => m.ScriptId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Allocation configuration
+            modelBuilder.Entity<Allocation>()
+                .HasKey(a => a.AllocationId);
+            modelBuilder.Entity<Allocation>()
+                .HasOne(a => a.Script)
+                .WithMany(s => s.Allocations)
+                .HasForeignKey(a => a.ScriptId)
+                .OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<Allocation>()
+                .HasOne(a => a.Examiner)
+                .WithMany(u => u.Allocations)
+                .HasForeignKey(a => a.ExaminerId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             // Marking configuration
             modelBuilder.Entity<Marking>()
                 .HasKey(m => m.Id);
             modelBuilder.Entity<Marking>()
                 .HasOne(m => m.Script)
-                .WithMany()
+                .WithMany(s => s.Markings)
                 .HasForeignKey(m => m.ScriptId)
                 .OnDelete(DeleteBehavior.Cascade);
             modelBuilder.Entity<Marking>()
@@ -146,10 +203,19 @@ namespace API.Data
                 .HasForeignKey(m => m.ExaminerId)
                 .OnDelete(DeleteBehavior.Cascade);
             modelBuilder.Entity<Marking>()
-                .HasOne(m => m.Department)
+                .HasOne(m => m.Allocation)
                 .WithMany()
-                .HasForeignKey(m => m.DepartmentId)
-                .OnDelete(DeleteBehavior.SetNull);
+                .HasForeignKey(m => m.AllocationId)
+                .OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<Marking>()
+                .HasMany(m => m.QuestionMarks)
+                .WithOne(qm => qm.Marking)
+                .HasForeignKey(qm => qm.MarkingId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // QuestionMark configuration
+            modelBuilder.Entity<QuestionMark>()
+                .HasKey(qm => qm.Id);
         }
     }
 }

@@ -20,24 +20,29 @@ namespace API.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<PaperDto>>> GetPapers([FromQuery] int? subjectConfigId = null)
+        public async Task<ActionResult<IEnumerable<PaperDto>>> GetPapers([FromQuery] int? subjectId = null, [FromQuery] int? projectId = null)
         {
             try
             {
                 var query = _context.Papers.AsQueryable();
 
-                if (subjectConfigId.HasValue)
-                    query = query.Where(p => p.SubjectConfigId == subjectConfigId.Value);
+                if (subjectId.HasValue)
+                    query = query.Where(p => p.SubjectId == subjectId.Value);
+
+                if (projectId.HasValue)
+                    query = query.Where(p => p.ProjectId == projectId.Value);
 
                 var papers = await query
-                    .Include(p => p.SubjectConfig)
+                    .Include(p => p.Subject)
+                    .Include(p => p.Project)
                     .OrderBy(p => p.PaperNumber)
                     .ToListAsync();
 
                 var paperDtos = papers.Select(p => new PaperDto
                 {
-                    Id = p.Id,
-                    SubjectConfigId = p.SubjectConfigId,
+                    PaperId = p.PaperId,
+                    SubjectId = p.SubjectId,
+                    ProjectId = p.ProjectId,
                     PaperCode = p.PaperCode,
                     PaperName = p.PaperName,
                     PaperNumber = p.PaperNumber,
@@ -61,17 +66,19 @@ namespace API.Controllers
             try
             {
                 var paper = await _context.Papers
-                    .Include(p => p.SubjectConfig)
+                    .Include(p => p.Subject)
+                    .Include(p => p.Project)
                     .Include(p => p.Sections)
-                    .FirstOrDefaultAsync(p => p.Id == id);
+                    .FirstOrDefaultAsync(p => p.PaperId == id);
 
                 if (paper == null)
                     return NotFound(new { success = false, message = "Paper not found" });
 
                 var paperDto = new PaperDto
                 {
-                    Id = paper.Id,
-                    SubjectConfigId = paper.SubjectConfigId,
+                    PaperId = paper.PaperId,
+                    SubjectId = paper.SubjectId,
+                    ProjectId = paper.ProjectId,
                     PaperCode = paper.PaperCode,
                     PaperName = paper.PaperName,
                     PaperNumber = paper.PaperNumber,
@@ -96,9 +103,14 @@ namespace API.Controllers
             try
             {
                 // Validate subject exists
-                var subject = await _context.SubjectConfigs.FindAsync(paperDto.SubjectConfigId);
+                var subject = await _context.Subjects.FindAsync(paperDto.SubjectId);
                 if (subject == null)
                     return BadRequest(new { success = false, message = "Subject not found" });
+
+                // Validate project exists
+                var project = await _context.Projects.FindAsync(paperDto.ProjectId);
+                if (project == null)
+                    return BadRequest(new { success = false, message = "Project not found" });
 
                 // Check if paper code already exists
                 if (await _context.Papers.AnyAsync(p => p.PaperCode == paperDto.PaperCode))
@@ -106,20 +118,24 @@ namespace API.Controllers
 
                 var paper = new Paper
                 {
-                    SubjectConfigId = paperDto.SubjectConfigId,
+                    SubjectId = paperDto.SubjectId,
+                    ProjectId = paperDto.ProjectId,
                     PaperCode = paperDto.PaperCode,
                     PaperName = paperDto.PaperName,
                     PaperNumber = paperDto.PaperNumber,
                     MaxMarks = paperDto.MaxMarks,
                     TotalQuestions = paperDto.TotalQuestions,
                     Description = paperDto.Description,
-                    IsActive = true
+                    CatchNo = paperDto.CatchNo,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
                 };
 
                 _context.Papers.Add(paper);
                 await _context.SaveChangesAsync();
 
-                return CreatedAtAction(nameof(GetPaper), new { id = paper.Id }, paperDto);
+                return CreatedAtAction(nameof(GetPaper), new { id = paper.PaperId }, paperDto);
             }
             catch (Exception ex)
             {
@@ -133,7 +149,7 @@ namespace API.Controllers
         {
             try
             {
-                var paper = await _context.Papers.FindAsync(id);
+                var paper = await _context.Papers.FirstOrDefaultAsync(p => p.PaperId == id);
                 if (paper == null)
                     return NotFound(new { success = false, message = "Paper not found" });
 
@@ -141,6 +157,7 @@ namespace API.Controllers
                 paper.MaxMarks = paperDto.MaxMarks;
                 paper.TotalQuestions = paperDto.TotalQuestions;
                 paper.Description = paperDto.Description;
+                paper.CatchNo = paperDto.CatchNo;
                 paper.IsActive = paperDto.IsActive;
                 paper.UpdatedAt = DateTime.UtcNow;
 
@@ -161,7 +178,7 @@ namespace API.Controllers
         {
             try
             {
-                var paper = await _context.Papers.FindAsync(id);
+                var paper = await _context.Papers.FirstOrDefaultAsync(p => p.PaperId == id);
                 if (paper == null)
                     return NotFound(new { success = false, message = "Paper not found" });
 
@@ -175,5 +192,25 @@ namespace API.Controllers
                 return StatusCode(500, new { success = false, message = ex.Message });
             }
         }
+
+        [HttpGet("{id}/sections")]
+        public async Task<ActionResult<IEnumerable<Section>>> GetPaperSections(int id)
+        {
+            try
+            {
+                var sections = await _context.Sections
+                    .Where(s => s.PaperId == id)
+                    .Include(s => s.Questions)
+                    .OrderBy(s => s.Id)
+                    .ToListAsync();
+
+                return Ok(sections);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
     }
 }
+

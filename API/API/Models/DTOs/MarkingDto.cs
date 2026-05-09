@@ -5,9 +5,7 @@ namespace API.Models.DTOs
         public int Id { get; set; }
         public int ScriptId { get; set; }
         public int ExaminerId { get; set; }
-        public int? DepartmentId { get; set; }
-        public string MarksJson { get; set; }
-        public string SectionMarksJson { get; set; }
+        public int AllocationId { get; set; }
         public decimal TotalMarks { get; set; }
         public decimal MaxMarks { get; set; }
         public decimal Percentage { get; set; }
@@ -19,10 +17,8 @@ namespace API.Models.DTOs
 
     public class SubmitMarkingRequest
     {
-        public int ScriptId { get; set; }
+        public int AllocationId { get; set; }
         public int ExaminerId { get; set; }
-        public string MarksJson { get; set; }
-        public string SectionMarksJson { get; set; }
         public decimal TotalMarks { get; set; }
         public string Remarks { get; set; }
     }

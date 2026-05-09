@@ -24,5 +24,9 @@ namespace API.Models
         public DateTime? SubmittedAt { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        
+        // Navigation properties
+        public ICollection<Allocation> Allocations { get; set; } = new List<Allocation>();
+        public ICollection<Marking> Markings { get; set; } = new List<Marking>();
     }
 }

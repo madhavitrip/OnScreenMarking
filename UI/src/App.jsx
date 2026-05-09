@@ -8,13 +8,112 @@ import SubjectConfig from './pages/SubjectConfig';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import ProtectedRoute from './components/ProtectedRoute';
+import AdminDashboard from './pages/AdminDashboard';
+import UniversityManagement from './pages/UniversityManagement';
+import DepartmentManagement from './pages/DepartmentManagement';
+import SubjectManagement from './pages/SubjectManagement';
+import SessionProjectManagement from './pages/SessionProjectManagement';
+import PapersManagement from './pages/PapersManagement';
+import UsersManagement from './pages/UsersManagement';
 
 function App() {
+  // Set default admin token for testing (remove in production)
+  const setTestToken = () => {
+    if (!localStorage.getItem('token')) {
+      localStorage.setItem('token', 'test-token-for-development');
+      localStorage.setItem('userType', 'admin');
+      localStorage.setItem('userName', 'Admin User');
+    }
+  };
+
+  // Get user type from localStorage
+  const userType = localStorage.getItem('userType');
+  const userId = localStorage.getItem('userId');
+
   return (
     <Router>
       <Routes>
         {/* Public Routes */}
         <Route path="/login" element={<Login />} />
+        
+        {/* Admin Routes - Manage all universities */}
+        {userType === 'admin' && (
+          <Route element={<Layout />}>
+            <Route 
+              path="/admin/dashboard" 
+              element={<AdminDashboard />} 
+            />
+            <Route 
+              path="/admin/universities" 
+              element={<UniversityManagement />} 
+            />
+            <Route 
+              path="/admin/departments" 
+              element={<DepartmentManagement />} 
+            />
+            <Route 
+              path="/admin/subjects" 
+              element={<SubjectManagement />} 
+            />
+            <Route 
+              path="/admin/sessions" 
+              element={<SessionProjectManagement />} 
+            />
+            <Route 
+              path="/admin/projects" 
+              element={<SessionProjectManagement />} 
+            />
+            <Route 
+              path="/admin/papers" 
+              element={<PapersManagement />} 
+            />
+            <Route 
+              path="/admin/users" 
+              element={<UsersManagement />} 
+            />
+          </Route>
+        )}
+
+        {/* University Coordinator Routes - Manage their university */}
+        {userType === 'coordinator' && (
+          <Route element={<Layout />}>
+            <Route 
+              path="/" 
+              element={<DepartmentManagement />} 
+            />
+            <Route 
+              path="/departments" 
+              element={<DepartmentManagement />} 
+            />
+            <Route 
+              path="/subjects" 
+              element={<SubjectManagement />} 
+            />
+            <Route 
+              path="/sessions" 
+              element={<SessionProjectManagement />} 
+            />
+            <Route 
+              path="/projects" 
+              element={<SessionProjectManagement />} 
+            />
+            <Route 
+              path="/papers" 
+              element={<PapersManagement />} 
+            />
+          </Route>
+        )}
+
+        {/* Examiner Routes - View and mark scripts */}
+        {userType === 'examiner' && (
+          <Route element={<Layout />}>
+            <Route path="/" element={<Home />} />
+            <Route path="/scripts" element={<Scripts />} />
+            <Route path="/marking" element={<ExaminerMarking />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/settings" element={<Settings />} />
+          </Route>
+        )}
         
         {/* Protected Routes with Layout */}
         <Route element={<ProtectedRoute />}>
