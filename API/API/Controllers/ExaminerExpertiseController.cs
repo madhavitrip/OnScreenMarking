@@ -26,14 +26,14 @@ namespace API.Controllers
             {
                 var expertise = await _context.ExaminerExpertises
                     .Where(ee => ee.ExaminerId == examinerId && ee.IsActive)
-                    .Include(ee => ee.Department)
+                    .Include(ee => ee.Subject)
                     .ToListAsync();
 
                 var expertiseDtos = expertise.Select(e => new ExaminerExpertiseDto
                 {
                     Id = e.Id,
                     ExaminerId = e.ExaminerId,
-                    DepartmentId = e.DepartmentId,
+                    SubjectId = e.SubjectId,
                     IsActive = e.IsActive
                 }).ToList();
 
@@ -45,22 +45,22 @@ namespace API.Controllers
             }
         }
 
-        [HttpGet("department/{departmentId}")]
-        public async Task<ActionResult<IEnumerable<ExaminerExpertiseDto>>> GetDepartmentExaminers(int departmentId)
+        [HttpGet("subject/{subjectId}")]
+        public async Task<ActionResult<IEnumerable<ExaminerExpertiseDto>>> GetSubjectExaminers(int subjectId)
         {
             try
             {
                 var expertise = await _context.ExaminerExpertises
-                    .Where(ee => ee.DepartmentId == departmentId && ee.IsActive)
+                    .Where(ee => ee.SubjectId == subjectId && ee.IsActive)
                     .Include(ee => ee.Examiner)
-                    .Include(ee => ee.Department)
+                    .Include(ee => ee.Subject)
                     .ToListAsync();
 
                 var expertiseDtos = expertise.Select(e => new ExaminerExpertiseDto
                 {
                     Id = e.Id,
                     ExaminerId = e.ExaminerId,
-                    DepartmentId = e.DepartmentId,
+                    SubjectId = e.SubjectId,
                     IsActive = e.IsActive
                 }).ToList();
 
@@ -83,18 +83,15 @@ namespace API.Controllers
                 if (examiner == null)
                     return BadRequest(new { success = false, message = "Examiner not found" });
 
-                // Validate department exists if specified
-                if (expertiseDto.DepartmentId.HasValue)
-                {
-                    var department = await _context.Departments.FindAsync(expertiseDto.DepartmentId.Value);
-                    if (department == null)
-                        return BadRequest(new { success = false, message = "Department not found" });
-                }
+                // Validate subject exists
+                var subject = await _context.Subjects.FindAsync(expertiseDto.SubjectId);
+                if (subject == null)
+                    return BadRequest(new { success = false, message = "Subject not found" });
 
                 // Check if expertise already exists
                 var existingExpertise = await _context.ExaminerExpertises
                     .FirstOrDefaultAsync(ee => ee.ExaminerId == expertiseDto.ExaminerId &&
-                                              ee.DepartmentId == expertiseDto.DepartmentId);
+                                              ee.SubjectId == expertiseDto.SubjectId);
 
                 if (existingExpertise != null)
                 {
@@ -106,7 +103,7 @@ namespace API.Controllers
                     var expertise = new ExaminerExpertise
                     {
                         ExaminerId = expertiseDto.ExaminerId,
-                        DepartmentId = expertiseDto.DepartmentId,
+                        SubjectId = expertiseDto.SubjectId,
                         IsActive = true
                     };
 

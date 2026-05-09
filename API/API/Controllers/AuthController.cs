@@ -27,6 +27,19 @@ namespace API.Controllers
         {
             try
             {
+                // Validate required fields
+                if (string.IsNullOrWhiteSpace(request.Name) || 
+                    string.IsNullOrWhiteSpace(request.Email) || 
+                    string.IsNullOrWhiteSpace(request.Password) ||
+                    string.IsNullOrWhiteSpace(request.ProfileImage))
+                {
+                    return BadRequest(new AuthResponse
+                    {
+                        Success = false,
+                        Message = "Name, email, password, and profile image are required"
+                    });
+                }
+
                 // Check if user already exists
                 if (_context.Users.Any(u => u.Email == request.Email))
                 {
@@ -44,9 +57,11 @@ namespace API.Controllers
                     Email = request.Email,
                     PasswordHash = HashPassword(request.Password),
                     UserType = request.UserType,
-                    DepartmentId = request.DepartmentId,
+                    UniversityId = request.UniversityId,
                     Phone = request.Phone,
-                    Address = request.Address
+                    Address = request.Address,
+                    ProfileImage = request.ProfileImage,
+                    IsActive = true
                 };
 
                 _context.Users.Add(user);
@@ -64,7 +79,12 @@ namespace API.Controllers
                         Id = user.Id,
                         Name = user.Name,
                         Email = user.Email,
-                        UserType = user.UserType
+                        UserType = user.UserType,
+                        UniversityId = user.UniversityId,
+                        DepartmentId = user.DepartmentId,
+                        Phone = user.Phone,
+                        Address = user.Address,
+                        ProfileImage = user.ProfileImage
                     }
                 });
             }
@@ -106,7 +126,12 @@ namespace API.Controllers
                         Id = user.Id,
                         Name = user.Name,
                         Email = user.Email,
-                        UserType = user.UserType
+                        UserType = user.UserType,
+                        UniversityId = user.UniversityId,
+                        DepartmentId = user.DepartmentId,
+                        Phone = user.Phone,
+                        Address = user.Address,
+                        ProfileImage = user.ProfileImage
                     }
                 });
             }
@@ -122,14 +147,15 @@ namespace API.Controllers
 
         private string GenerateJwtToken(User user)
         {
-            var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:SecretKey"]));
+            var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]));
             var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
             var claims = new[]
             {
                 new System.Security.Claims.Claim("id", user.Id.ToString()),
                 new System.Security.Claims.Claim("email", user.Email),
-                new System.Security.Claims.Claim("userType", user.UserType)
+                new System.Security.Claims.Claim("userType", user.UserType),
+                new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Role, user.UserType)
             };
 
             var token = new JwtSecurityToken(

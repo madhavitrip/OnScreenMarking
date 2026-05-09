@@ -8,7 +8,7 @@ namespace API.Models
     public class Allocation
 {
     [Key]
-    public int Id { get; set; }
+    public int AllocationId { get; set; }
 
     public int ScriptId { get; set; }
     public Script Script { get; set; }

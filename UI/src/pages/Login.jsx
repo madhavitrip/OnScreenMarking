@@ -1,19 +1,62 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Lock, Mail, BookOpen } from 'lucide-react';
+import { Lock, Mail, BookOpen, AlertCircle, Loader } from 'lucide-react';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [userType, setUserType] = useState('examiner');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    localStorage.setItem('token', 'mock-token');
-    localStorage.setItem('userType', userType);
-    localStorage.setItem('userName', email.split('@')[0]);
-    navigate('/');
+    setError('');
+    setLoading(true);
+
+    try {
+      const response = await fetch('https://localhost:7243/api/Auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email,
+          password: password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.message || 'Login failed. Please try again.');
+        setLoading(false);
+        return;
+      }
+
+      // Store token and user info
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('userType', data.user.userType);
+      localStorage.setItem('userName', data.user.name);
+      localStorage.setItem('userId', data.user.id);
+      localStorage.setItem('userEmail', data.user.email);
+      localStorage.setItem('profileImage', data.user.profileImage || '');
+
+      // Route based on userType
+      if (data.user.userType === 'admin') {
+        navigate('/admin/dashboard');
+      } else if (data.user.userType === 'coordinator') {
+        navigate('/');
+      } else {
+        // examiner or other types
+        navigate('/');
+      }
+    } catch (err) {
+      setError('Connection error. Please check if the API is running.');
+      console.error('Login error:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -28,33 +71,12 @@ const Login = () => {
         </div>
 
         <form onSubmit={handleLogin} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">User Type</label>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setUserType('examiner')}
-                className={`py-2 px-4 rounded-lg font-medium transition-all ${
-                  userType === 'examiner'
-                    ? 'bg-blue-600 text-white shadow-lg'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                Examiner
-              </button>
-              <button
-                type="button"
-                onClick={() => setUserType('coordinator')}
-                className={`py-2 px-4 rounded-lg font-medium transition-all ${
-                  userType === 'coordinator'
-                    ? 'bg-blue-600 text-white shadow-lg'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                Coordinator
-              </button>
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
+              <AlertCircle className="text-red-600 flex-shrink-0 mt-0.5" size={20} />
+              <p className="text-red-700 text-sm">{error}</p>
             </div>
-          </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
@@ -67,6 +89,7 @@ const Login = () => {
                 placeholder="examiner@cbse.gov.in"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                disabled={loading}
               />
             </div>
           </div>
@@ -82,15 +105,24 @@ const Login = () => {
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
               />
             </div>
           </div>
 
           <button
             type="submit"
-            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-2 rounded-lg transition-all duration-200 shadow-lg"
+            disabled={loading}
+            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-400 disabled:to-gray-500 text-white font-semibold py-2 rounded-lg transition-all duration-200 shadow-lg flex items-center justify-center gap-2"
           >
-            Sign In
+            {loading ? (
+              <>
+                <Loader className="animate-spin" size={20} />
+                Signing In...
+              </>
+            ) : (
+              'Sign In'
+            )}
           </button>
         </form>
 

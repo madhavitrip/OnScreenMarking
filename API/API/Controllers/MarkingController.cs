@@ -25,39 +25,34 @@ namespace API.Controllers
         {
             try
             {
-                // Verify script exists and examiner is assigned
-                var script = await _context.Scripts
-                    .Include(s => s.Paper)
-                    .FirstOrDefaultAsync(s => s.Id == request.ScriptId);
+                // Verify allocation exists
+                var allocation = await _context.Allocations
+                    .Include(a => a.Script)
+                    .FirstOrDefaultAsync(a => a.AllocationId == request.AllocationId);
 
-                if (script == null)
-                    return BadRequest(new { success = false, message = "Script not found" });
+                if (allocation == null)
+                    return BadRequest(new { success = false, message = "Allocation not found" });
 
-                if (script.AssignedExaminerId != request.ExaminerId)
-                    return BadRequest(new { success = false, message = "Script not assigned to this examiner" });
+                if (allocation.ExaminerId != request.ExaminerId)
+                    return BadRequest(new { success = false, message = "Allocation not assigned to this examiner" });
 
                 var existingMarking = await _context.Markings
-                    .FirstOrDefaultAsync(m => m.ScriptId == request.ScriptId && m.ExaminerId == request.ExaminerId);
+                    .FirstOrDefaultAsync(m => m.AllocationId == request.AllocationId);
 
                 if (existingMarking != null)
-                    return BadRequest(new { success = false, message = "Marking already exists for this script" });
-
-                // Get examiner's department
-                var examiner = await _context.Users.FindAsync(request.ExaminerId);
-                var departmentId = examiner?.DepartmentId;
+                    return BadRequest(new { success = false, message = "Marking already exists for this allocation" });
 
                 var marking = new Marking
                 {
-                    ScriptId = request.ScriptId,
+                    ScriptId = allocation.ScriptId,
                     ExaminerId = request.ExaminerId,
-                    DepartmentId = departmentId,
-                    MarksJson = request.MarksJson,
-                    SectionMarksJson = request.SectionMarksJson,
+                    AllocationId = request.AllocationId,
                     TotalMarks = request.TotalMarks,
-                    MaxMarks = script.MaxMarks,
-                    Percentage = (request.TotalMarks / script.MaxMarks) * 100,
+                    MaxMarks = allocation.Script.MaxMarks,
+                    Percentage = (request.TotalMarks / allocation.Script.MaxMarks) * 100,
                     Remarks = request.Remarks,
-                    Status = "draft"
+                    Status = "draft",
+                    StartedAt = DateTime.UtcNow
                 };
 
                 _context.Markings.Add(marking);
@@ -68,9 +63,7 @@ namespace API.Controllers
                     Id = marking.Id,
                     ScriptId = marking.ScriptId,
                     ExaminerId = marking.ExaminerId,
-                    DepartmentId = marking.DepartmentId,
-                    MarksJson = marking.MarksJson,
-                    SectionMarksJson = marking.SectionMarksJson,
+                    AllocationId = marking.AllocationId,
                     TotalMarks = marking.TotalMarks,
                     MaxMarks = marking.MaxMarks,
                     Percentage = marking.Percentage,
@@ -95,7 +88,7 @@ namespace API.Controllers
                 var marking = await _context.Markings
                     .Include(m => m.Script)
                     .Include(m => m.Examiner)
-                    .Include(m => m.Department)
+                    .Include(m => m.Allocation)
                     .FirstOrDefaultAsync(m => m.Id == id);
 
                 if (marking == null)
@@ -106,9 +99,7 @@ namespace API.Controllers
                     Id = marking.Id,
                     ScriptId = marking.ScriptId,
                     ExaminerId = marking.ExaminerId,
-                    DepartmentId = marking.DepartmentId,
-                    MarksJson = marking.MarksJson,
-                    SectionMarksJson = marking.SectionMarksJson,
+                    AllocationId = marking.AllocationId,
                     TotalMarks = marking.TotalMarks,
                     MaxMarks = marking.MaxMarks,
                     Percentage = marking.Percentage,
@@ -142,8 +133,6 @@ namespace API.Controllers
                 if (existingMarking.Status == "submitted")
                     return BadRequest(new { success = false, message = "Cannot update submitted marking" });
 
-                existingMarking.MarksJson = request.MarksJson;
-                existingMarking.SectionMarksJson = request.SectionMarksJson;
                 existingMarking.TotalMarks = request.TotalMarks;
                 existingMarking.Percentage = (request.TotalMarks / existingMarking.MaxMarks) * 100;
                 existingMarking.Remarks = request.Remarks;
@@ -222,7 +211,7 @@ namespace API.Controllers
                 var markings = await query
                     .Include(m => m.Script)
                     .Include(m => m.Examiner)
-                    .Include(m => m.Department)
+                    .Include(m => m.Allocation)
                     .Skip((page - 1) * limit)
                     .Take(limit)
                     .OrderByDescending(m => m.CreatedAt)
@@ -233,9 +222,7 @@ namespace API.Controllers
                     Id = m.Id,
                     ScriptId = m.ScriptId,
                     ExaminerId = m.ExaminerId,
-                    DepartmentId = m.DepartmentId,
-                    MarksJson = m.MarksJson,
-                    SectionMarksJson = m.SectionMarksJson,
+                    AllocationId = m.AllocationId,
                     TotalMarks = m.TotalMarks,
                     MaxMarks = m.MaxMarks,
                     Percentage = m.Percentage,
@@ -263,7 +250,7 @@ namespace API.Controllers
                 var marking = await _context.Markings
                     .Include(m => m.Script)
                     .Include(m => m.Examiner)
-                    .Include(m => m.Department)
+                    .Include(m => m.Allocation)
                     .FirstOrDefaultAsync(m => m.ScriptId == scriptId);
 
                 if (marking == null)
@@ -274,9 +261,7 @@ namespace API.Controllers
                     Id = marking.Id,
                     ScriptId = marking.ScriptId,
                     ExaminerId = marking.ExaminerId,
-                    DepartmentId = marking.DepartmentId,
-                    MarksJson = marking.MarksJson,
-                    SectionMarksJson = marking.SectionMarksJson,
+                    AllocationId = marking.AllocationId,
                     TotalMarks = marking.TotalMarks,
                     MaxMarks = marking.MaxMarks,
                     Percentage = marking.Percentage,

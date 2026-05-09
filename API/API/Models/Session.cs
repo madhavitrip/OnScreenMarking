@@ -7,7 +7,12 @@ namespace API.Models
 {
     public class Session 
     {
-        public int Session {get;set;}
-        public string Session {get;set;}
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int SessionId { get; set; }
+        public string SessionName { get; set; }
+        public bool IsActive { get; set; } = true;
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public ICollection<Project> Projects { get; set; } = new List<Project>();
     }
 }

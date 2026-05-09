@@ -11,8 +11,13 @@ namespace API.Models
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int UniversityId { get; set; }
         public string UniversityName { get; set; }
-        public bool IsActive { get; set; }
-        public ICollection<Department> Departments { get; set; }
-public ICollection<Project> Projects { get; set; }
+        public bool IsActive { get; set; } = true;
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        
+        // Navigation properties
+        public ICollection<Department> Departments { get; set; } = new List<Department>();
+        public ICollection<Project> Projects { get; set; } = new List<Project>();
+        public ICollection<User> Users { get; set; } = new List<User>();
     }
 }
