@@ -1,246 +1,280 @@
-import { useState, useEffect } from 'react';
-import { ChevronDown, ChevronUp, Edit2, Save, Plus } from 'lucide-react';
+import { 
+  ChevronDown, 
+  ChevronUp, 
+  Plus, 
+  ArrowLeft, 
+  BookOpen, 
+  FileText, 
+  Layers, 
+  CheckCircle2, 
+  AlertCircle, 
+  Clock, 
+  Award,
+  Hash,
+  ListTodo,
+  Trash2,
+  ChevronRight,
+  ChevronLeft,
+  Filter,
+  Users
+} from 'lucide-react';
+import { subjectService, sectionService, paperService } from '../services';
+import { useEffect, useState } from 'react';
+import apiCall from '../services/api';
 
-const SubjectConfig = () => {
+export default function SubjectConfig() {
+  const [universities, setUniversities] = useState([]);
   const [subjects, setSubjects] = useState([]);
-  const [selectedSubject, setSelectedSubject] = useState(null);
   const [papers, setPapers] = useState([]);
+  const [sections, setSections] = useState([]);
+  
+  const [selectedUniversity, setSelectedUniversity] = useState('');
+  const [selectedSubject, setSelectedSubject] = useState(null);
   const [selectedPaper, setSelectedPaper] = useState(null);
-  const [config, setConfig] = useState(null);
-  const [expandedSections, setExpandedSections] = useState({});
+  const [currentStep, setCurrentStep] = useState(1);
+  
   const [showSectionForm, setShowSectionForm] = useState(false);
-  const [sectionFormData, setSectionFormData] = useState({
+  const [sectionForm, setSectionForm] = useState({
     name: '',
     description: '',
     startQuestion: 1,
-    endQuestion: 1,
-    totalQuestions: 1,
-    totalMarks: 0
+    endQuestion: 10,
+    totalMarks: 10,
+    maxQuestionsToAttempt: 10,
   });
-  const [previewQuestions, setPreviewQuestions] = useState([]);
-  const [editingQuestions, setEditingQuestions] = useState({});
-  const [showPreview, setShowPreview] = useState(false);
+  
+  const [questions, setQuestions] = useState([]);
+  const [showQuestionPreview, setShowQuestionPreview] = useState(false);
+  const [editingSectionId, setEditingSectionId] = useState(null);
+  const [expandedSections, setExpandedSections] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
-  const API_URL = 'https://localhost:7243/api';
+  const [userProfile, setUserProfile] = useState(null);
+  const userType = localStorage.getItem('userType');
 
   useEffect(() => {
-    fetchSubjects();
+    fetchProfile();
+    fetchUniversities();
   }, []);
+
+  const fetchProfile = async () => {
+    try {
+      // Fetch current user details using token
+      const response = await apiCall('/Auth/profile');
+      setUserProfile(response);
+      
+      if (response.universityId) {
+        setSelectedUniversity(response.universityId.toString());
+      }
+    } catch (err) {
+      console.error('Failed to fetch user profile:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedUniversity) {
+      fetchSubjects();
+    }
+  }, [selectedUniversity]);
+
+  useEffect(() => {
+    if (selectedPaper) {
+      fetchSections();
+      setCurrentStep(3);
+    } else if (selectedSubject) {
+      fetchPapers();
+      setCurrentStep(2);
+    } else {
+      setCurrentStep(1);
+    }
+  }, [selectedSubject, selectedPaper]);
+
+  const fetchUniversities = async () => {
+    try {
+      setLoading(true);
+      const data = await subjectService.getAllUniversities();
+      setUniversities(data);
+      
+      const storedUniId = userProfile?.universityId || localStorage.getItem('universityId');
+      if (storedUniId) {
+        setSelectedUniversity(storedUniId.toString());
+      }
+    } catch (err) {
+      setError('Failed to fetch universities');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchSubjects = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/subject`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
-      setSubjects(data);
+      const subjectsData = await subjectService.getAllSubjects();
+      
+      // Fetch paper counts for each subject in parallel
+      const subjectsWithCounts = await Promise.all(
+        subjectsData.map(async (subject) => {
+          try {
+            const papers = await subjectService.getSubjectPapers(subject.subjectId);
+            return { ...subject, paperCount: papers.length };
+          } catch (e) {
+            return { ...subject, paperCount: 0 };
+          }
+        })
+      );
+      
+      setSubjects(subjectsWithCounts);
     } catch (err) {
       setError('Failed to fetch subjects');
+      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSubjectClick = async (subject) => {
-    setSelectedSubject(subject);
-    setSelectedPaper(null);
-    setConfig(null);
-    
+  const fetchPapers = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/subject/${subject.subjectId}/papers`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
-      setPapers(data);
+      const data = await paperService.getAllPapers();
+      const filtered = data.filter(p => p.subjectId === selectedSubject.subjectId);
+      setPapers(filtered);
     } catch (err) {
       setError('Failed to fetch papers');
+      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handlePaperClick = async (paper) => {
-    setSelectedPaper(paper);
-    setShowSectionForm(false);
-    
+  const fetchSections = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/section?paperId=${paper.paperId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const sections = await response.json();
-      
-      // Build config object similar to original
-      setConfig({
-        name: paper.paperName,
-        totalMarks: paper.maxMarks,
-        sections: sections
-      });
+      const data = await sectionService.getAllSections(selectedPaper.paperId);
+      setSections(data);
     } catch (err) {
       setError('Failed to fetch sections');
+      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAddSection = async (e) => {
-    e.preventDefault();
-    if (!selectedPaper) {
-      setError('Please select a paper first');
-      return;
-    }
+  const handleSectionFormChange = (e) => {
+    const { name, value } = e.target;
+    setSectionForm(prev => ({
+      ...prev,
+      [name]: name === 'startQuestion' || name === 'endQuestion' || name === 'totalMarks' || name === 'maxQuestionsToAttempt'
+        ? parseInt(value) || 0
+        : value
+    }));
+  };
 
-    // Validate all questions have type set
-    const invalidQuestions = previewQuestions.filter(q => !q.type || q.type === '');
-    if (invalidQuestions.length > 0) {
-      setError('All questions must have a type selected');
+  const generateQuestions = () => {
+    const { startQuestion, endQuestion, totalMarks } = sectionForm;
+    const totalQuestions = endQuestion - startQuestion + 1;
+    const marksPerQuestion = totalMarks / totalQuestions;
+
+    const generatedQuestions = [];
+    for (let i = startQuestion; i <= endQuestion; i++) {
+      generatedQuestions.push({
+        questionNo: i,
+        marks: parseFloat(marksPerQuestion.toFixed(2)),
+        type: '',
+        isOptional: false,
+        optionalGroupCode: '',
+      });
+    }
+    setQuestions(generatedQuestions);
+    setShowQuestionPreview(true);
+  };
+
+  const handleQuestionChange = (index, field, value) => {
+    const updatedQuestions = [...questions];
+    updatedQuestions[index] = {
+      ...updatedQuestions[index],
+      [field]: field === 'marks' ? parseFloat(value) || 0 : value
+    };
+    setQuestions(updatedQuestions);
+  };
+
+  const handleEditSection = (section) => {
+    setSectionForm({
+      name: section.name,
+      description: section.description,
+      startQuestion: section.startQuestion,
+      endQuestion: section.endQuestion,
+      totalMarks: section.totalMarks,
+      maxQuestionsToAttempt: section.maxQuestionsToAttempt,
+    });
+    setQuestions(section.questions || []);
+    setEditingSectionId(section.id);
+    setShowSectionForm(true);
+    setShowQuestionPreview(true);
+  };
+
+  const handleSaveSection = async () => {
+    if (questions.some(q => !q.type)) {
+      setError('Please select a type for all questions');
       return;
     }
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/section`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          paperId: selectedPaper.paperId,
-          name: sectionFormData.name,
-          description: sectionFormData.description,
-          startQuestion: sectionFormData.startQuestion,
-          endQuestion: sectionFormData.endQuestion,
-          totalQuestions: sectionFormData.totalQuestions,
-          totalMarks: sectionFormData.totalMarks,
-          questions: previewQuestions // Send all question details
-        })
-      });
+      setLoading(true);
+      const sectionData = {
+        ...sectionForm,
+        paperId: selectedPaper.paperId,
+        questions: questions.map(q => ({
+          ...q,
+          marks: parseFloat(q.marks)
+        }))
+      };
 
-      if (response.ok) {
-        setSectionFormData({ name: '', description: '', startQuestion: 1, endQuestion: 1, totalQuestions: 1, totalMarks: 0 });
-        setPreviewQuestions([]);
-        setEditingQuestions({});
-        setShowPreview(false);
-        setShowSectionForm(false);
-        // Refresh sections
-        handlePaperClick(selectedPaper);
+      if (editingSectionId) {
+        await sectionService.updateSection(editingSectionId, sectionData);
+        setSuccess('Section updated successfully');
       } else {
-        const errorData = await response.json();
-        setError(errorData.message || 'Failed to add section');
+        await sectionService.createSection(sectionData);
+        setSuccess('Section created successfully');
       }
+
+      setShowSectionForm(false);
+      setShowQuestionPreview(false);
+      setEditingSectionId(null);
+      setSectionForm({
+        name: '',
+        description: '',
+        startQuestion: 1,
+        endQuestion: 10,
+        totalMarks: 10,
+        maxQuestionsToAttempt: 10,
+      });
+      setQuestions([]);
+      fetchSections();
     } catch (err) {
-      setError('Error adding section');
+      setError('Failed to save section');
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleGeneratePreview = () => {
-    if (!sectionFormData.name) {
-      setError('Section name is required');
-      return;
+  const handleDeleteSection = async (sectionId) => {
+    if (window.confirm('Are you sure you want to delete this section?')) {
+      try {
+        setLoading(true);
+        await sectionService.deleteSection(sectionId);
+        setSuccess('Section deleted successfully!');
+        await fetchSections();
+      } catch (err) {
+        setError('Failed to delete section');
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
     }
-    if (sectionFormData.totalMarks <= 0) {
-      setError('Total marks must be greater than 0');
-      return;
-    }
-    if (sectionFormData.startQuestion > sectionFormData.endQuestion) {
-      setError('Start question must be less than or equal to end question');
-      return;
-    }
-
-    // Generate questions with default values
-    const marksPerQuestion = sectionFormData.totalMarks / sectionFormData.totalQuestions;
-    const questions = [];
-    for (let i = sectionFormData.startQuestion; i <= sectionFormData.endQuestion; i++) {
-      questions.push({
-        questionNo: i,
-        marks: marksPerQuestion,
-        type: 'MCQ', // default type
-        isOptional: false,
-        optionalGroupCode: ''
-      });
-    }
-    setPreviewQuestions(questions);
-    setShowPreview(true);
-    setError('');
-  };
-
-  const handleQuestionRangeChange = (startQ, endQ) => {
-    const totalQ = endQ - startQ + 1;
-    setSectionFormData(prev => ({
-      ...prev,
-      startQuestion: startQ,
-      endQuestion: endQ,
-      totalQuestions: totalQ
-    }));
-
-    // Generate preview questions
-    const marksPerQuestion = prev.totalMarks > 0 ? prev.totalMarks / totalQ : 0;
-    const questions = [];
-    for (let i = startQ; i <= endQ; i++) {
-      questions.push({
-        questionNo: i,
-        marks: marksPerQuestion
-      });
-    }
-    setPreviewQuestions(questions);
-  };
-
-  const handleTotalMarksChange = (marks) => {
-    setSectionFormData(prev => ({
-      ...prev,
-      totalMarks: marks
-    }));
-
-    // Recalculate marks per question
-    if (sectionFormData.totalQuestions > 0) {
-      const marksPerQuestion = marks / sectionFormData.totalQuestions;
-      const updatedQuestions = previewQuestions.map(q => ({
-        ...q,
-        marks: marksPerQuestion
-      }));
-      setPreviewQuestions(updatedQuestions);
-    }
-  };
-
-  const handleQuestionMarksChange = (questionNo, marks) => {
-    setEditingQuestions(prev => ({
-      ...prev,
-      [questionNo]: marks
-    }));
-
-    const updatedQuestions = previewQuestions.map(q =>
-      q.questionNo === questionNo ? { ...q, marks } : q
-    );
-    setPreviewQuestions(updatedQuestions);
-  };
-
-  const handleQuestionTypeChange = (questionNo, type) => {
-    const updatedQuestions = previewQuestions.map(q =>
-      q.questionNo === questionNo ? { ...q, type } : q
-    );
-    setPreviewQuestions(updatedQuestions);
-  };
-
-  const handleQuestionOptionalChange = (questionNo, isOptional) => {
-    const updatedQuestions = previewQuestions.map(q =>
-      q.questionNo === questionNo ? { ...q, isOptional } : q
-    );
-    setPreviewQuestions(updatedQuestions);
-  };
-
-  const handleQuestionGroupCodeChange = (questionNo, code) => {
-    const updatedQuestions = previewQuestions.map(q =>
-      q.questionNo === questionNo ? { ...q, optionalGroupCode: code } : q
-    );
-    setPreviewQuestions(updatedQuestions);
   };
 
   const toggleSection = (sectionId) => {
@@ -248,22 +282,6 @@ const SubjectConfig = () => {
       ...prev,
       [sectionId]: !prev[sectionId],
     }));
-  };
-
-  const getQuestionTypeLabel = (type) => {
-    const labels = {
-      MCQ: 'Multiple Choice',
-      SA: 'Short Answer',
-      LA: 'Long Answer',
-      CS: 'Case Study',
-      NP: 'Numerical Problem',
-      EXP: 'Experimental',
-      RC: 'Reading Comprehension',
-      WS: 'Writing Skills',
-      LIT: 'Literature',
-      GV: 'Grammar & Vocabulary',
-    };
-    return labels[type] || type;
   };
 
   const getQuestionTypeColor = (type) => {
@@ -282,460 +300,577 @@ const SubjectConfig = () => {
     return colors[type] || 'bg-gray-100 text-gray-800 border-gray-300';
   };
 
-  return (
-    <div className="space-y-6">
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-          {error}
-        </div>
-      )}
+  const calculateTotalSectionMarks = () => {
+    return sections.reduce((total, section) => total + section.totalMarks, 0);
+  };
 
-      {/* Header */}
+  const isAddSectionDisabled = () => {
+    if (!selectedPaper) return true;
+    const totalSectionMarks = calculateTotalSectionMarks();
+    return totalSectionMarks >= selectedPaper.maxMarks;
+  };
+
+  // Helper component for Stat Cards
+  const StatCard = ({ label, value, icon: Icon, colorClass }) => (
+    <div className="bg-white border border-gray-200 rounded-2xl p-5 flex items-center gap-4 shadow-sm hover:shadow-md transition-all hover:border-blue-300">
+      <div className={`p-3 rounded-xl ${colorClass}`}>
+        <Icon className="w-6 h-6" />
+      </div>
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Subject Configuration</h1>
-        <p className="text-gray-600 mt-1">View and manage exam structure, sections, and question details</p>
-      </div>
-
-      {/* Subject Selector */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-bold text-gray-900 mb-4">Select Subject</h2>
-        {loading && subjects.length === 0 ? (
-          <div className="text-gray-600">Loading subjects...</div>
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-            {subjects.map((subject) => (
-              <button
-                key={subject.subjectId}
-                onClick={() => handleSubjectClick(subject)}
-                className={`p-4 rounded-lg font-medium transition-all ${
-                  selectedSubject?.subjectId === subject.subjectId
-                    ? 'bg-blue-600 text-white shadow-lg'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                <p className="text-sm">{subject.subjectName}</p>
-                <p className="text-xs mt-1 opacity-75">{subject.department?.name}</p>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Papers Selector */}
-      {selectedSubject && papers.length > 0 && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-bold text-gray-900 mb-4">Select Paper</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-            {papers.map((paper) => (
-              <button
-                key={paper.paperId}
-                onClick={() => handlePaperClick(paper)}
-                className={`p-4 rounded-lg font-medium transition-all ${
-                  selectedPaper?.paperId === paper.paperId
-                    ? 'bg-green-600 text-white shadow-lg'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                <p className="text-sm">{paper.paperName}</p>
-                <p className="text-xs mt-1 opacity-75">{paper.paperCode}</p>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Subject Overview */}
-      {config && (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg shadow p-6 border border-blue-200">
-              <p className="text-blue-600 text-sm font-medium">Paper Name</p>
-              <p className="text-2xl font-bold text-gray-900 mt-2">{config.name}</p>
-            </div>
-            <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg shadow p-6 border border-green-200">
-              <p className="text-green-600 text-sm font-medium">Total Marks</p>
-              <p className="text-2xl font-bold text-gray-900 mt-2">{config.totalMarks}</p>
-            </div>
-            <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg shadow p-6 border border-purple-200">
-              <p className="text-purple-600 text-sm font-medium">Total Sections</p>
-              <p className="text-2xl font-bold text-gray-900 mt-2">{config.sections.length}</p>
-            </div>
-          </div>
-
-          {/* Add Section Button */}
-          <div className="flex justify-end">
-            <button
-              onClick={() => setShowSectionForm(!showSectionForm)}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold flex items-center gap-2 transition"
-            >
-              <Plus size={20} />
-              {showSectionForm ? 'Cancel' : 'Add Section'}
-            </button>
-          </div>
-
-          {/* Add Section Form */}
-          {showSectionForm && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-bold text-gray-900 mb-4">Add New Section</h2>
-              
-              {!showPreview ? (
-                // Step 1: Configuration
-                <form onSubmit={(e) => { e.preventDefault(); handleGeneratePreview(); }} className="space-y-6">
-                  {/* Basic Info */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-gray-700 font-semibold mb-2">Section Name *</label>
-                      <input
-                        type="text"
-                        value={sectionFormData.name}
-                        onChange={(e) => setSectionFormData({ ...sectionFormData, name: e.target.value })}
-                        className="w-full border border-gray-300 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="e.g., Section A"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-gray-700 font-semibold mb-2">Description</label>
-                      <input
-                        type="text"
-                        value={sectionFormData.description}
-                        onChange={(e) => setSectionFormData({ ...sectionFormData, description: e.target.value })}
-                        className="w-full border border-gray-300 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Optional description"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Question Range */}
-                  <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                    <h3 className="font-semibold text-gray-900 mb-4">Question Range</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <label className="block text-gray-700 font-semibold mb-2">Start Question *</label>
-                        <input
-                          type="number"
-                          value={sectionFormData.startQuestion}
-                          onChange={(e) => handleQuestionRangeChange(parseInt(e.target.value), sectionFormData.endQuestion)}
-                          className="w-full border border-gray-300 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          placeholder="e.g., 1"
-                          min="1"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-gray-700 font-semibold mb-2">End Question *</label>
-                        <input
-                          type="number"
-                          value={sectionFormData.endQuestion}
-                          onChange={(e) => handleQuestionRangeChange(sectionFormData.startQuestion, parseInt(e.target.value))}
-                          className="w-full border border-gray-300 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          placeholder="e.g., 10"
-                          min="1"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-gray-700 font-semibold mb-2">Total Questions</label>
-                        <input
-                          type="number"
-                          value={sectionFormData.totalQuestions}
-                          disabled
-                          className="w-full border border-gray-300 px-4 py-2 rounded-lg bg-gray-100 text-gray-600"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Marks Configuration */}
-                  <div className="bg-green-50 rounded-lg p-4 border border-green-200">
-                    <h3 className="font-semibold text-gray-900 mb-4">Marks Configuration</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                      <div>
-                        <label className="block text-gray-700 font-semibold mb-2">Total Marks *</label>
-                        <input
-                          type="number"
-                          value={sectionFormData.totalMarks}
-                          onChange={(e) => handleTotalMarksChange(parseInt(e.target.value))}
-                          className="w-full border border-gray-300 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                          placeholder="e.g., 10"
-                          min="0"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-gray-700 font-semibold mb-2">Marks Per Question</label>
-                        <input
-                          type="number"
-                          value={sectionFormData.totalQuestions > 0 ? (sectionFormData.totalMarks / sectionFormData.totalQuestions).toFixed(2) : 0}
-                          disabled
-                          className="w-full border border-gray-300 px-4 py-2 rounded-lg bg-gray-100 text-gray-600"
-                        />
-                      </div>
-                    </div>
-                    <p className="text-sm text-gray-600">Questions will be auto-created with marks distributed equally. You can customize each question in the next step.</p>
-                  </div>
-
-                  {/* Submit Button */}
-                  <div className="flex gap-4">
-                    <button
-                      type="submit"
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition"
-                    >
-                      Preview Questions
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowSectionForm(false);
-                        setSectionFormData({ name: '', description: '', startQuestion: 1, endQuestion: 1, totalQuestions: 1, totalMarks: 0 });
-                        setPreviewQuestions([]);
-                        setEditingQuestions({});
-                      }}
-                      className="bg-gray-400 hover:bg-gray-500 text-white px-6 py-2 rounded-lg font-semibold transition"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </form>
-              ) : (
-                // Step 2: Preview & Verification
-                <form onSubmit={handleAddSection} className="space-y-6">
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <h3 className="font-semibold text-gray-900 mb-2">Step 2: Verify & Customize Questions</h3>
-                    <p className="text-sm text-gray-600">Review the questions below. Set the question type and optional details for each question. All fields are required.</p>
-                  </div>
-
-                  {/* Questions Table */}
-                  <div className="overflow-x-auto border border-gray-300 rounded-lg">
-                    <table className="w-full">
-                      <thead className="bg-gray-200">
-                        <tr>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Q No</th>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Marks</th>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Type *</th>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Optional</th>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Group Code</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200">
-                        {previewQuestions.map((q) => (
-                          <tr key={q.questionNo} className="hover:bg-gray-50">
-                            <td className="px-4 py-3 text-gray-900 font-medium">Q{q.questionNo}</td>
-                            <td className="px-4 py-3">
-                              <input
-                                type="number"
-                                value={editingQuestions[q.questionNo] !== undefined ? editingQuestions[q.questionNo] : q.marks}
-                                onChange={(e) => handleQuestionMarksChange(q.questionNo, parseFloat(e.target.value))}
-                                className="w-20 border border-gray-300 px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                step="0.1"
-                                min="0"
-                              />
-                            </td>
-                            <td className="px-4 py-3">
-                              <select
-                                value={q.type}
-                                onChange={(e) => handleQuestionTypeChange(q.questionNo, e.target.value)}
-                                className="w-full border border-gray-300 px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                required
-                              >
-                                <option value="">Select Type</option>
-                                <option value="MCQ">MCQ</option>
-                                <option value="SA">Short Answer</option>
-                                <option value="LA">Long Answer</option>
-                                <option value="CS">Case Study</option>
-                                <option value="NP">Numerical</option>
-                                <option value="EXP">Experimental</option>
-                                <option value="RC">Reading</option>
-                                <option value="WS">Writing</option>
-                                <option value="LIT">Literature</option>
-                                <option value="GV">Grammar</option>
-                              </select>
-                            </td>
-                            <td className="px-4 py-3">
-                              <input
-                                type="checkbox"
-                                checked={q.isOptional}
-                                onChange={(e) => handleQuestionOptionalChange(q.questionNo, e.target.checked)}
-                                className="w-4 h-4 rounded"
-                              />
-                            </td>
-                            <td className="px-4 py-3">
-                              <input
-                                type="text"
-                                value={q.optionalGroupCode || ''}
-                                onChange={(e) => handleQuestionGroupCodeChange(q.questionNo, e.target.value)}
-                                placeholder="e.g., A1"
-                                className="w-20 border border-gray-300 px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                disabled={!q.isOptional}
-                              />
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {/* Summary */}
-                  <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                    <h3 className="font-semibold text-gray-900 mb-2">Summary</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                      <div>
-                        <p className="text-gray-600">Section</p>
-                        <p className="font-semibold text-gray-900">{sectionFormData.name}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-600">Questions</p>
-                        <p className="font-semibold text-gray-900">{sectionFormData.totalQuestions}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-600">Total Marks</p>
-                        <p className="font-semibold text-gray-900">{sectionFormData.totalMarks}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-600">Marks/Q</p>
-                        <p className="font-semibold text-gray-900">{(sectionFormData.totalMarks / sectionFormData.totalQuestions).toFixed(2)}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Submit Buttons */}
-                  <div className="flex gap-4">
-                    <button
-                      type="submit"
-                      className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-semibold transition"
-                    >
-                      Save Section & Questions
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowPreview(false);
-                        setPreviewQuestions([]);
-                      }}
-                      className="bg-gray-400 hover:bg-gray-500 text-white px-6 py-2 rounded-lg font-semibold transition"
-                    >
-                      Back to Edit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowSectionForm(false);
-                        setShowPreview(false);
-                        setSectionFormData({ name: '', description: '', startQuestion: 1, endQuestion: 1, totalQuestions: 1, totalMarks: 0 });
-                        setPreviewQuestions([]);
-                        setEditingQuestions({});
-                      }}
-                      className="bg-red-400 hover:bg-red-500 text-white px-6 py-2 rounded-lg font-semibold transition"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </form>
-              )}
-            </div>
-          )}
-
-          {/* Sections Detail */}
-          <div className="space-y-4">
-            {config.sections.map((section) => (
-              <div key={section.id} className="bg-white rounded-lg shadow overflow-hidden">
-                {/* Section Header */}
-                <button
-                  onClick={() => toggleSection(section.id)}
-                  className="w-full bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 p-6 flex items-center justify-between transition-colors"
-                >
-                  <div className="text-left">
-                    <h3 className="text-lg font-bold text-gray-900">{section.name}</h3>
-                    <p className="text-sm text-gray-600 mt-1">{section.description}</p>
-                  </div>
-                  <div className="flex items-center gap-6">
-                    <div className="text-right">
-                      <p className="text-sm text-gray-600">Questions: {section.totalQuestions}</p>
-                      <p className="text-lg font-bold text-gray-900">Marks: {section.totalMarks}</p>
-                    </div>
-                    {expandedSections[section.id] ? (
-                      <ChevronUp size={24} className="text-gray-600" />
-                    ) : (
-                      <ChevronDown size={24} className="text-gray-600" />
-                    )}
-                  </div>
-                </button>
-
-                {/* Section Content */}
-                {expandedSections[section.id] && (
-                  <div className="p-6 border-t border-gray-200">
-                    {/* Section Statistics */}
-                    <div className="grid grid-cols-3 gap-4 mb-6 pb-6 border-b border-gray-200">
-                      <div className="bg-blue-50 rounded-lg p-4">
-                        <p className="text-xs text-blue-600 font-medium">Total Questions</p>
-                        <p className="text-2xl font-bold text-blue-900 mt-1">{section.totalQuestions}</p>
-                      </div>
-                      <div className="bg-green-50 rounded-lg p-4">
-                        <p className="text-xs text-green-600 font-medium">Total Marks</p>
-                        <p className="text-2xl font-bold text-green-900 mt-1">{section.totalMarks}</p>
-                      </div>
-                      <div className="bg-purple-50 rounded-lg p-4">
-                        <p className="text-xs text-purple-600 font-medium">Avg Marks/Q</p>
-                        <p className="text-2xl font-bold text-purple-900 mt-1">
-                          {(section.totalMarks / section.totalQuestions).toFixed(1)}
-                        </p>
-                      </div>
-                    </div>
-                    <p className="text-sm text-gray-600">Created: {new Date(section.createdAt).toLocaleDateString()}</p>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {/* Summary Statistics */}
-          <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg shadow p-6 border border-blue-200">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">Exam Summary</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {config.sections.map((section) => (
-                <div key={section.id} className="bg-white rounded-lg p-4 border border-gray-200">
-                  <p className="text-sm font-medium text-gray-600">{section.name}</p>
-                  <div className="mt-2 space-y-1">
-                    <p className="text-lg font-bold text-gray-900">{section.totalMarks} marks</p>
-                    <p className="text-xs text-gray-500">{section.totalQuestions} questions</p>
-                    <p className="text-xs text-gray-500">
-                      {((section.totalMarks / config.totalMarks) * 100).toFixed(0)}% of total
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* Legend */}
-      <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
-        <h2 className="text-lg font-bold text-gray-900 mb-4">Question Type Legend</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-          {[
-            { type: 'MCQ', label: 'Multiple Choice' },
-            { type: 'SA', label: 'Short Answer' },
-            { type: 'LA', label: 'Long Answer' },
-            { type: 'CS', label: 'Case Study' },
-            { type: 'NP', label: 'Numerical' },
-            { type: 'EXP', label: 'Experimental' },
-            { type: 'RC', label: 'Reading' },
-            { type: 'WS', label: 'Writing' },
-            { type: 'LIT', label: 'Literature' },
-            { type: 'GV', label: 'Grammar' },
-          ].map((item) => (
-            <div key={item.type} className="flex items-center gap-2">
-              <span className={`px-2 py-1 rounded text-xs font-medium border ${getQuestionTypeColor(item.type)}`}>
-                {item.type}
-              </span>
-              <span className="text-xs text-gray-600">{item.label}</span>
-            </div>
-          ))}
-        </div>
+        <p className="text-gray-500 text-sm font-medium">{label}</p>
+        <p className="text-2xl font-bold text-gray-900">{value}</p>
       </div>
     </div>
   );
-};
 
-export default SubjectConfig;
+  // Helper component for Step Indicator
+  const StepIndicator = ({ step, label, active, completed }) => (
+    <div className={`flex flex-col items-center gap-2 ${active || completed ? 'text-blue-600' : 'text-gray-400'}`}>
+      <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
+        completed ? 'bg-blue-600 border-blue-600 text-white' : 
+        active ? 'border-blue-500 bg-blue-50 text-blue-600 shadow-sm' : 
+        'border-gray-200 bg-gray-50'
+      }`}>
+        {completed ? <CheckCircle2 className="w-6 h-6" /> : <span className="font-bold">{step}</span>}
+      </div>
+      <span className={`text-[10px] font-bold uppercase tracking-wider ${active ? 'text-blue-600' : ''}`}>{label}</span>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-4 lg:p-6">
+      <div className="max-w-[1800px] mx-auto">
+        {/* Compact Header Section */}
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-3xl shadow-lg p-6 mb-6 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-white/10 rounded-2xl">
+              <Layers className="w-8 h-8 text-blue-100" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">
+                Subject Configuration
+              </h1>
+              <p className="text-blue-100/80 text-sm font-medium">
+                Structure and manage examinations
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4 md:gap-8 bg-white/10 backdrop-blur-sm border border-white/20 px-6 py-3 rounded-2xl">
+            <StepIndicator step={1} label="Subject" active={currentStep === 1} completed={currentStep > 1} />
+            <div className={`h-1 w-8 md:w-12 rounded-full ${currentStep > 1 ? 'bg-white' : 'bg-white/20'}`} />
+            <StepIndicator step={2} label="Paper" active={currentStep === 2} completed={currentStep > 2} />
+            <div className={`h-1 w-8 md:w-12 rounded-full ${currentStep > 2 ? 'bg-white' : 'bg-white/20'}`} />
+            <StepIndicator step={3} label="Sections" active={currentStep === 3} completed={currentStep > 3} />
+          </div>
+        </div>
+
+        {/* Notifications */}
+        <div className="fixed top-6 right-6 z-50 flex flex-col gap-3">
+          {error && (
+            <div className="bg-white border-l-4 border-red-500 shadow-xl text-red-600 px-6 py-4 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-right duration-300">
+              <AlertCircle className="w-5 h-5" />
+              <p className="font-bold">{error}</p>
+            </div>
+          )}
+          {success && (
+            <div className="bg-white border-l-4 border-emerald-500 shadow-xl text-emerald-600 px-6 py-4 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-right duration-300">
+              <CheckCircle2 className="w-5 h-5" />
+              <p className="font-bold">{success}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Step 1: Subject Selection (Insta-Story Style) */}
+        {currentStep === 1 && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="bg-white border border-gray-200 rounded-3xl p-8 shadow-sm">
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center gap-4">
+                  <div className="p-2 bg-blue-100 rounded-xl text-blue-600">
+                    <BookOpen className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">Your Subjects</h2>
+                    <p className="text-gray-500 text-sm">Select a subject to start configuring examination papers</p>
+                  </div>
+                </div>
+
+                {!(userProfile?.universityId || localStorage.getItem('universityId')) && (
+                  <div className="w-64">
+                    <select
+                      value={selectedUniversity}
+                      onChange={(e) => setSelectedUniversity(e.target.value)}
+                      className="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Select University</option>
+                      {universities.map(uni => (
+                        <option key={uni.universityId} value={uni.universityId}>{uni.universityName}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {subjects.length > 0 ? (
+                <div className="relative">
+                  <div className="flex gap-8 overflow-x-auto pb-6 pt-2 custom-scrollbar no-scrollbar">
+                    {subjects.map(subject => (
+                      <button
+                        key={subject.subjectId}
+                        onClick={() => setSelectedSubject(subject)}
+                        className="flex flex-col items-center gap-3 group shrink-0"
+                      >
+                        <div className={`relative p-1 rounded-full transition-all duration-300 ${
+                          selectedSubject?.subjectId === subject.subjectId 
+                          ? 'bg-gradient-to-tr from-blue-600 to-indigo-500 scale-110 shadow-lg shadow-blue-500/20' 
+                          : 'bg-gray-200 group-hover:bg-blue-300'
+                        }`}>
+                          <div className="bg-white rounded-full p-0.5">
+                            <div className={`w-20 h-20 rounded-full flex items-center justify-center text-xl font-bold transition-colors ${
+                              selectedSubject?.subjectId === subject.subjectId 
+                              ? 'bg-blue-50 text-blue-600' 
+                              : 'bg-gray-100 text-gray-400 group-hover:bg-blue-100 group-hover:text-blue-500'
+                            }`}>
+                              {subject.subjectName.substring(0, 2).toUpperCase()}
+                              
+                              {/* Paper Count Badge */}
+                              <div className="absolute -top-1 -right-1 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-md border-2 border-white">
+                                {subject.paperCount || 0}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <span className={`text-xs font-bold transition-colors ${
+                          selectedSubject?.subjectId === subject.subjectId ? 'text-blue-600' : 'text-gray-500 group-hover:text-gray-900'
+                        }`}>
+                          {subject.subjectName}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : selectedUniversity ? (
+                <div className="h-40 flex flex-col items-center justify-center bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
+                  <p className="text-gray-400 text-sm font-medium">Fetching subjects...</p>
+                </div>
+              ) : (
+                <div className="h-40 flex flex-col items-center justify-center bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl">
+                  <AlertCircle className="w-8 h-8 text-gray-300 mb-2" />
+                  <p className="text-gray-400 text-sm font-medium">Please select a university to view subjects</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Step 2: Paper Selection */}
+        {currentStep === 2 && (
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="bg-white border border-gray-200 rounded-[2.5rem] p-8 md:p-10 shadow-sm">
+              <div className="flex items-center justify-between mb-10">
+                <div className="flex items-center gap-4">
+                  <button 
+                    onClick={() => setSelectedSubject(null)}
+                    className="p-3 bg-gray-100 hover:bg-gray-200 rounded-2xl text-gray-600 transition-all active:scale-95"
+                  >
+                    <ArrowLeft className="w-6 h-6" />
+                  </button>
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900">Select Paper</h2>
+                    <p className="text-gray-500 font-medium">Configure sections for <span className="text-blue-600 font-bold">{selectedSubject.subjectName}</span></p>
+                  </div>
+                </div>
+              </div>
+
+              {papers.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {papers.map(paper => (
+                    <button
+                      key={paper.paperId}
+                      onClick={() => setSelectedPaper(paper)}
+                      className="group bg-white hover:bg-blue-50 border border-gray-200 hover:border-blue-300 p-8 rounded-3xl transition-all duration-300 text-left relative shadow-sm hover:shadow-md"
+                    >
+                      <div className="flex justify-between items-start mb-6">
+                        <div className="p-3 bg-gray-100 rounded-2xl group-hover:bg-blue-100 transition-colors">
+                          <FileText className="w-6 h-6 text-gray-500 group-hover:text-blue-600" />
+                        </div>
+                        <div className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-bold border border-blue-200 uppercase tracking-wider">
+                          {paper.catchNo}
+                        </div>
+                      </div>
+                      <div className="font-bold text-gray-900 text-xl mb-2 group-hover:text-blue-700 transition-colors">{paper.paperName}</div>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-gray-500 text-sm">
+                          <Award className="w-4 h-4 text-blue-500" />
+                          <span>Max Marks: <span className="text-gray-900 font-bold">{paper.maxMarks}</span></span>
+                        </div>
+                      </div>
+                      <div className="mt-8 flex items-center text-blue-600 text-sm font-bold opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all">
+                        Configure Sections <ChevronRight className="w-4 h-4 ml-1" />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="h-[300px] flex flex-col items-center justify-center bg-gray-50 border-2 border-dashed border-gray-200 rounded-[2.5rem]">
+                  <FileText className="w-12 h-12 text-gray-300 mb-3" />
+                  <p className="text-gray-400 font-bold text-lg">No papers found for this subject</p>
+                  <button 
+                    onClick={() => setSelectedSubject(null)}
+                    className="mt-4 text-blue-600 hover:text-blue-700 font-bold transition-all"
+                  >
+                    Go back to subjects
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Step 3: Manage Sections */}
+        {currentStep === 3 && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
+            {/* Header & Stats in a single row */}
+            <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm">
+              <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
+                <div className="flex items-center gap-4">
+                  <button 
+                    onClick={() => setSelectedPaper(null)}
+                    className="p-2 bg-gray-100 hover:bg-gray-200 rounded-xl text-gray-600 transition-all active:scale-95"
+                  >
+                    <ArrowLeft className="w-5 h-5" />
+                  </button>
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900 leading-tight">Section Management</h2>
+                    <p className="text-gray-500 text-xs font-medium">{selectedSubject.subjectName} <ChevronRight className="inline w-3 h-3 mx-1" /> {selectedPaper.paperName}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-4 flex-grow max-w-2xl">
+                  <div className="flex-grow grid grid-cols-3 gap-3">
+                    <div className="bg-blue-50 p-3 rounded-2xl border border-blue-100 flex items-center gap-3">
+                      <Award className="w-5 h-5 text-blue-500" />
+                      <div>
+                        <p className="text-[10px] text-blue-600 uppercase font-bold tracking-tight">Max</p>
+                        <p className="text-sm font-bold text-gray-900">{selectedPaper.maxMarks}</p>
+                      </div>
+                    </div>
+                    <div className="bg-emerald-50 p-3 rounded-2xl border border-emerald-100 flex items-center gap-3">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                      <div>
+                        <p className="text-[10px] text-emerald-600 uppercase font-bold tracking-tight">Allocated</p>
+                        <p className="text-sm font-bold text-gray-900">{calculateTotalSectionMarks()}</p>
+                      </div>
+                    </div>
+                    <div className="bg-red-50 p-3 rounded-2xl border border-red-100 flex items-center gap-3">
+                      <Clock className="w-5 h-5 text-red-500" />
+                      <div>
+                        <p className="text-[10px] text-red-600 uppercase font-bold tracking-tight">Left</p>
+                        <p className="text-sm font-bold text-gray-900">{selectedPaper.maxMarks - calculateTotalSectionMarks()}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {!showSectionForm && (
+                    <button
+                      onClick={() => {
+                        setEditingSectionId(null);
+                        setShowSectionForm(true);
+                      }}
+                      disabled={isAddSectionDisabled()}
+                      className={`flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold transition-all shrink-0 ${
+                        isAddSectionDisabled()
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed shadow-none'
+                          : 'bg-blue-600 hover:bg-blue-700 text-white shadow-md active:scale-95'
+                      }`}
+                    >
+                      <Plus className="w-5 h-5" />
+                      Add Section
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Section Creation Form - Side by Side */}
+            {showSectionForm && (
+              <div className="bg-white border border-blue-200 rounded-3xl p-6 shadow-xl animate-in zoom-in-95 duration-300">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-4">
+                    <div className="p-2 bg-blue-100 rounded-xl">
+                      <Layers className="w-6 h-6 text-blue-600" />
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900">
+                      {editingSectionId ? 'Edit Section' : 'Create Section'}
+                    </h3>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleSaveSection}
+                      disabled={loading}
+                      className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-md transition-all disabled:opacity-50 text-sm"
+                    >
+                      {loading ? 'Saving...' : 'Save Changes'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowSectionForm(false);
+                        setShowQuestionPreview(false);
+                        setEditingSectionId(null);
+                      }}
+                      className="px-6 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold transition-all text-sm"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+                  {/* Left Column: Basic Info */}
+                  <div className="xl:col-span-3 space-y-4">
+                    <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                      <label className="block text-gray-700 text-xs font-bold mb-2 uppercase tracking-tight">Section Details</label>
+                      <div className="space-y-3">
+                        <input
+                          type="text"
+                          name="name"
+                          value={sectionForm.name}
+                          onChange={handleSectionFormChange}
+                          className="w-full bg-white text-gray-900 px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                          placeholder="Section Name"
+                        />
+                        <textarea
+                          name="description"
+                          value={sectionForm.description}
+                          onChange={handleSectionFormChange}
+                          className="w-full bg-white text-gray-900 px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none h-24 text-sm"
+                          placeholder="Description"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                      <label className="block text-gray-700 text-xs font-bold mb-2 uppercase tracking-tight">Structure</label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <p className="text-[10px] text-gray-500 mb-1">Start Q#</p>
+                          <input
+                            type="number"
+                            name="startQuestion"
+                            value={sectionForm.startQuestion}
+                            onChange={handleSectionFormChange}
+                            className="w-full bg-white px-3 py-2 rounded-lg border border-gray-300 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-gray-500 mb-1">End Q#</p>
+                          <input
+                            type="number"
+                            name="endQuestion"
+                            value={sectionForm.endQuestion}
+                            onChange={handleSectionFormChange}
+                            className="w-full bg-white px-3 py-2 rounded-lg border border-gray-300 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-gray-500 mb-1">Marks</p>
+                          <input
+                            type="number"
+                            name="totalMarks"
+                            value={sectionForm.totalMarks}
+                            onChange={handleSectionFormChange}
+                            className="w-full bg-white px-3 py-2 rounded-lg border border-gray-300 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-gray-500 mb-1">Attempt</p>
+                          <input
+                            type="number"
+                            name="maxQuestionsToAttempt"
+                            value={sectionForm.maxQuestionsToAttempt}
+                            onChange={handleSectionFormChange}
+                            className="w-full bg-white px-3 py-2 rounded-lg border border-gray-300 text-sm"
+                          />
+                        </div>
+                      </div>
+                      {!showQuestionPreview && (
+                        <button
+                          onClick={generateQuestions}
+                          className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-xl text-sm font-bold transition-all"
+                        >
+                          Generate Questions
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Right Column: Questions Grid */}
+                  <div className="xl:col-span-9">
+                    {showQuestionPreview ? (
+                      <div className="bg-gray-50 rounded-2xl border border-gray-200 overflow-hidden flex flex-col h-[600px]">
+                        <div className="bg-gray-100 px-6 py-3 border-b border-gray-200 flex justify-between items-center">
+                          <h4 className="text-sm font-bold text-gray-700 uppercase tracking-tight">Question Configuration</h4>
+                          <span className="text-xs font-medium text-gray-500">{questions.length} Questions in this section</span>
+                        </div>
+                        <div className="overflow-auto flex-grow custom-scrollbar">
+                          <table className="w-full text-left border-collapse">
+                            <thead className="sticky top-0 bg-white z-10 shadow-sm">
+                              <tr>
+                                <th className="px-4 py-3 text-gray-600 text-[10px] font-bold uppercase tracking-wider">Q No</th>
+                                <th className="px-4 py-3 text-gray-600 text-[10px] font-bold uppercase tracking-wider">Marks</th>
+                                <th className="px-4 py-3 text-gray-600 text-[10px] font-bold uppercase tracking-wider">Type</th>
+                                <th className="px-4 py-3 text-gray-600 text-[10px] font-bold uppercase tracking-wider">Optional</th>
+                                <th className="px-4 py-3 text-gray-600 text-[10px] font-bold uppercase tracking-wider">Group</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100 bg-white">
+                              {questions.map((q, idx) => (
+                                <tr key={idx} className="hover:bg-blue-50/50 transition-colors">
+                                  <td className="px-4 py-2 text-gray-900 font-bold text-sm">#{q.questionNo}</td>
+                                  <td className="px-4 py-2">
+                                    <input
+                                      type="number"
+                                      value={q.marks}
+                                      onChange={(e) => handleQuestionChange(idx, 'marks', e.target.value)}
+                                      className="w-20 bg-gray-50 px-2 py-1.5 rounded-lg border border-gray-200 text-sm focus:ring-1 focus:ring-blue-500 outline-none"
+                                      step="0.5"
+                                    />
+                                  </td>
+                                  <td className="px-4 py-2">
+                                    <select
+                                      value={q.type}
+                                      onChange={(e) => handleQuestionChange(idx, 'type', e.target.value)}
+                                      className={`w-full bg-gray-50 px-2 py-1.5 rounded-lg border text-sm outline-none ${
+                                        !q.type ? 'border-red-200' : 'border-gray-200 focus:ring-1 focus:ring-blue-500'
+                                      }`}
+                                    >
+                                      <option value="">Type</option>
+                                      {['MCQ', 'SA', 'LA', 'CS', 'NP', 'EXP', 'RC', 'WS', 'LIT', 'GV'].map(type => (
+                                        <option key={type} value={type}>{type}</option>
+                                      ))}
+                                    </select>
+                                  </td>
+                                  <td className="px-4 py-2 text-center">
+                                    <input
+                                      type="checkbox"
+                                      checked={q.isOptional}
+                                      onChange={(e) => handleQuestionChange(idx, 'isOptional', e.target.checked)}
+                                      className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                                    />
+                                  </td>
+                                  <td className="px-4 py-2">
+                                    <input
+                                      type="text"
+                                      value={q.optionalGroupCode || ''}
+                                      onChange={(e) => handleQuestionChange(idx, 'optionalGroupCode', e.target.value)}
+                                      className={`w-16 bg-gray-50 px-2 py-1.5 rounded-lg border border-gray-200 text-xs ${!q.isOptional && 'opacity-30'}`}
+                                      placeholder="Grp"
+                                      disabled={!q.isOptional}
+                                    />
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="h-full flex flex-col items-center justify-center bg-gray-50 border-2 border-dashed border-gray-200 rounded-3xl min-h-[400px]">
+                        <ListTodo className="w-12 h-12 text-gray-300 mb-4" />
+                        <p className="text-gray-500 font-medium text-center px-10">
+                          Complete the section details and click <span className="font-bold text-blue-600">Generate Questions</span> to configure individual marks and types.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Existing Sections List */}
+            {sections.length > 0 && !showSectionForm && (
+              <div className="space-y-6">
+                <div className="flex items-center gap-3 mb-2 px-2">
+                  <Layers className="w-6 h-6 text-blue-600" />
+                  <h3 className="text-xl font-bold text-gray-900">Configured Sections</h3>
+                </div>
+                <div className="grid grid-cols-1 gap-4">
+                  {sections.map(section => (
+                    <div 
+                      key={section.id} 
+                      className="group bg-white border border-gray-200 rounded-3xl p-6 shadow-sm hover:shadow-md hover:border-blue-200 transition-all"
+                    >
+                      <div className="flex flex-col md:flex-row justify-between gap-6">
+                        <div className="flex-grow">
+                          <div className="flex items-center gap-3 mb-2">
+                            <h4 className="text-xl font-bold text-gray-900">{section.name}</h4>
+                            <div className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-[10px] font-bold border border-blue-200 uppercase">
+                              Q{section.startQuestion} - Q{section.endQuestion}
+                            </div>
+                          </div>
+                          <p className="text-gray-500 text-sm mb-6 max-w-2xl font-medium">{section.description || 'No description provided for this section.'}</p>
+                          
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                            <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                              <p className="text-gray-400 text-[10px] uppercase font-bold tracking-wider mb-1">Total Marks</p>
+                              <p className="text-gray-900 font-bold text-lg">{section.totalMarks}</p>
+                            </div>
+                            <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                              <p className="text-gray-400 text-[10px] uppercase font-bold tracking-wider mb-1">To Attempt</p>
+                              <p className="text-gray-900 font-bold text-lg">{section.maxQuestionsToAttempt}</p>
+                            </div>
+                            <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                              <p className="text-gray-400 text-[10px] uppercase font-bold tracking-wider mb-1">Questions</p>
+                              <p className="text-gray-900 font-bold text-lg">{section.questions?.length || 0}</p>
+                            </div>
+                            <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                              <p className="text-gray-400 text-[10px] uppercase font-bold tracking-wider mb-1">Avg Marks</p>
+                              <p className="text-gray-900 font-bold text-lg">{(section.totalMarks / (section.endQuestion - section.startQuestion + 1)).toFixed(1)}</p>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => handleEditSection(section)}
+                            className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-100 hover:border-blue-200 transition-all font-bold shadow-sm"
+                          >
+                            <FileText className="w-4 h-4" />
+                            View/Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteSection(section.id)}
+                            className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-white hover:bg-red-50 text-red-600 border border-gray-200 hover:border-red-200 transition-all font-bold shadow-sm"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {sections.length === 0 && !showSectionForm && (
+              <div className="h-[400px] flex flex-col items-center justify-center bg-white border-2 border-dashed border-gray-200 rounded-[2.5rem] shadow-sm">
+                <Layers className="w-16 h-16 text-gray-200 mb-4" />
+                <h3 className="text-xl font-bold text-gray-400">No sections configured yet</h3>
+                <p className="text-gray-500 mb-6 font-medium">Start by adding a new section to define the paper structure</p>
+                <button
+                  onClick={() => setShowSectionForm(true)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-2xl font-bold shadow-lg shadow-blue-500/20 transition-all hover:scale-105"
+                >
+                  Create First Section
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

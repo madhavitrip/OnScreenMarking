@@ -1,5 +1,20 @@
 import React, { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, Link } from "react-router-dom";
+import { 
+  FileText, 
+  Plus, 
+  Edit2, 
+  UserPlus, 
+  X, 
+  Search, 
+  CheckCircle2, 
+  Trash2,
+  ChevronLeft,
+  Filter,
+  Users,
+  BookOpen
+} from "lucide-react";
+import apiCall from "../services/api";
 
 export default function PapersManagement() {
   const [searchParams] = useSearchParams();
@@ -23,91 +38,115 @@ export default function PapersManagement() {
     projectId: projectId || "",
     isActive: true,
   });
+  
+  // Examiner Allocation State
+  const [showExaminerModal, setShowExaminerModal] = useState(false);
+  const [selectedPaper, setSelectedPaper] = useState(null);
+  const [availableExaminers, setAvailableExaminers] = useState([]);
+  const [assignedExaminers, setAssignedExaminers] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [allocationLoading, setAllocationLoading] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  const API_URL = "https://localhost:7243/api";
+  const [success, setSuccess] = useState("");
 
   useEffect(() => {
-    fetchSubjects();
-    fetchProjects();
-    if (subjectId || projectId) {
-      fetchPapers();
-    }
+    fetchInitialData();
   }, [subjectId, projectId]);
 
-  const fetchSubjects = async () => {
+  const fetchInitialData = async () => {
+    setLoading(true);
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_URL}/subject`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setSubjects(data);
-      }
+      const [subs, projs] = await Promise.all([
+        apiCall('/subject'),
+        apiCall('/project')
+      ]);
+      setSubjects(subs);
+      setProjects(projs);
+      
+      await fetchPapers();
     } catch (err) {
-      console.error("Failed to fetch subjects:", err);
-    }
-  };
-
-  const fetchProjects = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_URL}/project`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setProjects(data);
-      }
-    } catch (err) {
-      console.error("Failed to fetch projects:", err);
-    }
-  };
-
-  const fetchPapers = async () => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem("token");
-      let url = `${API_URL}/papers`;
-      const params = [];
-      if (subjectId) params.push(`subjectId=${subjectId}`);
-      if (projectId) params.push(`projectId=${projectId}`);
-      if (params.length > 0) url += "?" + params.join("&");
-
-      const response = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setPapers(data);
-      }
-    } catch (err) {
-      setError("Failed to fetch papers");
+      setError("Failed to initialize data");
     } finally {
       setLoading(false);
     }
   };
 
+  const fetchPapers = async () => {
+    try {
+      let url = `/papers`;
+      const params = [];
+      if (subjectId) params.push(`subjectId=${subjectId}`);
+      if (projectId) params.push(`projectId=${projectId}`);
+      if (params.length > 0) url += "?" + params.join("&");
+
+      const data = await apiCall(url);
+      setPapers(data);
+    } catch (err) {
+      setError("Failed to fetch papers");
+    }
+  };
+
+  // Examiner Allocation Logic
+  const openAllocationModal = async (paper) => {
+    setSelectedPaper(paper);
+    setShowExaminerModal(true);
+    setAllocationLoading(true);
+    try {
+      // Find the project to get universityId
+      const project = projects.find(p => p.projectId === paper.projectId);
+      const universityId = project ? project.universityId : null;
+
+      // Fetch available examiners for this subject and university
+      const examiners = await apiCall(`/users/examiners?subjectId=${paper.subjectId}${universityId ? `&universityId=${universityId}` : ''}`);
+      setAvailableExaminers(examiners);
+
+      // Fetch currently assigned examiners
+      const assigned = await apiCall(`/PaperExaminers/paper/${paper.paperId}`);
+      setAssignedExaminers(assigned);
+    } catch (err) {
+      console.error("Failed to fetch examiners:", err);
+    } finally {
+      setAllocationLoading(false);
+    }
+  };
+
+  const handleAssign = async (examinerId) => {
+    try {
+      await apiCall('/PaperExaminers/assign', {
+        method: 'POST',
+        body: JSON.stringify({
+          paperId: selectedPaper.paperId,
+          examinerId: examinerId
+        })
+      });
+      // Refresh assignments
+      const assigned = await apiCall(`/PaperExaminers/paper/${selectedPaper.paperId}`);
+      setAssignedExaminers(assigned);
+      setSuccess("Examiner assigned successfully");
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err) {
+      setError("Failed to assign examiner");
+    }
+  };
+
+  const handleRemoveAssignment = async (assignmentId) => {
+    try {
+      await apiCall(`/PaperExaminers/remove/${assignmentId}`, {
+        method: 'DELETE'
+      });
+      setAssignedExaminers(prev => prev.filter(a => a.id !== assignmentId));
+    } catch (err) {
+      setError("Failed to remove examiner");
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (
-      !formData.paperCode ||
-      !formData.paperName ||
-      !formData.subjectId ||
-      !formData.projectId
-    ) {
-      setError("Please fill all required fields");
-      return;
-    }
-
     try {
-      const token = localStorage.getItem("token");
       const method = editingId ? "PUT" : "POST";
-      const url = editingId
-        ? `${API_URL}/papers/${editingId}`
-        : `${API_URL}/papers`;
+      const url = editingId ? `/papers/${editingId}` : `/papers`;
 
       const payload = {
         ...formData,
@@ -118,38 +157,17 @@ export default function PapersManagement() {
         totalQuestions: parseInt(formData.totalQuestions, 10),
       };
 
-      const response = await fetch(url, {
+      await apiCall(url, {
         method,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(payload)
       });
 
-      if (response.ok) {
-        setFormData({
-          paperCode: "",
-          paperName: "",
-          paperNumber: 1,
-          maxMarks: 100,
-          totalQuestions: 0,
-          description: "",
-          subjectId: subjectId || "",
-          projectId: projectId || "",
-          isActive: true,
-        });
-        setEditingId(null);
-        setShowForm(false);
-        setError("");
-        fetchPapers();
-      } else {
-        const data = await response.json();
-        setError(data.message || "Failed to save paper");
-      }
+      handleCancel();
+      fetchPapers();
+      setSuccess("Paper saved successfully");
+      setTimeout(() => setSuccess(""), 3000);
     } catch (err) {
       setError("Error saving paper");
-      console.error(err);
     }
   };
 
@@ -168,6 +186,7 @@ export default function PapersManagement() {
     });
     setEditingId(paper.paperId);
     setShowForm(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleCancel = () => {
@@ -189,209 +208,184 @@ export default function PapersManagement() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 p-8">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-white mb-2">Papers</h1>
-            <p className="text-slate-400">Manage exam papers</p>
+    <div className="min-h-screen bg-gray-50 pb-12">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-4">
+              <Link to="/admin/dashboard" className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                <ChevronLeft className="text-gray-600" />
+              </Link>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                  <FileText className="text-blue-600" />
+                  Papers Management
+                </h1>
+                <p className="text-sm text-gray-500">Configure and allocate examiners to exam papers</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowForm(!showForm)}
+                className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold transition-all shadow-sm ${
+                  showForm 
+                    ? "bg-gray-100 text-gray-700 hover:bg-gray-200" 
+                    : "bg-blue-600 text-white hover:bg-blue-700 hover:shadow-md"
+                }`}
+              >
+                {showForm ? <X size={18} /> : <Plus size={18} />}
+                {showForm ? "Cancel" : "Add Paper"}
+              </button>
+            </div>
           </div>
-          <button
-            onClick={() => setShowForm(!showForm)}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition"
-          >
-            {showForm ? "Cancel" : "+ Add Paper"}
-          </button>
         </div>
+      </div>
 
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
         {error && (
-          <div className="bg-red-500 text-white p-4 rounded-lg mb-6">
+          <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl mb-6 flex items-center gap-3">
+            <X size={20} className="bg-red-100 p-1 rounded-full" />
             {error}
           </div>
         )}
+        {success && (
+          <div className="bg-green-50 border border-green-200 text-green-700 p-4 rounded-xl mb-6 flex items-center gap-3">
+            <CheckCircle2 size={20} className="bg-green-100 p-1 rounded-full" />
+            {success}
+          </div>
+        )}
 
-        {/* Form */}
+        {/* Form Container */}
         {showForm && (
-          <div className="bg-slate-700 rounded-lg p-6 mb-8">
-            <h2 className="text-xl font-bold text-white mb-4">
-              {editingId ? "Edit Paper" : "Add New Paper"}
+          <div className="bg-white rounded-2xl p-8 shadow-md border border-gray-100 mb-8 animate-in fade-in slide-in-from-top-4 duration-300">
+            <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+              <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center">
+                {editingId ? <Edit2 size={16} /> : <Plus size={16} />}
+              </div>
+              {editingId ? "Edit Paper Configuration" : "Create New Paper"}
             </h2>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+            
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-2">
-                    Paper Code *
-                  </label>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">Paper Code *</label>
                   <input
                     type="text"
                     value={formData.paperCode}
-                    onChange={(e) =>
-                      setFormData({ ...formData, paperCode: e.target.value })
-                    }
-                    className="w-full bg-slate-600 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="e.g., MATH-101"
+                    onChange={(e) => setFormData({ ...formData, paperCode: e.target.value })}
+                    className="w-full bg-gray-50 border border-gray-200 text-gray-900 px-4 py-2.5 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none"
+                    placeholder="e.g. MATH-101"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-2">
-                    Paper Name *
-                  </label>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">Paper Name *</label>
                   <input
                     type="text"
                     value={formData.paperName}
-                    onChange={(e) =>
-                      setFormData({ ...formData, paperName: e.target.value })
-                    }
-                    className="w-full bg-slate-600 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="e.g., Mathematics Paper 1"
+                    onChange={(e) => setFormData({ ...formData, paperName: e.target.value })}
+                    className="w-full bg-gray-50 border border-gray-200 text-gray-900 px-4 py-2.5 rounded-xl focus:ring-2 focus:ring-blue-500 transition-all outline-none"
+                    placeholder="e.g. Calculus I"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-2">
-                    CatchNo
-                  </label>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">Catch Number</label>
                   <input
+                    type="text"
                     value={formData.catchNo}
-                    onChange={(e) =>
-                      setFormData({ ...formData, catchNo: e.target.value })
-                    }
-                    className="w-full bg-slate-600 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onChange={(e) => setFormData({ ...formData, catchNo: e.target.value })}
+                    className="w-full bg-gray-50 border border-gray-200 text-gray-900 px-4 py-2.5 rounded-xl focus:ring-2 focus:ring-blue-500 transition-all outline-none"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-2">
-                    Subject *
-                  </label>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">Subject *</label>
                   <select
                     value={formData.subjectId}
-                    onChange={(e) =>
-                      setFormData({ ...formData, subjectId: e.target.value })
-                    }
-                    className="w-full bg-slate-600 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onChange={(e) => setFormData({ ...formData, subjectId: e.target.value })}
+                    className="w-full bg-gray-50 border border-gray-200 text-gray-900 px-4 py-2.5 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
                     required
                   >
                     <option value="">Select Subject</option>
-                    {subjects.map((subject) => (
-                      <option key={subject.subjectId} value={subject.subjectId}>
-                        {subject.subjectName}
-                      </option>
+                    {subjects.map((s) => (
+                      <option key={s.subjectId} value={s.subjectId}>{s.subjectName}</option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-2">
-                    Project *
-                  </label>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">Project *</label>
                   <select
                     value={formData.projectId}
-                    onChange={(e) =>
-                      setFormData({ ...formData, projectId: e.target.value })
-                    }
-                    className="w-full bg-slate-600 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onChange={(e) => setFormData({ ...formData, projectId: e.target.value })}
+                    className="w-full bg-gray-50 border border-gray-200 text-gray-900 px-4 py-2.5 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
                     required
                   >
                     <option value="">Select Project</option>
-                    {projects.map((project) => (
-                      <option key={project.projectId} value={project.projectId}>
-                        {project.projectName}
-                      </option>
+                    {projects.map((p) => (
+                      <option key={p.projectId} value={p.projectId}>{p.projectName}</option>
                     ))}
                   </select>
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-2">
-                    Paper Number
-                  </label>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">Paper Number</label>
                   <input
                     type="number"
                     value={formData.paperNumber}
-                    onChange={(e) =>
-                      setFormData({ ...formData, paperNumber: e.target.value })
-                    }
-                    className="w-full bg-slate-600 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onChange={(e) => setFormData({ ...formData, paperNumber: e.target.value })}
+                    className="w-full bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-xl outline-none"
                     min="1"
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-2">
-                    Max Marks
-                  </label>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">Max Marks</label>
                   <input
                     type="number"
                     value={formData.maxMarks}
-                    onChange={(e) =>
-                      setFormData({ ...formData, maxMarks: e.target.value })
-                    }
-                    className="w-full bg-slate-600 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onChange={(e) => setFormData({ ...formData, maxMarks: e.target.value })}
+                    className="w-full bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-xl outline-none"
                     min="0"
                   />
                 </div>
-
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-2">
-                    Total Questions
-                  </label>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">Total Questions</label>
                   <input
+                    type="number"
                     value={formData.totalQuestions}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        totalQuestions: e.target.value,
-                      })
-                    }
-                    className="w-full bg-slate-600 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onChange={(e) => setFormData({ ...formData, totalQuestions: e.target.value })}
+                    className="w-full bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-xl outline-none"
                     min="0"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-slate-300 font-semibold mb-2">
-                  Description
-                </label>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Description</label>
                 <textarea
                   value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
-                  className="w-full bg-slate-600 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter paper description"
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  className="w-full bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-xl outline-none"
                   rows="3"
                 />
               </div>
 
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={formData.isActive}
-                  onChange={(e) =>
-                    setFormData({ ...formData, isActive: e.target.checked })
-                  }
-                  className="w-4 h-4 rounded"
-                />
-                <label className="ml-2 text-slate-300">Active</label>
-              </div>
-
-              <div className="flex gap-4">
+              <div className="flex items-center gap-4">
                 <button
                   type="submit"
-                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-semibold transition"
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-blue-200 transition-all"
                 >
-                  {editingId ? "Update" : "Create"}
+                  {editingId ? "Update Configuration" : "Save Paper"}
                 </button>
                 <button
                   type="button"
                   onClick={handleCancel}
-                  className="bg-slate-600 hover:bg-slate-500 text-white px-6 py-2 rounded-lg font-semibold transition"
+                  className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-8 py-3 rounded-xl font-bold transition-all"
                 >
                   Cancel
                 </button>
@@ -400,75 +394,95 @@ export default function PapersManagement() {
           </div>
         )}
 
-        {/* Papers List */}
-        <div className="bg-slate-700 rounded-lg overflow-hidden">
+        {/* Papers Table */}
+        <div className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
           {loading ? (
-            <div className="p-8 text-center text-slate-400">Loading...</div>
+            <div className="p-20 text-center flex flex-col items-center gap-4">
+              <div className="animate-spin w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full"></div>
+              <p className="text-gray-500 font-medium">Fetching paper configurations...</p>
+            </div>
           ) : papers.length === 0 ? (
-            <div className="p-8 text-center text-slate-400">
-              No papers found. Create one to get started!
+            <div className="p-20 text-center">
+              <div className="w-16 h-16 bg-gray-50 text-gray-300 rounded-full flex items-center justify-center mx-auto mb-4">
+                <FileText size={32} />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900">No Papers Found</h3>
+              <p className="text-gray-500 max-w-xs mx-auto mt-2">Start by adding a new paper or adjusting your filters.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-slate-800">
+              <table className="w-full text-left">
+                <thead className="bg-gray-50/50 border-b border-gray-100">
                   <tr>
-                    <th className="px-6 py-3 text-left text-slate-300 font-semibold">
-                      Code
-                    </th>
-                    <th className="px-6 py-3 text-left text-slate-300 font-semibold">
-                      Name
-                    </th>
-                    <th className="px-6 py-3 text-left text-slate-300 font-semibold">
-                      Max Marks
-                    </th>
-                    <th className="px-6 py-3 text-left text-slate-300 font-semibold">
-                      Questions
-                    </th>
-                    <th className="px-6 py-3 text-left text-slate-300 font-semibold">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-slate-300 font-semibold">
-                      Actions
-                    </th>
+                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Paper Info</th>
+                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Subject & Project</th>
+                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-center">Stats</th>
+                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-center">Status</th>
+                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-gray-50">
                   {papers.map((paper) => (
-                    <tr
-                      key={paper.paperId}
-                      className="border-t border-slate-600 hover:bg-slate-600 transition"
-                    >
-                      <td className="px-6 py-4 text-white">
-                        {paper.paperCode}
+                    <tr key={paper.paperId} className="group hover:bg-gray-50/50 transition-colors">
+                      <td className="px-6 py-5">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center font-bold">
+                            {paper.paperCode.substring(0, 2)}
+                          </div>
+                          <div>
+                            <p className="font-bold text-gray-900 leading-none">{paper.paperCode}</p>
+                            <p className="text-xs text-gray-500 mt-1">{paper.paperName}</p>
+                          </div>
+                        </div>
                       </td>
-                      <td className="px-6 py-4 text-white">
-                        {paper.paperName}
+                      <td className="px-6 py-5">
+                        <div className="flex flex-col gap-1">
+                          <span className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                            <BookOpen size={14} className="text-gray-400" />
+                            {subjects.find(s => s.subjectId === paper.subjectId)?.subjectName}
+                          </span>
+                          <span className="text-xs text-gray-400 flex items-center gap-1.5">
+                            <Filter size={14} />
+                            {projects.find(p => p.projectId === paper.projectId)?.projectName}
+                          </span>
+                        </div>
                       </td>
-                      <td className="px-6 py-4 text-slate-300">
-                        {paper.maxMarks}
+                      <td className="px-6 py-5">
+                        <div className="flex items-center justify-center gap-4">
+                          <div className="text-center">
+                            <p className="text-[10px] uppercase font-bold text-gray-400 leading-none">Max</p>
+                            <p className="text-sm font-bold text-gray-700">{paper.maxMarks}</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-[10px] uppercase font-bold text-gray-400 leading-none">Qs</p>
+                            <p className="text-sm font-bold text-gray-700">{paper.totalQuestions}</p>
+                          </div>
+                        </div>
                       </td>
-                      <td className="px-6 py-4 text-slate-300">
-                        {paper.totalQuestions}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                            paper.isActive
-                              ? "bg-green-500 text-white"
-                              : "bg-red-500 text-white"
-                          }`}
-                        >
+                      <td className="px-6 py-5 text-center">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                          paper.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"
+                        }`}>
                           {paper.isActive ? "Active" : "Inactive"}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
-                        <button
-                          onClick={() => handleEdit(paper)}
-                          className="text-blue-400 hover:text-blue-300 mr-4 font-semibold"
-                        >
-                          Edit
-                        </button>
+                      <td className="px-6 py-5 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => openAllocationModal(paper)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 font-bold text-xs transition-colors"
+                          >
+                            <Users size={14} />
+                            Assign Examiners
+                          </button>
+                          <button
+                            onClick={() => handleEdit(paper)}
+                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                            title="Edit"
+                          >
+                            <Edit2 size={18} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -478,6 +492,127 @@ export default function PapersManagement() {
           )}
         </div>
       </div>
+
+      {/* Examiner Allocation Modal */}
+      {showExaminerModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+            <div className="p-6 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">Assign Examiners</h3>
+                <p className="text-sm text-gray-500">Allocation for {selectedPaper?.paperCode}: {selectedPaper?.paperName}</p>
+              </div>
+              <button 
+                onClick={() => setShowExaminerModal(false)}
+                className="p-2 hover:bg-gray-200 rounded-full transition-colors"
+              >
+                <X size={20} className="text-gray-500" />
+              </button>
+            </div>
+
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* Available Examiners */}
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Available Examiners</h4>
+                    <span className="bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                      {availableExaminers.length} Found
+                    </span>
+                  </div>
+                  
+                  <div className="relative mb-4">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                    <input 
+                      type="text"
+                      placeholder="Search by name..."
+                      className="w-full bg-gray-50 border border-gray-200 rounded-xl py-2 pl-10 pr-4 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                    {allocationLoading ? (
+                      <div className="text-center py-10 opacity-50">Loading examiners...</div>
+                    ) : availableExaminers.filter(ex => 
+                      ex.name.toLowerCase().includes(searchQuery.toLowerCase()) && 
+                      !assignedExaminers.some(a => a.examinerId === ex.id)
+                    ).map(examiner => (
+                      <div key={examiner.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-blue-50 group transition-all">
+                        <div className="flex items-center gap-3">
+                          <img 
+                            src={examiner.profileImage || "https://ui-avatars.com/api/?name=" + examiner.name} 
+                            alt="" 
+                            className="w-8 h-8 rounded-full bg-gray-200 border-2 border-white shadow-sm"
+                          />
+                          <div>
+                            <p className="text-sm font-bold text-gray-800">{examiner.name}</p>
+                            <p className="text-[10px] text-gray-500">ID: {examiner.id}</p>
+                          </div>
+                        </div>
+                        <button 
+                          onClick={() => handleAssign(examiner.id)}
+                          className="p-1.5 bg-white text-blue-600 rounded-lg shadow-sm border border-gray-100 opacity-0 group-hover:opacity-100 transition-all hover:scale-110"
+                        >
+                          <UserPlus size={16} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Assigned Examiners */}
+                <div>
+                  <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-4">Assigned to Paper</h4>
+                  <div className="space-y-3 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
+                    {assignedExaminers.length === 0 ? (
+                      <div className="text-center py-12 border-2 border-dashed border-gray-100 rounded-2xl">
+                        <Users size={32} className="mx-auto text-gray-200 mb-2" />
+                        <p className="text-xs text-gray-400 font-medium">No examiners assigned yet</p>
+                      </div>
+                    ) : (
+                      assignedExaminers.map(assignment => (
+                        <div key={assignment.id} className="flex items-center justify-between p-3 bg-blue-50 border border-blue-100 rounded-xl">
+                          <div className="flex items-center gap-3">
+                            <div className="relative">
+                              <img 
+                                src={assignment.examiner?.profileImage || "https://ui-avatars.com/api/?name=" + assignment.examiner?.name} 
+                                alt="" 
+                                className="w-8 h-8 rounded-full border-2 border-white shadow-sm"
+                              />
+                              <div className="absolute -top-1 -right-1 bg-green-500 border-2 border-white w-3 h-3 rounded-full"></div>
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-blue-900">{assignment.examiner?.name}</p>
+                              <p className="text-[10px] text-blue-600/70">Assigned: {new Date(assignment.assignedAt).toLocaleDateString()}</p>
+                            </div>
+                          </div>
+                          <button 
+                            onClick={() => handleRemoveAssignment(assignment.id)}
+                            className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-white rounded-lg transition-all"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 bg-gray-50 border-t border-gray-100 flex justify-end">
+              <button 
+                onClick={() => setShowExaminerModal(false)}
+                className="bg-blue-600 text-white px-8 py-2.5 rounded-xl font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
