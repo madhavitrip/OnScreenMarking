@@ -1,5 +1,5 @@
 import { useNavigate, Link } from 'react-router-dom';
-import { LogOut, User, Bell, BookOpen, Settings } from 'lucide-react';
+import { LogOut, User, Bell, BookOpen, Settings, LayoutDashboard } from 'lucide-react';
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -29,10 +29,10 @@ const Navbar = () => {
         {userType === 'admin' && (
           <Link 
             to="/admin/dashboard"
-            className="text-white hover:bg-blue-500 px-3 py-1 rounded transition-colors flex items-center gap-1"
+            className="flex items-center gap-2 bg-blue-500/20 hover:bg-blue-500/30 text-white px-4 py-2 rounded-xl transition-all border border-blue-400/30"
           >
-            <Settings size={18} />
-            <span className="text-sm font-medium">Admin</span>
+            <LayoutDashboard size={18} />
+            <span className="text-sm font-bold">Admin Dashboard</span>
           </Link>
         )}
         <button className="p-2 text-white hover:bg-blue-500 rounded-full transition-colors relative">
