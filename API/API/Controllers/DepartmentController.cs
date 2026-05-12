@@ -81,6 +81,19 @@ namespace API.Controllers
                 if (university == null)
                     return BadRequest(new { success = false, message = "University not found" });
 
+                // Coordinators can only create departments for their own university
+                var userType = User.FindFirst("userType")?.Value;
+                if (userType == "coordinator")
+                {
+                    var userIdClaim = User.FindFirst("id")?.Value;
+                    if (int.TryParse(userIdClaim, out int userId))
+                    {
+                        var user = await _context.Users.FindAsync(userId);
+                        if (user?.UniversityId != department.UniversityId)
+                            return Forbid();
+                    }
+                }
+
                 department.IsActive = true;
                 department.CreatedAt = DateTime.UtcNow;
                 department.UpdatedAt = DateTime.UtcNow;

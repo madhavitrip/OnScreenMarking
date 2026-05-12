@@ -9,6 +9,7 @@ import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminDashboard from './pages/AdminDashboard';
+import CoordinatorDashboard from './pages/CoordinatorDashboard';
 import UniversityManagement from './pages/UniversityManagement';
 import DepartmentManagement from './pages/DepartmentManagement';
 import SubjectManagement from './pages/SubjectManagement';
@@ -40,6 +41,10 @@ function App() {
         {userType === 'admin' && (
           <Route element={<Layout />}>
             <Route 
+              path="/" 
+              element={<Navigate to="/admin/dashboard" replace />} 
+            />
+            <Route 
               path="/admin/dashboard" 
               element={<AdminDashboard />} 
             />
@@ -68,6 +73,14 @@ function App() {
               element={<PapersManagement />} 
             />
             <Route 
+              path="/admin/subject-config" 
+              element={<SubjectConfig />} 
+            />
+            <Route 
+              path="/admin/subject-config" 
+              element={<SubjectConfig />} 
+            />
+            <Route 
               path="/admin/users" 
               element={<UsersManagement />} 
             />
@@ -79,7 +92,11 @@ function App() {
           <Route element={<Layout />}>
             <Route 
               path="/" 
-              element={<DepartmentManagement />} 
+              element={<Navigate to="/coordinator/dashboard" replace />} 
+            />
+            <Route 
+              path="/coordinator/dashboard" 
+              element={<CoordinatorDashboard />} 
             />
             <Route 
               path="/departments" 
