@@ -1,8 +1,35 @@
 import { NavLink } from 'react-router-dom';
-import { Home, FileText, BarChart3, Settings, Users, BookOpen, PenTool, Layers } from 'lucide-react';
+import { Home, FileText, BarChart3, Settings, Users, BookOpen, PenTool, Layers, School, Building2, Calendar, ClipboardList } from 'lucide-react';
 
 const Sidebar = () => {
-  const menuItems = [
+  const userType = localStorage.getItem('userType');
+
+  // Admin navigation
+  const adminMenuItems = [
+    { icon: <Home size={20} />, label: 'Dashboard', path: '/admin/dashboard' },
+    { icon: <School size={20} />, label: 'Universities', path: '/admin/universities' },
+    { icon: <Building2 size={20} />, label: 'Departments', path: '/admin/departments' },
+    { icon: <BookOpen size={20} />, label: 'Subjects', path: '/admin/subjects' },
+    { icon: <Calendar size={20} />, label: 'Sessions', path: '/admin/sessions' },
+    { icon: <ClipboardList size={20} />, label: 'Projects', path: '/admin/projects' },
+    { icon: <FileText size={20} />, label: 'Papers', path: '/admin/papers' },
+    { icon: <Users size={20} />, label: 'Users', path: '/admin/users' },
+    { icon: <Settings size={20} />, label: 'Settings', path: '/settings' },
+  ];
+
+  // Coordinator navigation
+  const coordinatorMenuItems = [
+    { icon: <Home size={20} />, label: 'Dashboard', path: '/coordinator/dashboard' },
+    { icon: <Building2 size={20} />, label: 'Departments', path: '/departments' },
+    { icon: <BookOpen size={20} />, label: 'Subjects', path: '/subjects' },
+    { icon: <Calendar size={20} />, label: 'Sessions', path: '/sessions' },
+    { icon: <ClipboardList size={20} />, label: 'Projects', path: '/projects' },
+    { icon: <FileText size={20} />, label: 'Papers', path: '/papers' },
+    { icon: <Settings size={20} />, label: 'Settings', path: '/settings' },
+  ];
+
+  // Examiner navigation
+  const examinerMenuItems = [
     { icon: <Home size={20} />, label: 'Dashboard', path: '/' },
     { icon: <FileText size={20} />, label: 'Scripts', path: '/scripts' },
     { icon: <PenTool size={20} />, label: 'Marking', path: '/marking' },
@@ -12,6 +39,14 @@ const Sidebar = () => {
     { icon: <BookOpen size={20} />, label: 'Subjects', path: '/subjects' },
     { icon: <Settings size={20} />, label: 'Settings', path: '/settings' },
   ];
+
+  // Select menu based on user type
+  let menuItems = examinerMenuItems;
+  if (userType === 'admin') {
+    menuItems = adminMenuItems;
+  } else if (userType === 'coordinator') {
+    menuItems = coordinatorMenuItems;
+  }
 
   return (
     <aside className="w-64 h-[calc(100vh-4rem)] bg-white border-r border-gray-200 sticky top-16 overflow-y-auto">

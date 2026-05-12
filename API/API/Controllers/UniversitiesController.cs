@@ -68,6 +68,11 @@ namespace API.Controllers
                 if (string.IsNullOrEmpty(university.UniversityName))
                     return BadRequest(new { success = false, message = "University name is required" });
 
+                // Only admins can create universities
+                var userType = User.FindFirst("userType")?.Value;
+                if (userType != "admin")
+                    return Forbid();
+
                 _context.Universities.Add(university);
                 await _context.SaveChangesAsync();
 
@@ -114,6 +119,38 @@ namespace API.Controllers
                     .ToListAsync();
 
                 return Ok(departments);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpGet("current/my-university")]
+        public async Task<ActionResult<University>> GetMyUniversity()
+        {
+            try
+            {
+                var userIdClaim = User.FindFirst("id")?.Value;
+                if (!int.TryParse(userIdClaim, out int userId))
+                    return Unauthorized(new { success = false, message = "Invalid user" });
+
+                var user = await _context.Users
+                    .Include(u => u.University)
+                    .FirstOrDefaultAsync(u => u.Id == userId);
+
+                if (user == null || user.UniversityId == null)
+                    return NotFound(new { success = false, message = "User not associated with a university" });
+
+                var university = await _context.Universities
+                    .Include(u => u.Departments)
+                    .Include(u => u.Projects)
+                    .FirstOrDefaultAsync(u => u.UniversityId == user.UniversityId);
+
+                if (university == null)
+                    return NotFound(new { success = false, message = "University not found" });
+
+                return Ok(university);
             }
             catch (Exception ex)
             {

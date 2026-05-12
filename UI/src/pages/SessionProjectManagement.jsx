@@ -1,310 +1,212 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { Calendar, ClipboardList, Plus, ChevronRight } from 'lucide-react';
+import apiCall from '../services/api';
 
 export default function SessionProjectManagement() {
-  const [activeTab, setActiveTab] = useState('sessions');
+  const [searchParams] = useSearchParams();
+  const universityId = searchParams.get('universityId');
+
   const [sessions, setSessions] = useState([]);
   const [projects, setProjects] = useState([]);
-  const [universities, setUniversities] = useState([]);
-  const [showForm, setShowForm] = useState(false);
+  const [selectedSessionId, setSelectedSessionId] = useState(null);
+  const [showSessionForm, setShowSessionForm] = useState(false);
+  const [showProjectForm, setShowProjectForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({
     sessionName: '',
     projectName: '',
-    sessionId: '',
-    universityId: '',
     isActive: true
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const API_URL = 'https://localhost:7243/api';
-
   useEffect(() => {
     fetchSessions();
-    fetchProjects();
-    fetchUniversities();
   }, []);
+
+  useEffect(() => {
+    if (selectedSessionId) {
+      fetchProjects(selectedSessionId);
+    }
+  }, [selectedSessionId]);
 
   const fetchSessions = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/session`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
+      setLoading(true);
+      const data = await apiCall('/session');
       setSessions(data);
     } catch (err) {
-      console.error('Failed to fetch sessions');
+      setError('Failed to fetch sessions');
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const fetchProjects = async () => {
+  const fetchProjects = async (sessionId) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/project`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
-      setProjects(data);
+      const data = await apiCall('/project');
+      // Filter projects by session and university if provided
+      const filtered = data.filter(p => p.sessionId === sessionId && (!universityId || p.universityId === parseInt(universityId)));
+      setProjects(filtered);
     } catch (err) {
-      console.error('Failed to fetch projects');
+      setError('Failed to fetch projects');
+      console.error(err);
     }
   };
 
-  const fetchUniversities = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/universities`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
-      setUniversities(data);
-    } catch (err) {
-      console.error('Failed to fetch universities');
-    }
-  };
-
-  const handleSubmit = async (e) => {
+  const handleSessionSubmit = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('token');
-      
-      if (activeTab === 'sessions') {
-        const method = editingId ? 'PUT' : 'POST';
-        const url = editingId 
-          ? `${API_URL}/session/${editingId}`
-          : `${API_URL}/session`;
+      const method = editingId ? 'PUT' : 'POST';
+      const url = editingId ? `/session/${editingId}` : '/session';
 
-        const response = await fetch(url, {
-          method,
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            sessionName: formData.sessionName,
-            isActive: formData.isActive
-          })
-        });
+      await apiCall(url, {
+        method,
+        body: JSON.stringify({
+          sessionName: formData.sessionName,
+          isActive: formData.isActive
+        })
+      });
 
-        if (response.ok) {
-          fetchSessions();
-          setFormData({ sessionName: '', projectName: '', sessionId: '', universityId: '', isActive: true });
-          setEditingId(null);
-          setShowForm(false);
-        }
-      } else {
-        if (!formData.sessionId || !formData.universityId) {
-          setError('Please select session and university');
-          return;
-        }
-
-        const method = editingId ? 'PUT' : 'POST';
-        const url = editingId 
-          ? `${API_URL}/project/${editingId}`
-          : `${API_URL}/project`;
-
-        const response = await fetch(url, {
-          method,
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            projectName: formData.projectName,
-            sessionId: parseInt(formData.sessionId),
-            universityId: parseInt(formData.universityId),
-            isActive: formData.isActive
-          })
-        });
-
-        if (response.ok) {
-          fetchProjects();
-          setFormData({ sessionName: '', projectName: '', sessionId: '', universityId: '', isActive: true });
-          setEditingId(null);
-          setShowForm(false);
-        }
-      }
+      fetchSessions();
+      setFormData({ sessionName: '', projectName: '', isActive: true });
+      setEditingId(null);
+      setShowSessionForm(false);
     } catch (err) {
-      setError('Error saving data');
+      setError('Error saving session');
     }
   };
 
-  const handleEdit = (item) => {
-    if (activeTab === 'sessions') {
-      setFormData({
-        sessionName: item.sessionName,
-        projectName: '',
-        sessionId: '',
-        universityId: '',
-        isActive: item.isActive
-      });
-    } else {
-      setFormData({
-        sessionName: '',
-        projectName: item.projectName,
-        sessionId: item.sessionId,
-        universityId: item.universityId,
-        isActive: item.isActive
-      });
+  const handleProjectSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedSessionId) {
+      setError('Please select a session first');
+      return;
     }
-    setEditingId(item.sessionId || item.projectId);
-    setShowForm(true);
+
+    try {
+      const method = editingId ? 'PUT' : 'POST';
+      const url = editingId ? `/project/${editingId}` : '/project';
+
+      await apiCall(url, {
+        method,
+        body: JSON.stringify({
+          projectName: formData.projectName,
+          sessionId: selectedSessionId,
+          universityId: universityId ? parseInt(universityId) : 1,
+          isActive: formData.isActive
+        })
+      });
+
+      fetchProjects(selectedSessionId);
+      setFormData({ sessionName: '', projectName: '', isActive: true });
+      setEditingId(null);
+      setShowProjectForm(false);
+    } catch (err) {
+      setError('Error saving project');
+    }
+  };
+
+  const handleEditSession = (session) => {
+    setFormData({
+      sessionName: session.sessionName,
+      projectName: '',
+      isActive: session.isActive
+    });
+    setEditingId(session.sessionId);
+    setShowSessionForm(true);
+  };
+
+  const handleEditProject = (project) => {
+    setFormData({
+      sessionName: '',
+      projectName: project.projectName,
+      isActive: project.isActive
+    });
+    setEditingId(project.projectId);
+    setShowProjectForm(true);
   };
 
   const handleCancel = () => {
-    setFormData({ sessionName: '', projectName: '', sessionId: '', universityId: '', isActive: true });
+    setFormData({ sessionName: '', projectName: '', isActive: true });
     setEditingId(null);
-    setShowForm(false);
+    setShowSessionForm(false);
+    setShowProjectForm(false);
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 p-8">
-        <div className="max-w-6xl mx-auto">
-          {/* Header */}
-          <div className="flex justify-between items-center mb-8">
-            <div>
-              <h1 className="text-3xl font-bold text-white mb-2">Sessions & Projects</h1>
-              <p className="text-slate-400">Manage exam sessions and projects</p>
-            </div>
-            <button
-              onClick={() => setShowForm(!showForm)}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition"
-            >
-              {showForm ? 'Cancel' : `+ Add ${activeTab === 'sessions' ? 'Session' : 'Project'}`}
-            </button>
-          </div>
+    <div className="min-h-screen bg-gray-50 pb-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="py-6">
+          <h1 className="text-2xl font-bold text-gray-900">Sessions & Projects</h1>
+          <p className="text-gray-500 text-sm mt-1">Select a session to view and manage its projects</p>
+        </div>
 
-          {/* Tabs */}
-          <div className="flex gap-4 mb-8">
-            <button
-              onClick={() => {
-                setActiveTab('sessions');
-                setShowForm(false);
-              }}
-              className={`px-6 py-2 rounded-lg font-semibold transition ${
-                activeTab === 'sessions'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-              }`}
-            >
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 text-red-900 text-sm">
+            {error}
+          </div>
+        )}
+
+        {/* Sessions Section */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+              <Calendar size={20} />
               Sessions
-            </button>
+            </h2>
             <button
-              onClick={() => {
-                setActiveTab('projects');
-                setShowForm(false);
-              }}
-              className={`px-6 py-2 rounded-lg font-semibold transition ${
-                activeTab === 'projects'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-              }`}
+              onClick={() => setShowSessionForm(!showSessionForm)}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
             >
-              Projects
+              <Plus size={16} />
+              Add Session
             </button>
           </div>
 
-          {error && (
-            <div className="bg-red-500 text-white p-4 rounded-lg mb-6">
-              {error}
-            </div>
-          )}
-
-          {/* Form */}
-          {showForm && (
-            <div className="bg-slate-700 rounded-lg p-6 mb-8">
-              <h2 className="text-xl font-bold text-white mb-4">
-                {editingId ? 'Edit' : 'Add New'} {activeTab === 'sessions' ? 'Session' : 'Project'}
-              </h2>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {activeTab === 'sessions' ? (
-                  <div>
-                    <label className="block text-slate-300 font-semibold mb-2">
-                      Session Name
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.sessionName}
-                      onChange={(e) => setFormData({ ...formData, sessionName: e.target.value })}
-                      className="w-full bg-slate-600 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="e.g., 2024-2025"
-                      required
-                    />
-                  </div>
-                ) : (
-                  <>
-                    <div>
-                      <label className="block text-slate-300 font-semibold mb-2">
-                        Session
-                      </label>
-                      <select
-                        value={formData.sessionId}
-                        onChange={(e) => setFormData({ ...formData, sessionId: e.target.value })}
-                        className="w-full bg-slate-600 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        required
-                      >
-                        <option value="">Select Session</option>
-                        {sessions.map((session) => (
-                          <option key={session.sessionId} value={session.sessionId}>
-                            {session.sessionName}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-slate-300 font-semibold mb-2">
-                        University
-                      </label>
-                      <select
-                        value={formData.universityId}
-                        onChange={(e) => setFormData({ ...formData, universityId: e.target.value })}
-                        className="w-full bg-slate-600 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        required
-                      >
-                        <option value="">Select University</option>
-                        {universities.map((uni) => (
-                          <option key={uni.universityId} value={uni.universityId}>
-                            {uni.universityName}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-slate-300 font-semibold mb-2">
-                        Project Name
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.projectName}
-                        onChange={(e) => setFormData({ ...formData, projectName: e.target.value })}
-                        className="w-full bg-slate-600 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="e.g., Mid-Term Exam"
-                        required
-                      />
-                    </div>
-                  </>
-                )}
+          {/* Session Form */}
+          {showSessionForm && (
+            <div className="bg-white rounded-lg border border-gray-200 p-4 mb-4">
+              <h3 className="text-sm font-bold text-gray-900 mb-3">
+                {editingId ? 'Edit Session' : 'Add New Session'}
+              </h3>
+              <form onSubmit={handleSessionSubmit} className="space-y-3">
+                <div>
+                  <label className="block text-gray-700 text-xs font-semibold mb-1">
+                    Session Name
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.sessionName}
+                    onChange={(e) => setFormData({ ...formData, sessionName: e.target.value })}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="e.g., 2024-2025"
+                    required
+                  />
+                </div>
                 <div className="flex items-center">
                   <input
                     type="checkbox"
                     checked={formData.isActive}
                     onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                    className="w-4 h-4 rounded"
+                    className="w-4 h-4 rounded border-gray-300"
                   />
-                  <label className="ml-2 text-slate-300">Active</label>
+                  <label className="ml-2 text-gray-700 text-sm">Active</label>
                 </div>
-                <div className="flex gap-4">
+                <div className="flex gap-2">
                   <button
                     type="submit"
-                    className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-semibold transition"
+                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
                   >
                     {editingId ? 'Update' : 'Create'}
                   </button>
                   <button
                     type="button"
                     onClick={handleCancel}
-                    className="bg-slate-600 hover:bg-slate-500 text-white px-6 py-2 rounded-lg font-semibold transition"
+                    className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
                   >
                     Cancel
                   </button>
@@ -313,97 +215,179 @@ export default function SessionProjectManagement() {
             </div>
           )}
 
-          {/* List */}
-          <div className="bg-slate-700 rounded-lg overflow-hidden">
-            {activeTab === 'sessions' ? (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-slate-800">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-slate-300 font-semibold">Name</th>
-                      <th className="px-6 py-3 text-left text-slate-300 font-semibold">Status</th>
-                      <th className="px-6 py-3 text-left text-slate-300 font-semibold">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sessions.map((session) => (
-                      <tr key={session.sessionId} className="border-t border-slate-600 hover:bg-slate-600 transition">
-                        <td className="px-6 py-4 text-white">{session.sessionName}</td>
-                        <td className="px-6 py-4">
-                          <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                            session.isActive 
-                              ? 'bg-green-500 text-white' 
-                              : 'bg-red-500 text-white'
-                          }`}>
-                            {session.isActive ? 'Active' : 'Inactive'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <button
-                            onClick={() => handleEdit(session)}
-                            className="text-blue-400 hover:text-blue-300 font-semibold"
-                          >
-                            Edit
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-slate-800">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-slate-300 font-semibold">Name</th>
-                      <th className="px-6 py-3 text-left text-slate-300 font-semibold">Session</th>
-                      <th className="px-6 py-3 text-left text-slate-300 font-semibold">University</th>
-                      <th className="px-6 py-3 text-left text-slate-300 font-semibold">Status</th>
-                      <th className="px-6 py-3 text-left text-slate-300 font-semibold">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {projects.map((project) => (
-                      <tr key={project.projectId} className="border-t border-slate-600 hover:bg-slate-600 transition">
-                        <td className="px-6 py-4 text-white">{project.projectName}</td>
-                        <td className="px-6 py-4 text-slate-300">
-                          {sessions.find(s => s.sessionId === project.sessionId)?.sessionName}
-                        </td>
-                        <td className="px-6 py-4 text-slate-300">
-                          {universities.find(u => u.universityId === project.universityId)?.universityName}
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                            project.isActive 
-                              ? 'bg-green-500 text-white' 
-                              : 'bg-red-500 text-white'
-                          }`}>
-                            {project.isActive ? 'Active' : 'Inactive'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <button
-                            onClick={() => handleEdit(project)}
-                            className="text-blue-400 hover:text-blue-300 mr-4 font-semibold"
-                          >
-                            Edit
-                          </button>
-                          <a
-                            href={`/admin/papers?projectId=${project.projectId}`}
-                            className="text-green-400 hover:text-green-300 font-semibold"
-                          >
-                            View Papers
-                          </a>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+          {/* Sessions Grid */}
+          {loading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+              <p className="text-gray-600 text-sm">Loading sessions...</p>
+            </div>
+          ) : sessions.length === 0 ? (
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
+              <Calendar className="mx-auto text-gray-400 mb-3" size={32} />
+              <p className="text-gray-600 text-sm font-semibold">No sessions yet</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {sessions.map((session) => (
+                <div
+                  key={session.sessionId}
+                  onClick={() => setSelectedSessionId(session.sessionId)}
+                  className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                    selectedSessionId === session.sessionId
+                      ? 'border-blue-600 bg-blue-50'
+                      : 'border-gray-200 bg-white hover:border-blue-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-bold text-gray-900">{session.sessionName}</h3>
+                    <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                      session.isActive
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-red-100 text-red-700'
+                    }`}>
+                      {session.isActive ? 'Active' : 'Off'}
+                    </span>
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEditSession(session);
+                    }}
+                    className="text-blue-600 hover:text-blue-700 text-xs font-semibold"
+                  >
+                    Edit
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Projects Section */}
+        {selectedSessionId && (
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                <ClipboardList size={20} />
+                Projects for {sessions.find(s => s.sessionId === selectedSessionId)?.sessionName}
+              </h2>
+              <button
+                onClick={() => setShowProjectForm(!showProjectForm)}
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+              >
+                <Plus size={16} />
+                Add Project
+              </button>
+            </div>
+
+            {/* Project Form */}
+            {showProjectForm && (
+              <div className="bg-white rounded-lg border border-gray-200 p-4 mb-4">
+                <h3 className="text-sm font-bold text-gray-900 mb-3">
+                  {editingId ? 'Edit Project' : 'Add New Project'}
+                </h3>
+                <form onSubmit={handleProjectSubmit} className="space-y-3">
+                  <div>
+                    <label className="block text-gray-700 text-xs font-semibold mb-1">
+                      Project Name
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.projectName}
+                      onChange={(e) => setFormData({ ...formData, projectName: e.target.value })}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="e.g., Mid-Term Exam"
+                      required
+                    />
+                  </div>
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={formData.isActive}
+                      onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                      className="w-4 h-4 rounded border-gray-300"
+                    />
+                    <label className="ml-2 text-gray-700 text-sm">Active</label>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="submit"
+                      className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+                    >
+                      {editingId ? 'Update' : 'Create'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCancel}
+                      className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
               </div>
             )}
+
+            {/* Projects Table */}
+            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+              {projects.length === 0 ? (
+                <div className="p-8 text-center">
+                  <ClipboardList className="mx-auto text-gray-400 mb-3" size={32} />
+                  <p className="text-gray-600 text-sm font-semibold">No projects for this session</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-gray-700 text-xs font-bold uppercase">Name</th>
+                        <th className="px-4 py-3 text-left text-gray-700 text-xs font-bold uppercase">Status</th>
+                        <th className="px-4 py-3 text-left text-gray-700 text-xs font-bold uppercase">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {projects.map((project) => (
+                        <tr key={project.projectId} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-4 py-3 text-gray-900 text-sm font-medium">{project.projectName}</td>
+                          <td className="px-4 py-3">
+                            <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                              project.isActive
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-red-100 text-red-700'
+                            }`}>
+                              {project.isActive ? 'Active' : 'Inactive'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            <button
+                              onClick={() => handleEditProject(project)}
+                              className="text-blue-600 hover:text-blue-700 font-semibold mr-4"
+                            >
+                              Edit
+                            </button>
+                            <a
+                              href={`/admin/subject-config?projectId=${project.projectId}`}
+                              className="text-purple-600 hover:text-purple-700 font-semibold mr-4"
+                            >
+                              Configure
+                            </a>
+                            <a
+                              href={`/admin/papers?projectId=${project.projectId}`}
+                              className="text-green-600 hover:text-green-700 font-semibold"
+                            >
+                              Papers
+                            </a>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
-    );
+    </div>
+  );
 }

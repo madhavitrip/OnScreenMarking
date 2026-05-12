@@ -141,13 +141,13 @@ export default function DepartmentManagement() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 p-8">
+    <div className="min-h-screen bg-gray-50 p-8">
         <div className="max-w-6xl mx-auto">
           {/* Header */}
           <div className="flex justify-between items-center mb-8">
             <div>
-              <h1 className="text-3xl font-bold text-white mb-2">Departments</h1>
-              <p className="text-slate-400">Manage departments within universities</p>
+              <h1 className="text-3xl font-bold text-slate-900 mb-2">Departments</h1>
+              <p className="text-slate-500">Manage departments within universities</p>
             </div>
             <button
               onClick={() => setShowForm(!showForm)}
@@ -165,51 +165,61 @@ export default function DepartmentManagement() {
 
           {/* Form */}
           {showForm && (
-            <div className="bg-slate-700 rounded-lg p-6 mb-8">
-              <h2 className="text-xl font-bold text-white mb-4">
+            <div className="bg-white border border-slate-200 rounded-lg p-6 mb-8 shadow-sm">
+              <h2 className="text-xl font-bold text-slate-900 mb-4">
                 {editingId ? 'Edit Department' : 'Add New Department'}
               </h2>
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-slate-300 font-semibold mb-2">
-                    University ({universities.length} available)
-                  </label>
-                  {loadingUniversities ? (
-                    <div className="w-full bg-slate-600 text-slate-400 px-4 py-2 rounded-lg">
-                      Loading universities...
+                {userType === 'admin' ? (
+                  <div>
+                    <label className="block text-slate-700 font-semibold mb-2">
+                      University ({universities.length} available)
+                    </label>
+                    {loadingUniversities ? (
+                      <div className="w-full bg-slate-50 border border-slate-200 text-slate-400 px-4 py-2 rounded-lg">
+                        Loading universities...
+                      </div>
+                    ) : universities.length === 0 ? (
+                      <div className="w-full bg-slate-50 border border-slate-200 text-slate-400 px-4 py-2 rounded-lg">
+                        No universities available
+                      </div>
+                    ) : (
+                      <select
+                        value={formData.universityId}
+                        onChange={handleUniversityChange}
+                        className="w-full bg-white border border-slate-300 text-slate-900 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        required
+                      >
+                        <option value="">Select University</option>
+                        {universities.map((uni) => {
+                          return (
+                            <option key={uni.universityId} value={uni.universityId}>
+                              {uni.universityName || 'Unnamed'}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    )}
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-slate-700 font-semibold mb-2">
+                      University
+                    </label>
+                    <div className="w-full bg-slate-50 border border-slate-200 text-slate-900 px-4 py-2 rounded-lg">
+                      {universities.find(u => u.universityId === parseInt(userUniversityId))?.universityName || 'Your University'}
                     </div>
-                  ) : universities.length === 0 ? (
-                    <div className="w-full bg-slate-600 text-slate-400 px-4 py-2 rounded-lg">
-                      No universities available
-                    </div>
-                  ) : (
-                    <select
-                      value={formData.universityId}
-                      onChange={handleUniversityChange}
-                      className="w-full bg-slate-600 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required
-                    >
-                      <option value="">Select University</option>
-                      {universities.map((uni) => {
-                        console.log('Rendering university:', uni);
-                        return (
-                          <option key={uni.universityId} value={uni.universityId}>
-                            {uni.universityName || 'Unnamed'}
-                          </option>
-                        );
-                      })}
-                    </select>
-                  )}
-                </div>
+                  </div>
+                )}
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-2">
+                  <label className="block text-slate-700 font-semibold mb-2">
                     Department Name
                   </label>
                   <input
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full bg-slate-600 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full bg-white border border-slate-300 text-slate-900 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Enter department name"
                     required
                   />
@@ -219,9 +229,9 @@ export default function DepartmentManagement() {
                     type="checkbox"
                     checked={formData.isActive}
                     onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                    className="w-4 h-4 rounded"
+                    className="w-4 h-4 rounded border-slate-300"
                   />
-                  <label className="ml-2 text-slate-300">Active</label>
+                  <label className="ml-2 text-slate-700">Active</label>
                 </div>
                 <div className="flex gap-4">
                   <button
@@ -233,7 +243,7 @@ export default function DepartmentManagement() {
                   <button
                     type="button"
                     onClick={handleCancel}
-                    className="bg-slate-600 hover:bg-slate-500 text-white px-6 py-2 rounded-lg font-semibold transition"
+                    className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-6 py-2 rounded-lg font-semibold transition"
                   >
                     Cancel
                   </button>
@@ -243,36 +253,36 @@ export default function DepartmentManagement() {
           )}
 
           {/* Departments List */}
-          <div className="bg-slate-700 rounded-lg overflow-hidden">
+          <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
             {loading ? (
-              <div className="p-8 text-center text-slate-400">Loading...</div>
+              <div className="p-8 text-center text-slate-500">Loading...</div>
             ) : departments.length === 0 ? (
-              <div className="p-8 text-center text-slate-400">
+              <div className="p-8 text-center text-slate-500">
                 {universityId ? 'No departments found. Create one to get started!' : 'Select a university to view departments'}
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-slate-800">
+                  <thead className="bg-slate-50 border-b border-slate-200">
                     <tr>
-                      <th className="px-6 py-3 text-left text-slate-300 font-semibold">Name</th>
-                      <th className="px-6 py-3 text-left text-slate-300 font-semibold">University</th>
-                      <th className="px-6 py-3 text-left text-slate-300 font-semibold">Status</th>
-                      <th className="px-6 py-3 text-left text-slate-300 font-semibold">Actions</th>
+                      <th className="px-6 py-3 text-left text-slate-600 font-semibold uppercase text-xs tracking-wider">Name</th>
+                      <th className="px-6 py-3 text-left text-slate-600 font-semibold uppercase text-xs tracking-wider">University</th>
+                      <th className="px-6 py-3 text-left text-slate-600 font-semibold uppercase text-xs tracking-wider">Status</th>
+                      <th className="px-6 py-3 text-left text-slate-600 font-semibold uppercase text-xs tracking-wider">Actions</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-slate-200">
                     {departments.map((department) => (
-                      <tr key={department.departmentId} className="border-t border-slate-600 hover:bg-slate-600 transition">
-                        <td className="px-6 py-4 text-white">{department.name}</td>
-                        <td className="px-6 py-4 text-slate-300">
+                      <tr key={department.departmentId} className="hover:bg-slate-50 transition">
+                        <td className="px-6 py-4 text-slate-900 font-medium">{department.name}</td>
+                        <td className="px-6 py-4 text-slate-600">
                           {universities.find(u => u.universityId === department.universityId)?.universityName}
                         </td>
                         <td className="px-6 py-4">
-                          <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
                             department.isActive 
-                              ? 'bg-green-500 text-white' 
-                              : 'bg-red-500 text-white'
+                              ? 'bg-green-100 text-green-700 border border-green-200' 
+                              : 'bg-red-100 text-red-700 border border-red-200'
                           }`}>
                             {department.isActive ? 'Active' : 'Inactive'}
                           </span>
@@ -280,13 +290,13 @@ export default function DepartmentManagement() {
                         <td className="px-6 py-4">
                           <button
                             onClick={() => handleEdit(department)}
-                            className="text-blue-400 hover:text-blue-300 mr-4 font-semibold"
+                            className="text-blue-600 hover:text-blue-800 mr-4 font-semibold"
                           >
                             Edit
                           </button>
                           <a
                             href={`/admin/subjects?departmentId=${department.departmentId}`}
-                            className="text-green-400 hover:text-green-300 font-semibold"
+                            className="text-green-600 hover:text-green-800 font-semibold"
                           >
                             View Subjects
                           </a>
