@@ -3,6 +3,7 @@ using System;
 using API.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace API.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260511070024_Maxquestion")]
+    partial class Maxquestion
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -228,36 +231,6 @@ namespace API.Migrations
                     b.HasIndex("SubjectId");
 
                     b.ToTable("Papers");
-                });
-
-            modelBuilder.Entity("API.Models.PaperExaminer", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("AssignedAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<int>("ExaminerId")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("tinyint(1)");
-
-                    b.Property<int?>("MaxScriptLimit")
-                        .HasColumnType("int");
-
-                    b.Property<int>("PaperId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ExaminerId");
-
-                    b.HasIndex("PaperId");
-
-                    b.ToTable("PaperExaminers");
                 });
 
             modelBuilder.Entity("API.Models.Project", b =>
@@ -693,25 +666,6 @@ namespace API.Migrations
                     b.Navigation("Project");
 
                     b.Navigation("Subject");
-                });
-
-            modelBuilder.Entity("API.Models.PaperExaminer", b =>
-                {
-                    b.HasOne("API.Models.User", "Examiner")
-                        .WithMany()
-                        .HasForeignKey("ExaminerId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("API.Models.Paper", "Paper")
-                        .WithMany()
-                        .HasForeignKey("PaperId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Examiner");
-
-                    b.Navigation("Paper");
                 });
 
             modelBuilder.Entity("API.Models.Project", b =>

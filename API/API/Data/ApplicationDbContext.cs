@@ -24,7 +24,7 @@ namespace API.Data
         public DbSet<Script> Scripts { get; set; }
         public DbSet<Allocation> Allocations { get; set; }
         public DbSet<Marking> Markings { get; set; }
-
+        public DbSet<PaperExaminer> PaperExaminers { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -211,6 +211,20 @@ namespace API.Data
                 .HasMany(m => m.QuestionMarks)
                 .WithOne(qm => qm.Marking)
                 .HasForeignKey(qm => qm.MarkingId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // PaperExaminer configuration
+            modelBuilder.Entity<PaperExaminer>()
+                .HasKey(pe => pe.Id);
+            modelBuilder.Entity<PaperExaminer>()
+                .HasOne(pe => pe.Paper)
+                .WithMany()
+                .HasForeignKey(pe => pe.PaperId)
+                .OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<PaperExaminer>()
+                .HasOne(pe => pe.Examiner)
+                .WithMany()
+                .HasForeignKey(pe => pe.ExaminerId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             // QuestionMark configuration

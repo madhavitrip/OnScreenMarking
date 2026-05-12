@@ -46,6 +46,7 @@ namespace API.Models.DTOs
         public int TotalMarks { get; set; }
         public int StartQuestion { get; set; }
         public int EndQuestion { get; set; }
+        public int MaxQuestionsToAttempt { get; set; }
         public List<QuestionDto> Questions { get; set; } = new List<QuestionDto>();
     }
 

@@ -18,6 +18,7 @@ namespace API.Models
         public int TotalMarks { get; set; }
         public int StartQuestion { get; set; } // e.g., 1
         public int EndQuestion { get; set; } // e.g., 10
+        public int MaxQuestionsToAttempt { get; set; } // e.g., 8 (out of 10)
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         
         // Navigation properties

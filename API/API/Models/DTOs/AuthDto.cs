@@ -38,6 +38,8 @@ namespace API.Models.DTOs
         public string Phone { get; set; }
         public string Address { get; set; }
         public string ProfileImage { get; set; }
+        public bool IsActive { get; set; } = true;
+        public University University { get; set; }
     }
 
     public class ExaminerExpertiseDto

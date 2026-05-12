@@ -102,6 +102,7 @@ namespace API.Controllers
                     TotalMarks = sectionDto.TotalMarks,
                     StartQuestion = sectionDto.StartQuestion,
                     EndQuestion = sectionDto.EndQuestion,
+                    MaxQuestionsToAttempt = sectionDto.MaxQuestionsToAttempt,
                     CreatedAt = DateTime.UtcNow
                 };
 
