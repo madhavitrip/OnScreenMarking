@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BreadcrumbProvider } from './context/BreadcrumbContext';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import Login from './pages/Login';
@@ -33,122 +34,121 @@ function App() {
 
   return (
     <Router>
-      <Routes>
-        {/* Public Routes */}
-        <Route path="/login" element={<Login />} />
-        
-        {/* Admin Routes - Manage all universities */}
-        {userType === 'admin' && (
-          <Route element={<Layout />}>
-            <Route 
-              path="/" 
-              element={<Navigate to="/admin/dashboard" replace />} 
-            />
-            <Route 
-              path="/admin/dashboard" 
-              element={<AdminDashboard />} 
-            />
-            <Route 
-              path="/admin/universities" 
-              element={<UniversityManagement />} 
-            />
-            <Route 
-              path="/admin/departments" 
-              element={<DepartmentManagement />} 
-            />
-            <Route 
-              path="/admin/subjects" 
-              element={<SubjectManagement />} 
-            />
-            <Route 
-              path="/admin/sessions" 
-              element={<SessionProjectManagement />} 
-            />
-            <Route 
-              path="/admin/projects" 
-              element={<SessionProjectManagement />} 
-            />
-            <Route 
-              path="/admin/papers" 
-              element={<PapersManagement />} 
-            />
-            <Route 
-              path="/admin/subject-config" 
-              element={<SubjectConfig />} 
-            />
-            <Route 
-              path="/admin/subject-config" 
-              element={<SubjectConfig />} 
-            />
-            <Route 
-              path="/admin/users" 
-              element={<UsersManagement />} 
-            />
-          </Route>
-        )}
+      <BreadcrumbProvider>
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/login" element={<Login />} />
+          
+          {/* Admin Routes - Manage all universities */}
+          {userType === 'admin' && (
+            <Route element={<Layout />}>
+              <Route 
+                path="/" 
+                element={<Navigate to="/admin/dashboard" replace />} 
+              />
+              <Route 
+                path="/admin/dashboard" 
+                element={<AdminDashboard />} 
+              />
+              <Route 
+                path="/admin/universities" 
+                element={<UniversityManagement />} 
+              />
+              <Route 
+                path="/admin/departments" 
+                element={<DepartmentManagement />} 
+              />
+              <Route 
+                path="/admin/subjects" 
+                element={<SubjectManagement />} 
+              />
+              <Route 
+                path="/admin/sessions" 
+                element={<SessionProjectManagement />} 
+              />
+              <Route 
+                path="/admin/projects" 
+                element={<SessionProjectManagement />} 
+              />
+              <Route 
+                path="/admin/papers" 
+                element={<PapersManagement />} 
+              />
+              <Route 
+                path="/admin/subject-config" 
+                element={<SubjectConfig />} 
+              />
+             
+              <Route 
+                path="/admin/users" 
+                element={<UsersManagement />} 
+              />
+            </Route>
+          )}
 
-        {/* University Coordinator Routes - Manage their university */}
-        {userType === 'coordinator' && (
-          <Route element={<Layout />}>
-            <Route 
-              path="/" 
-              element={<Navigate to="/coordinator/dashboard" replace />} 
-            />
-            <Route 
-              path="/coordinator/dashboard" 
-              element={<CoordinatorDashboard />} 
-            />
-            <Route 
-              path="/departments" 
-              element={<DepartmentManagement />} 
-            />
-            <Route 
-              path="/subjects" 
-              element={<SubjectManagement />} 
-            />
-            <Route 
-              path="/sessions" 
-              element={<SessionProjectManagement />} 
-            />
-            <Route 
-              path="/projects" 
-              element={<SessionProjectManagement />} 
-            />
-            <Route 
-              path="/papers" 
-              element={<PapersManagement />} 
-            />
-          </Route>
-        )}
+          {/* University Coordinator Routes - Manage their university */}
+          {userType === 'coordinator' && (
+            <Route element={<Layout />}>
+              <Route 
+                path="/" 
+                element={<Navigate to="/coordinator/dashboard" replace />} 
+              />
+              <Route 
+                path="/coordinator/dashboard" 
+                element={<CoordinatorDashboard />} 
+              />
+              <Route 
+                path="/departments" 
+                element={<DepartmentManagement />} 
+              />
+              <Route 
+                path="/subjects" 
+                element={<SubjectManagement />} 
+              />
+              <Route 
+                path="/sessions" 
+                element={<SessionProjectManagement />} 
+              />
+              <Route 
+                path="/projects" 
+                element={<SessionProjectManagement />} 
+              />
+              <Route 
+                path="/papers" 
+                element={<PapersManagement />} 
+              />
+            </Route>
+          )}
 
-        {/* Examiner Routes - View and mark scripts */}
-        {userType === 'examiner' && (
-          <Route element={<Layout />}>
-            <Route path="/" element={<Home />} />
-            <Route path="/scripts" element={<Scripts />} />
-            <Route path="/marking" element={<ExaminerMarking />} />
-            <Route path="/reports" element={<Reports />} />
-            <Route path="/settings" element={<Settings />} />
+          {/* Examiner Routes - View and mark scripts */}
+          {userType === 'examiner' && (
+            <Route element={<Layout />}>
+              <Route path="/" element={<Home />} />
+              <Route path="/scripts" element={<Scripts />} />
+              <Route path="/marking" element={<ExaminerMarking />} />
+              <Route path="/reports" element={<Reports />} />
+              <Route path="/settings" element={<Settings />} />
+            </Route>
+          )}
+          
+          {/* Protected Routes with Layout */}
+          <Route element={<ProtectedRoute />}>
+            <Route element={<Layout />}>
+              <Route path="/" element={<Home />} />
+              <Route path="/scripts" element={<Scripts />} />
+              <Route path="/marking" element={<ExaminerMarking />} />
+              <Route path="/subject-config" element={<SubjectConfig />} />
+              <Route path="/reports" element={<Reports />} />
+              <Route path="/examiners" element={<Home />} />
+              <Route path="/subjects" element={<Home />} />
+              <Route path="/settings" element={<Settings />} />
+            </Route>
           </Route>
-        )}
-        
-        {/* Protected Routes with Layout */}
-        <Route element={<ProtectedRoute />}>
-          <Route element={<Layout />}>
-            <Route path="/" element={<Home />} />
-            <Route path="/scripts" element={<Scripts />} />
-            <Route path="/marking" element={<ExaminerMarking />} />
-            <Route path="/subject-config" element={<SubjectConfig />} />
-            <Route path="/reports" element={<Reports />} />
-            <Route path="/examiners" element={<Home />} />
-            <Route path="/subjects" element={<Home />} />
-            <Route path="/settings" element={<Settings />} />
-          </Route>
-        </Route>
 
-        {/* Redirect unknown routes */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+          {/* Redirect unknown routes */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BreadcrumbProvider>
     </Router>
   );
 }

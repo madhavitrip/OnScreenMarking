@@ -94,14 +94,6 @@ export default function AdminDashboard() {
       lightColor: 'bg-green-50'
     },
     {
-      id: 'sessions',
-      title: 'Sessions',
-      description: 'Manage examination sessions',
-      icon: <Calendar size={24} />,
-      color: 'bg-yellow-500',
-      lightColor: 'bg-yellow-50'
-    },
-    {
       id: 'projects',
       title: 'Projects',
       description: 'Organize marking projects',
@@ -109,14 +101,6 @@ export default function AdminDashboard() {
       color: 'bg-red-500',
       lightColor: 'bg-red-50'
     },
-    {
-      id: 'papers',
-      title: 'Papers',
-      description: 'Configure exam papers and sections',
-      icon: <FileText size={24} />,
-      color: 'bg-indigo-500',
-      lightColor: 'bg-indigo-50'
-    }
   ];
 
   return (

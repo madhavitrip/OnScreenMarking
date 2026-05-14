@@ -20,13 +20,20 @@ import {
 } from 'lucide-react';
 import { subjectService, sectionService, paperService } from '../services';
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import apiCall from '../services/api';
+import { decryptId, encryptId } from '../utils/encryption';
+import { useBreadcrumb } from '../context/BreadcrumbContext';
 
 export default function SubjectConfig() {
-  const [universities, setUniversities] = useState([]);
+  const [searchParams] = useSearchParams();
+  const encryptedProjectId = searchParams.get('projectId');
+  const projectId = encryptedProjectId ? decryptId(encryptedProjectId) : null;
+  
   const [subjects, setSubjects] = useState([]);
   const [papers, setPapers] = useState([]);
   const [sections, setSections] = useState([]);
+  const [projectData, setProjectData] = useState(null);
   
   const [selectedUniversity, setSelectedUniversity] = useState('');
   const [selectedSubject, setSelectedSubject] = useState(null);
@@ -50,34 +57,20 @@ export default function SubjectConfig() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-
-  const [userProfile, setUserProfile] = useState(null);
   const userType = localStorage.getItem('userType');
+  const { setBreadcrumb } = useBreadcrumb();
 
   useEffect(() => {
-    fetchProfile();
-    fetchUniversities();
-  }, []);
-
-  const fetchProfile = async () => {
-    try {
-      // Fetch current user details using token
-      const response = await apiCall('/Auth/profile');
-      setUserProfile(response);
-      
-      if (response.universityId) {
-        setSelectedUniversity(response.universityId.toString());
-      }
-    } catch (err) {
-      console.error('Failed to fetch user profile:', err);
-    }
-  };
-
-  useEffect(() => {
-    if (selectedUniversity) {
+    if (projectId) {
+      // Set breadcrumb with full path
+      setBreadcrumb([
+        { label: 'Sessions & Projects', path: '/admin/sessions', icon: 'Calendar' },
+        { label: 'Subject Configuration', path: `/admin/subject-config?projectId=${encryptedProjectId}`, icon: 'Layers' }
+      ]);
+      fetchProjectData();
       fetchSubjects();
     }
-  }, [selectedUniversity]);
+  }, [projectId, encryptedProjectId]);
 
   useEffect(() => {
     if (selectedPaper) {
@@ -91,28 +84,19 @@ export default function SubjectConfig() {
     }
   }, [selectedSubject, selectedPaper]);
 
-  const fetchUniversities = async () => {
+  const fetchProjectData = async () => {
     try {
-      setLoading(true);
-      const data = await subjectService.getAllUniversities();
-      setUniversities(data);
-      
-      const storedUniId = userProfile?.universityId || localStorage.getItem('universityId');
-      if (storedUniId) {
-        setSelectedUniversity(storedUniId.toString());
-      }
+      const data = await apiCall(`/project/${projectId}`);
+      setProjectData(data);
     } catch (err) {
-      setError('Failed to fetch universities');
-      console.error(err);
-    } finally {
-      setLoading(false);
+      console.error('Failed to fetch project data:', err);
     }
   };
 
   const fetchSubjects = async () => {
     try {
       setLoading(true);
-      const subjectsData = await subjectService.getAllSubjects();
+      const subjectsData = await subjectService.getSubjectByProject(projectId);
       
       // Fetch paper counts for each subject in parallel
       const subjectsWithCounts = await Promise.all(
@@ -395,21 +379,6 @@ export default function SubjectConfig() {
                     <p className="text-gray-500 text-sm">Select a subject to start configuring examination papers</p>
                   </div>
                 </div>
-
-                {!(userProfile?.universityId || localStorage.getItem('universityId')) && (
-                  <div className="w-64">
-                    <select
-                      value={selectedUniversity}
-                      onChange={(e) => setSelectedUniversity(e.target.value)}
-                      className="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Select University</option>
-                      {universities.map(uni => (
-                        <option key={uni.universityId} value={uni.universityId}>{uni.universityName}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
               </div>
 
               {subjects.length > 0 ? (
@@ -479,9 +448,15 @@ export default function SubjectConfig() {
                   </button>
                   <div>
                     <h2 className="text-2xl font-bold text-gray-900">Select Paper</h2>
-                    <p className="text-gray-500 font-medium">Configure sections for <span className="text-blue-600 font-bold">{selectedSubject.subjectName}</span></p>
+                    <p className="text-gray-500 font-medium">Configure sections for <span className="text-blue-600 font-bold">{selectedSubject?.subjectName || 'Subject'}</span></p>
                   </div>
                 </div>
+                <button
+                  className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-md transition-all active:scale-95"
+                >
+                  <Plus className="w-5 h-5" />
+                  Add Paper
+                </button>
               </div>
 
               {papers.length > 0 ? (

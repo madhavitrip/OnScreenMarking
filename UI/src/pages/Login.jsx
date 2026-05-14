@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, Mail, BookOpen, AlertCircle, Loader } from 'lucide-react';
+import authService from '../services/authService';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -15,24 +16,7 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const response = await fetch('https://localhost:7243/api/Auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: email,
-          password: password,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.message || 'Login failed. Please try again.');
-        setLoading(false);
-        return;
-      }
+      const data = await authService.login(email, password);
 
       // Store token and user info
       localStorage.setItem('token', data.token);
@@ -52,7 +36,7 @@ const Login = () => {
         navigate('/');
       }
     } catch (err) {
-      setError('Connection error. Please check if the API is running.');
+      setError(err.message || 'Connection error. Please check if the API is running.');
       console.error('Login error:', err);
     } finally {
       setLoading(false);

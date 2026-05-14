@@ -45,6 +45,92 @@ namespace API.Controllers
             }
         }
 
+        [HttpGet("Project")]
+        public async Task<ActionResult<IEnumerable<Subject>>> GetSubjectByProject([FromQuery] int projectId)
+        {
+            try
+            {
+                // Get UniversityId from Project
+                var universityId = await _context.Projects
+                    .Where(p => p.ProjectId == projectId)
+                    .Select(p => p.UniversityId)
+                    .FirstOrDefaultAsync();
+
+                if (universityId == 0)
+                {
+                    return NotFound(new
+                    {
+                        success = false,
+                        message = "University not found for this project."
+                    });
+                }
+
+                // Get Department Ids of that University
+                var departmentIds = await _context.Departments
+                    .Where(d => d.UniversityId == universityId)
+                    .Select(d => d.DepartmentId)
+                    .ToListAsync();
+
+                // Get Subjects by DepartmentIds
+                var subjects = await _context.Subjects
+                    .Where(s => departmentIds.Contains(s.DepartmentId) && s.IsActive)
+                    .Include(s => s.Department)
+                    .Include(s => s.Papers)
+                    .Include(s => s.ExaminerExpertises)
+                    .OrderBy(s => s.SubjectName)
+                    .ToListAsync();
+
+                return Ok(subjects);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+        }
+
+        [HttpGet("University")]
+        public async Task<ActionResult<IEnumerable<Subject>>> GetSubjectByUniversity([FromQuery] int universityId)
+        {
+            try
+            {
+                if (universityId == 0)
+                {
+                    return NotFound(new
+                    {
+                        success = false,
+                        message = "University not found for this project."
+                    });
+                }
+
+                // Get Department Ids of that University
+                var departmentIds = await _context.Departments
+                    .Where(d => d.UniversityId == universityId)
+                    .Select(d => d.DepartmentId)
+                    .ToListAsync();
+
+                // Get Subjects by DepartmentIds
+                var subjects = await _context.Subjects
+                    .Where(s => departmentIds.Contains(s.DepartmentId) && s.IsActive)
+                    .Include(s => s.Department)
+                    .OrderBy(s => s.SubjectName)
+                    .ToListAsync();
+
+                return Ok(subjects);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+        }
+
         [HttpGet("{id}")]
         public async Task<ActionResult<Subject>> GetSubject(int id)
         {

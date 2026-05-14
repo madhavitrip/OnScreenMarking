@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { Plus, Edit2, Trash2, X, CheckCircle } from 'lucide-react';
+import universityService from '../services/universityService';
 
 export default function UniversityManagement() {
   const [universities, setUniversities] = useState([]);
@@ -10,8 +12,7 @@ export default function UniversityManagement() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-
-  const API_URL = 'https://localhost:7243/api';
+  const [success, setSuccess] = useState('');
 
   useEffect(() => {
     fetchUniversities();
@@ -20,14 +21,11 @@ export default function UniversityManagement() {
   const fetchUniversities = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/universities`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
+      const data = await universityService.getAllUniversities();
       setUniversities(data);
     } catch (err) {
       setError('Failed to fetch universities');
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -36,31 +34,23 @@ export default function UniversityManagement() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('token');
-      const method = editingId ? 'PUT' : 'POST';
-      const url = editingId 
-        ? `${API_URL}/universities/${editingId}`
-        : `${API_URL}/universities`;
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(formData)
-      });
-
-      if (response.ok) {
-        setFormData({ universityName: '', isActive: true });
-        setEditingId(null);
-        setShowForm(false);
-        fetchUniversities();
+      setLoading(true);
+      if (editingId) {
+        await universityService.updateUniversity(editingId, formData);
+        setSuccess('University updated successfully');
       } else {
-        setError('Failed to save university');
+        await universityService.createUniversity(formData);
+        setSuccess('University created successfully');
       }
+      setFormData({ universityName: '', isActive: true });
+      setEditingId(null);
+      setShowForm(false);
+      fetchUniversities();
     } catch (err) {
-      setError('Error saving university');
+      setError(err.message || 'Error saving university');
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -73,140 +63,169 @@ export default function UniversityManagement() {
     setShowForm(true);
   };
 
+  const handleDelete = async (universityId) => {
+    if (window.confirm('Are you sure you want to delete this university?')) {
+      try {
+        setLoading(true);
+        await universityService.deleteUniversity(universityId);
+        setSuccess('University deleted successfully');
+        fetchUniversities();
+      } catch (err) {
+        setError('Failed to delete university');
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
   const handleCancel = () => {
     setFormData({ universityName: '', isActive: true });
     setEditingId(null);
     setShowForm(false);
+    setError('');
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 p-8">
-        <div className="max-w-6xl mx-auto">
-          {/* Header */}
-          <div className="flex justify-between items-center mb-8">
-            <div>
-              <h1 className="text-3xl font-bold text-white mb-2">Universities</h1>
-              <p className="text-slate-400">Manage all universities in the system</p>
-            </div>
+    <div className="min-h-screen bg-gray-50 p-4 lg:p-8">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Universities</h1>
+            <p className="text-gray-600">Manage all universities in the system</p>
+          </div>
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition flex items-center gap-2"
+          >
+            <Plus className="w-5 h-5" />
+            {showForm ? 'Cancel' : 'Add University'}
+          </button>
+        </div>
+
+        {/* Notifications */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg mb-6 flex items-center gap-3">
+            <X className="w-5 h-5" />
+            {error}
+          </div>
+        )}
+        {success && (
+          <div className="bg-green-50 border border-green-200 text-green-700 p-4 rounded-lg mb-6 flex items-center gap-3">
+            <CheckCircle className="w-5 h-5" />
+            {success}
+          </div>
+        )}
+
+        {/* Form */}
+        {showForm && (
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 mb-8">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              {editingId ? 'Edit University' : 'Add New University'}
+            </h2>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  University Name
+                </label>
+                <input
+                  type="text"
+                  value={formData.universityName}
+                  onChange={(e) => setFormData({ ...formData, universityName: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  placeholder="Enter university name"
+                  required
+                />
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="isActive"
+                  checked={formData.isActive}
+                  onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                  className="w-4 h-4 rounded"
+                />
+                <label htmlFor="isActive" className="text-sm font-semibold text-gray-700">
+                  Active
+                </label>
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition disabled:opacity-50"
+                >
+                  {loading ? 'Saving...' : editingId ? 'Update' : 'Create'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  className="bg-gray-200 hover:bg-gray-300 text-gray-900 px-6 py-2 rounded-lg font-semibold transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* Universities List */}
+        {loading && !showForm ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading universities...</p>
+          </div>
+        ) : universities.length === 0 ? (
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-12 text-center">
+            <p className="text-gray-600 text-lg mb-4">No universities found</p>
             <button
-              onClick={() => setShowForm(!showForm)}
+              onClick={() => setShowForm(true)}
               className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition"
             >
-              {showForm ? 'Cancel' : '+ Add University'}
+              Create First University
             </button>
           </div>
-
-          {error && (
-            <div className="bg-red-500 text-white p-4 rounded-lg mb-6">
-              {error}
-            </div>
-          )}
-
-          {/* Form */}
-          {showForm && (
-            <div className="bg-slate-700 rounded-lg p-6 mb-8">
-              <h2 className="text-xl font-bold text-white mb-4">
-                {editingId ? 'Edit University' : 'Add New University'}
-              </h2>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-slate-300 font-semibold mb-2">
-                    University Name
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.universityName}
-                    onChange={(e) => setFormData({ ...formData, universityName: e.target.value })}
-                    className="w-full bg-slate-600 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter university name"
-                    required
-                  />
-                </div>
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={formData.isActive}
-                    onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                    className="w-4 h-4 rounded"
-                  />
-                  <label className="ml-2 text-slate-300">Active</label>
-                </div>
-                <div className="flex gap-4">
-                  <button
-                    type="submit"
-                    className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-semibold transition"
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {universities.map((university) => (
+              <div
+                key={university.universityId}
+                className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition p-6"
+              >
+                <div className="flex justify-between items-start mb-4">
+                  <h3 className="text-lg font-bold text-gray-900">{university.universityName}</h3>
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                      university.isActive
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-red-100 text-red-700'
+                    }`}
                   >
-                    {editingId ? 'Update' : 'Create'}
+                    {university.isActive ? 'Active' : 'Inactive'}
+                  </span>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleEdit(university)}
+                    className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-600 px-4 py-2 rounded-lg font-semibold transition flex items-center justify-center gap-2"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                    Edit
                   </button>
                   <button
-                    type="button"
-                    onClick={handleCancel}
-                    className="bg-slate-600 hover:bg-slate-500 text-white px-6 py-2 rounded-lg font-semibold transition"
+                    onClick={() => handleDelete(university.universityId)}
+                    className="flex-1 bg-red-50 hover:bg-red-100 text-red-600 px-4 py-2 rounded-lg font-semibold transition flex items-center justify-center gap-2"
                   >
-                    Cancel
+                    <Trash2 className="w-4 h-4" />
+                    Delete
                   </button>
                 </div>
-              </form>
-            </div>
-          )}
-
-          {/* Universities List */}
-          <div className="bg-slate-700 rounded-lg overflow-hidden">
-            {loading ? (
-              <div className="p-8 text-center text-slate-400">Loading...</div>
-            ) : universities.length === 0 ? (
-              <div className="p-8 text-center text-slate-400">
-                No universities found. Create one to get started!
               </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-slate-800">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-slate-300 font-semibold">Name</th>
-                      <th className="px-6 py-3 text-left text-slate-300 font-semibold">Status</th>
-                      <th className="px-6 py-3 text-left text-slate-300 font-semibold">Created</th>
-                      <th className="px-6 py-3 text-left text-slate-300 font-semibold">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {universities.map((university) => (
-                      <tr key={university.universityId} className="border-t border-slate-600 hover:bg-slate-600 transition">
-                        <td className="px-6 py-4 text-white">{university.universityName}</td>
-                        <td className="px-6 py-4">
-                          <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                            university.isActive 
-                              ? 'bg-green-500 text-white' 
-                              : 'bg-red-500 text-white'
-                          }`}>
-                            {university.isActive ? 'Active' : 'Inactive'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-slate-400">
-                          {new Date(university.createdAt).toLocaleDateString()}
-                        </td>
-                        <td className="px-6 py-4">
-                          <button
-                            onClick={() => handleEdit(university)}
-                            className="text-blue-400 hover:text-blue-300 mr-4 font-semibold"
-                          >
-                            Edit
-                          </button>
-                          <a
-                            href={`/admin/departments?universityId=${university.universityId}`}
-                            className="text-green-400 hover:text-green-300 font-semibold"
-                          >
-                            View Departments
-                          </a>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            ))}
           </div>
-        </div>
+        )}
       </div>
-    );
+    </div>
+  );
 }

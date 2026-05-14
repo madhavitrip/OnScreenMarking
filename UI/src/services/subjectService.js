@@ -1,45 +1,41 @@
-import apiCall from './api';
+import apiCall from "./api";
 
 const subjectService = {
-  // Get all subjects
   getAllSubjects: async () => {
-    return apiCall('/subject');
+    return apiCall("/subject");
+  },
+  getSubjectByUniversity: async (universityId) => {
+    return apiCall(`/Subject/University?universityId=${universityId}`);
+  },
+getSubjectByProject: async (projectId) => {
+    return apiCall(`/Subject/Project?projectId=${projectId}`);
+  },
+  getSubjectsByDepartment: async (departmentId) => {
+    return apiCall(`/subject?departmentId=${departmentId}`);
   },
 
-  // Get subject by ID
   getSubjectById: async (subjectId) => {
     return apiCall(`/subject/${subjectId}`);
   },
 
-  // Get papers for a subject
-  getSubjectPapers: async (subjectId) => {
-    return apiCall(`/subject/${subjectId}/papers`);
-  },
-
-  // Get examiners for a subject
-  getSubjectExaminers: async (subjectId) => {
-    return apiCall(`/subject/${subjectId}/examiners`);
-  },
-
-  // Create subject
   createSubject: async (subjectData) => {
-    return apiCall('/subject', {
-      method: 'POST',
+    return apiCall("/subject", {
+      method: "POST",
       body: JSON.stringify(subjectData),
     });
   },
 
-  // Update subject
   updateSubject: async (subjectId, subjectData) => {
     return apiCall(`/subject/${subjectId}`, {
-      method: 'PUT',
+      method: "PUT",
       body: JSON.stringify(subjectData),
     });
   },
 
-  // Get all universities
-  getAllUniversities: async () => {
-    return apiCall('/universities');
+  deleteSubject: async (subjectId) => {
+    return apiCall(`/subject/${subjectId}`, {
+      method: "DELETE",
+    });
   },
 };
 

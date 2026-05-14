@@ -1,5 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Camera, X } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Camera, X, CheckCircle } from 'lucide-react';
+import userService from '../services/userService';
+import universityService from '../services/universityService';
+import departmentService from '../services/departmentService';
 
 export default function UsersManagement() {
   const [users, setUsers] = useState([]);
@@ -9,10 +12,11 @@ export default function UsersManagement() {
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [videoStream, setVideoStream] = useState(null);
   const [showCamera, setShowCamera] = useState(false);
-  const videoRef = React.useRef(null);
-  const canvasRef = React.useRef(null);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -25,8 +29,6 @@ export default function UsersManagement() {
     address: '',
     profileImage: ''
   });
-
-  const API_URL = 'https://localhost:7243/api';
 
   useEffect(() => {
     fetchUsers();
@@ -42,16 +44,11 @@ export default function UsersManagement() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/users`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setUsers(data);
-      }
+      const data = await userService.getAllUsers();
+      setUsers(data);
     } catch (err) {
-      console.error('Failed to fetch users:', err);
+      setError('Failed to fetch users');
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -59,29 +56,18 @@ export default function UsersManagement() {
 
   const fetchUniversities = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/universities`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setUniversities(data);
-      }
+      const data = await universityService.getAllUniversities();
+      setUniversities(data);
     } catch (err) {
-      console.error('Failed to fetch universities:', err);
+      setError('Failed to fetch universities');
+      console.error(err);
     }
   };
 
   const fetchDepartments = async (universityId) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/department?universityId=${universityId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setDepartments(data);
-      }
+      const data = await departmentService.getDepartmentsByUniversity(universityId);
+      setDepartments(data);
     } catch (err) {
       console.error('Failed to fetch departments:', err);
     }
@@ -126,7 +112,7 @@ export default function UsersManagement() {
     }
 
     try {
-      const token = localStorage.getItem('token');
+      setLoading(true);
       const payload = {
         name: formData.name,
         email: formData.email,
@@ -139,38 +125,28 @@ export default function UsersManagement() {
         profileImage: formData.profileImage
       };
 
-      const response = await fetch(`${API_URL}/Auth/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(payload)
+      await userService.createUser(payload);
+      setSuccess('User created successfully');
+      setFormData({
+        name: '',
+        email: '',
+        password: '',
+        userType: 'examiner',
+        universityId: '',
+        departmentId: '',
+        phone: '',
+        address: '',
+        profileImage: ''
       });
-
-      if (response.ok) {
-        setFormData({
-          name: '',
-          email: '',
-          password: '',
-          userType: 'examiner',
-          universityId: '',
-          departmentId: '',
-          phone: '',
-          address: '',
-          profileImage: ''
-        });
-        setEditingId(null);
-        setShowForm(false);
-        setError('');
-        fetchUsers();
-      } else {
-        const data = await response.json();
-        setError(data.message || 'Failed to create user');
-      }
+      setEditingId(null);
+      setShowForm(false);
+      setError('');
+      fetchUsers();
     } catch (err) {
-      setError('Error creating user');
+      setError(err.message || 'Error creating user');
       console.error(err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -193,36 +169,44 @@ export default function UsersManagement() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 p-8">
+    <div className="min-h-screen bg-gray-50 p-4 lg:p-8">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-2">Users</h1>
-            <p className="text-slate-400">Manage system users</p>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Users</h1>
+            <p className="text-gray-600">Manage system users</p>
           </div>
           <button
             onClick={() => setShowForm(!showForm)}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition flex items-center gap-2"
           >
             {showForm ? 'Cancel' : '+ Add User'}
           </button>
         </div>
 
+        {/* Notifications */}
         {error && (
-          <div className="bg-red-500 text-white p-4 rounded-lg mb-6">
+          <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg mb-6 flex items-center gap-3">
+            <X className="w-5 h-5" />
             {error}
+          </div>
+        )}
+        {success && (
+          <div className="bg-green-50 border border-green-200 text-green-700 p-4 rounded-lg mb-6 flex items-center gap-3">
+            <CheckCircle className="w-5 h-5" />
+            {success}
           </div>
         )}
 
         {/* Form */}
         {showForm && (
-          <div className="bg-slate-700 rounded-lg p-6 mb-8">
-            <h2 className="text-xl font-bold text-white mb-4">Add New User</h2>
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 mb-8">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Add New User</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Camera Section */}
-              <div className="bg-slate-600 rounded-lg p-4">
-                <label className="block text-slate-300 font-semibold mb-2">
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <label className="block text-gray-700 font-semibold mb-2">
                   Profile Picture *
                 </label>
                 {showCamera ? (
@@ -289,27 +273,27 @@ export default function UsersManagement() {
               {/* User Details */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-2">
+                  <label className="block text-gray-700 font-semibold mb-2">
                     Name *
                   </label>
                   <input
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full bg-slate-600 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full bg-white border border-gray-300 text-gray-900 px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                     placeholder="Full name"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-2">
+                  <label className="block text-gray-700 font-semibold mb-2">
                     Email *
                   </label>
                   <input
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full bg-slate-600 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full bg-white border border-gray-300 text-gray-900 px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                     placeholder="user@example.com"
                     required
                   />
@@ -318,26 +302,26 @@ export default function UsersManagement() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-2">
+                  <label className="block text-gray-700 font-semibold mb-2">
                     Password *
                   </label>
                   <input
                     type="password"
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="w-full bg-slate-600 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full bg-white border border-gray-300 text-gray-900 px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                     placeholder="••••••••"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-2">
+                  <label className="block text-gray-700 font-semibold mb-2">
                     User Type *
                   </label>
                   <select
                     value={formData.userType}
                     onChange={(e) => setFormData({ ...formData, userType: e.target.value })}
-                    className="w-full bg-slate-600 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full bg-white border border-gray-300 text-gray-900 px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                     required
                   >
                     <option value="examiner">Examiner</option>
@@ -349,13 +333,13 @@ export default function UsersManagement() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-2">
+                  <label className="block text-gray-700 font-semibold mb-2">
                     University
                   </label>
                   <select
                     value={formData.universityId}
                     onChange={(e) => setFormData({ ...formData, universityId: e.target.value, departmentId: '' })}
-                    className="w-full bg-slate-600 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full bg-white border border-gray-300 text-gray-900 px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                   >
                     <option value="">Select University</option>
                     {universities.map((uni) => (
@@ -366,13 +350,13 @@ export default function UsersManagement() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-2">
+                  <label className="block text-gray-700 font-semibold mb-2">
                     Department
                   </label>
                   <select
                     value={formData.departmentId}
                     onChange={(e) => setFormData({ ...formData, departmentId: e.target.value })}
-                    className="w-full bg-slate-600 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full bg-white border border-gray-300 text-gray-900 px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                     disabled={!formData.universityId}
                   >
                     <option value="">Select Department</option>
@@ -387,42 +371,43 @@ export default function UsersManagement() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-2">
+                  <label className="block text-gray-700 font-semibold mb-2">
                     Phone
                   </label>
                   <input
                     type="tel"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-full bg-slate-600 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full bg-white border border-gray-300 text-gray-900 px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                     placeholder="Phone number"
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-2">
+                  <label className="block text-gray-700 font-semibold mb-2">
                     Address
                   </label>
                   <input
                     type="text"
                     value={formData.address}
                     onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    className="w-full bg-slate-600 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full bg-white border border-gray-300 text-gray-900 px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                     placeholder="Address"
                   />
                 </div>
               </div>
 
-              <div className="flex gap-4">
+              <div className="flex gap-3 pt-4">
                 <button
                   type="submit"
-                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-semibold transition"
+                  disabled={loading}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition disabled:opacity-50"
                 >
-                  Create User
+                  {loading ? 'Creating...' : 'Create User'}
                 </button>
                 <button
                   type="button"
                   onClick={handleCancel}
-                  className="bg-slate-600 hover:bg-slate-500 text-white px-6 py-2 rounded-lg font-semibold transition"
+                  className="bg-gray-200 hover:bg-gray-300 text-gray-900 px-6 py-2 rounded-lg font-semibold transition"
                 >
                   Cancel
                 </button>
@@ -432,37 +417,46 @@ export default function UsersManagement() {
         )}
 
         {/* Users List */}
-        <div className="bg-slate-700 rounded-lg overflow-hidden">
-          {loading ? (
-            <div className="p-8 text-center text-slate-400">Loading...</div>
-          ) : users.length === 0 ? (
-            <div className="p-8 text-center text-slate-400">
-              No users found. Create one to get started!
-            </div>
-          ) : (
+        {loading && !showForm ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading users...</p>
+          </div>
+        ) : users.length === 0 ? (
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-12 text-center">
+            <p className="text-gray-600 text-lg mb-4">No users found</p>
+            <button
+              onClick={() => setShowForm(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition"
+            >
+              Create First User
+            </button>
+          </div>
+        ) : (
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-slate-800">
+                <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    <th className="px-6 py-3 text-left text-slate-300 font-semibold">Name</th>
-                    <th className="px-6 py-3 text-left text-slate-300 font-semibold">Email</th>
-                    <th className="px-6 py-3 text-left text-slate-300 font-semibold">Type</th>
-                    <th className="px-6 py-3 text-left text-slate-300 font-semibold">University</th>
-                    <th className="px-6 py-3 text-left text-slate-300 font-semibold">Status</th>
+                    <th className="px-6 py-3 text-left text-gray-700 font-semibold">Name</th>
+                    <th className="px-6 py-3 text-left text-gray-700 font-semibold">Email</th>
+                    <th className="px-6 py-3 text-left text-gray-700 font-semibold">Type</th>
+                    <th className="px-6 py-3 text-left text-gray-700 font-semibold">University</th>
+                    <th className="px-6 py-3 text-left text-gray-700 font-semibold">Status</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-gray-200">
                   {users.map((user) => (
-                    <tr key={user.id} className="border-t border-slate-600 hover:bg-slate-600 transition">
-                      <td className="px-6 py-4 text-white">{user.name}</td>
-                      <td className="px-6 py-4 text-slate-300">{user.email}</td>
-                      <td className="px-6 py-4 text-slate-300 capitalize">{user.userType}</td>
-                      <td className="px-6 py-4 text-slate-300">{user.university?.universityName || '-'}</td>
+                    <tr key={user.id} className="hover:bg-gray-50 transition">
+                      <td className="px-6 py-4 text-gray-900">{user.name}</td>
+                      <td className="px-6 py-4 text-gray-600">{user.email}</td>
+                      <td className="px-6 py-4 text-gray-600 capitalize">{user.userType}</td>
+                      <td className="px-6 py-4 text-gray-600">{user.university?.universityName || '-'}</td>
                       <td className="px-6 py-4">
                         <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
                           user.isActive
-                            ? 'bg-green-500 text-white'
-                            : 'bg-red-500 text-white'
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-red-100 text-red-700'
                         }`}>
                           {user.isActive ? 'Active' : 'Inactive'}
                         </span>
@@ -472,8 +466,8 @@ export default function UsersManagement() {
                 </tbody>
               </table>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

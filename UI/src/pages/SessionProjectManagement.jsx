@@ -1,11 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { Calendar, ClipboardList, Plus, ChevronRight } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { Calendar, ClipboardList, Plus } from 'lucide-react';
 import apiCall from '../services/api';
+import { encryptId } from '../utils/encryption';
+import { useBreadcrumb } from '../context/BreadcrumbContext';
 
 export default function SessionProjectManagement() {
   const [searchParams] = useSearchParams();
   const universityId = searchParams.get('universityId');
+  const { setBreadcrumb } = useBreadcrumb();
 
   const [sessions, setSessions] = useState([]);
   const [projects, setProjects] = useState([]);
@@ -22,6 +25,10 @@ export default function SessionProjectManagement() {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    // Set breadcrumb for this page
+    setBreadcrumb([
+      { label: 'Sessions & Projects', path: '/admin/sessions', icon: 'Calendar' }
+    ]);
     fetchSessions();
   }, []);
 
@@ -366,13 +373,13 @@ export default function SessionProjectManagement() {
                               Edit
                             </button>
                             <a
-                              href={`/admin/subject-config?projectId=${project.projectId}`}
+                              href={`/admin/subject-config?projectId=${encryptId(project.projectId)}`}
                               className="text-purple-600 hover:text-purple-700 font-semibold mr-4"
                             >
                               Configure
                             </a>
                             <a
-                              href={`/admin/papers?projectId=${project.projectId}`}
+                              href={`/admin/papers?projectId=${encryptId(project.projectId)}`}
                               className="text-green-600 hover:text-green-700 font-semibold"
                             >
                               Papers

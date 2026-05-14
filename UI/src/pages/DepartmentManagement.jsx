@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import departmentService from '../services/departmentService';
+import universityService from '../services/universityService';
 
 export default function DepartmentManagement() {
   const [searchParams] = useSearchParams();
@@ -23,8 +25,7 @@ export default function DepartmentManagement() {
   const [loading, setLoading] = useState(false);
   const [loadingUniversities, setLoadingUniversities] = useState(true);
   const [error, setError] = useState('');
-
-  const API_URL = 'https://localhost:7243/api';
+  const [success, setSuccess] = useState('');
 
   useEffect(() => {
     fetchUniversities();
@@ -36,21 +37,11 @@ export default function DepartmentManagement() {
   const fetchUniversities = async () => {
     try {
       setLoadingUniversities(true);
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/universities`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (!response.ok) {
-        console.error('Failed to fetch universities:', response.status);
-        setError('Failed to load universities');
-        return;
-      }
-      const data = await response.json();
-      console.log('Universities loaded:', data);
+      const data = await universityService.getAllUniversities();
       setUniversities(data);
     } catch (err) {
       console.error('Failed to fetch universities:', err);
-      setError('Error loading universities');
+      setError('Failed to load universities');
     } finally {
       setLoadingUniversities(false);
     }
@@ -59,11 +50,7 @@ export default function DepartmentManagement() {
   const fetchDepartments = async (uniId) => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/department?universityId=${uniId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
+      const data = await departmentService.getDepartmentsByUniversity(uniId);
       setDepartments(data);
     } catch (err) {
       setError('Failed to fetch departments');
@@ -80,39 +67,29 @@ export default function DepartmentManagement() {
     }
 
     try {
-      const token = localStorage.getItem('token');
-      const method = editingId ? 'PUT' : 'POST';
-      const url = editingId 
-        ? `${API_URL}/department/${editingId}`
-        : `${API_URL}/department`;
-
-      // Convert universityId to number
+      setLoading(true);
       const payload = {
         ...formData,
         universityId: parseInt(formData.universityId, 10)
       };
 
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(payload)
-      });
-
-      if (response.ok) {
-        setFormData({ name: '', universityId: universityId || '', isActive: true });
-        setEditingId(null);
-        setShowForm(false);
-        if (formData.universityId) {
-          fetchDepartments(formData.universityId);
-        }
+      if (editingId) {
+        await departmentService.updateDepartment(editingId, payload);
+        setSuccess('Department updated successfully');
       } else {
-        setError('Failed to save department');
+        await departmentService.createDepartment(payload);
+        setSuccess('Department created successfully');
+      }
+      setFormData({ name: '', universityId: universityId || '', isActive: true });
+      setEditingId(null);
+      setShowForm(false);
+      if (formData.universityId) {
+        fetchDepartments(formData.universityId);
       }
     } catch (err) {
-      setError('Error saving department');
+      setError(err.message || 'Failed to save department');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -130,6 +107,7 @@ export default function DepartmentManagement() {
     setFormData({ name: '', universityId: activeUniversityId || '', isActive: true });
     setEditingId(null);
     setShowForm(false);
+    setError('');
   };
 
   const handleUniversityChange = (e) => {
@@ -146,48 +124,54 @@ export default function DepartmentManagement() {
           {/* Header */}
           <div className="flex justify-between items-center mb-8">
             <div>
-              <h1 className="text-3xl font-bold text-slate-900 mb-2">Departments</h1>
-              <p className="text-slate-500">Manage departments within universities</p>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Departments</h1>
+              <p className="text-gray-600">Manage departments within universities</p>
             </div>
             <button
               onClick={() => setShowForm(!showForm)}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition flex items-center gap-2"
             >
               {showForm ? 'Cancel' : '+ Add Department'}
             </button>
           </div>
 
+          {/* Notifications */}
           {error && (
-            <div className="bg-red-500 text-white p-4 rounded-lg mb-6">
+            <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg mb-6">
               {error}
+            </div>
+          )}
+          {success && (
+            <div className="bg-green-50 border border-green-200 text-green-700 p-4 rounded-lg mb-6">
+              {success}
             </div>
           )}
 
           {/* Form */}
           {showForm && (
-            <div className="bg-white border border-slate-200 rounded-lg p-6 mb-8 shadow-sm">
-              <h2 className="text-xl font-bold text-slate-900 mb-4">
+            <div className="bg-white border border-gray-200 rounded-lg p-6 mb-8 shadow-sm">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">
                 {editingId ? 'Edit Department' : 'Add New Department'}
               </h2>
               <form onSubmit={handleSubmit} className="space-y-4">
                 {userType === 'admin' ? (
                   <div>
-                    <label className="block text-slate-700 font-semibold mb-2">
+                    <label className="block text-gray-700 font-semibold mb-2">
                       University ({universities.length} available)
                     </label>
                     {loadingUniversities ? (
-                      <div className="w-full bg-slate-50 border border-slate-200 text-slate-400 px-4 py-2 rounded-lg">
+                      <div className="w-full bg-gray-50 border border-gray-200 text-gray-400 px-4 py-2 rounded-lg">
                         Loading universities...
                       </div>
                     ) : universities.length === 0 ? (
-                      <div className="w-full bg-slate-50 border border-slate-200 text-slate-400 px-4 py-2 rounded-lg">
+                      <div className="w-full bg-gray-50 border border-gray-200 text-gray-400 px-4 py-2 rounded-lg">
                         No universities available
                       </div>
                     ) : (
                       <select
                         value={formData.universityId}
                         onChange={handleUniversityChange}
-                        className="w-full bg-white border border-slate-300 text-slate-900 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full bg-white border border-gray-300 text-gray-900 px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                         required
                       >
                         <option value="">Select University</option>
@@ -203,47 +187,49 @@ export default function DepartmentManagement() {
                   </div>
                 ) : (
                   <div>
-                    <label className="block text-slate-700 font-semibold mb-2">
+                    <label className="block text-gray-700 font-semibold mb-2">
                       University
                     </label>
-                    <div className="w-full bg-slate-50 border border-slate-200 text-slate-900 px-4 py-2 rounded-lg">
+                    <div className="w-full bg-gray-50 border border-gray-200 text-gray-900 px-4 py-2 rounded-lg">
                       {universities.find(u => u.universityId === parseInt(userUniversityId))?.universityName || 'Your University'}
                     </div>
                   </div>
                 )}
                 <div>
-                  <label className="block text-slate-700 font-semibold mb-2">
+                  <label className="block text-gray-700 font-semibold mb-2">
                     Department Name
                   </label>
                   <input
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full bg-white border border-slate-300 text-slate-900 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full bg-white border border-gray-300 text-gray-900 px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                     placeholder="Enter department name"
                     required
                   />
                 </div>
-                <div className="flex items-center">
+                <div className="flex items-center gap-3">
                   <input
                     type="checkbox"
+                    id="isActive"
                     checked={formData.isActive}
                     onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                    className="w-4 h-4 rounded border-slate-300"
+                    className="w-4 h-4 rounded border-gray-300"
                   />
-                  <label className="ml-2 text-slate-700">Active</label>
+                  <label htmlFor="isActive" className="text-gray-700 font-semibold">Active</label>
                 </div>
-                <div className="flex gap-4">
+                <div className="flex gap-3 pt-4">
                   <button
                     type="submit"
-                    className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-semibold transition"
+                    disabled={loading}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition disabled:opacity-50"
                   >
-                    {editingId ? 'Update' : 'Create'}
+                    {loading ? 'Saving...' : editingId ? 'Update' : 'Create'}
                   </button>
                   <button
                     type="button"
                     onClick={handleCancel}
-                    className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-6 py-2 rounded-lg font-semibold transition"
+                    className="bg-gray-200 hover:bg-gray-300 text-gray-900 px-6 py-2 rounded-lg font-semibold transition"
                   >
                     Cancel
                   </button>
@@ -253,29 +239,29 @@ export default function DepartmentManagement() {
           )}
 
           {/* Departments List */}
-          <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
-            {loading ? (
-              <div className="p-8 text-center text-slate-500">Loading...</div>
+          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+            {loading && !showForm ? (
+              <div className="p-8 text-center text-gray-500">Loading...</div>
             ) : departments.length === 0 ? (
-              <div className="p-8 text-center text-slate-500">
+              <div className="p-8 text-center text-gray-500">
                 {universityId ? 'No departments found. Create one to get started!' : 'Select a university to view departments'}
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-slate-50 border-b border-slate-200">
+                  <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
-                      <th className="px-6 py-3 text-left text-slate-600 font-semibold uppercase text-xs tracking-wider">Name</th>
-                      <th className="px-6 py-3 text-left text-slate-600 font-semibold uppercase text-xs tracking-wider">University</th>
-                      <th className="px-6 py-3 text-left text-slate-600 font-semibold uppercase text-xs tracking-wider">Status</th>
-                      <th className="px-6 py-3 text-left text-slate-600 font-semibold uppercase text-xs tracking-wider">Actions</th>
+                      <th className="px-6 py-3 text-left text-gray-700 font-semibold">Name</th>
+                      <th className="px-6 py-3 text-left text-gray-700 font-semibold">University</th>
+                      <th className="px-6 py-3 text-left text-gray-700 font-semibold">Status</th>
+                      <th className="px-6 py-3 text-left text-gray-700 font-semibold">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-200">
+                  <tbody className="divide-y divide-gray-200">
                     {departments.map((department) => (
-                      <tr key={department.departmentId} className="hover:bg-slate-50 transition">
-                        <td className="px-6 py-4 text-slate-900 font-medium">{department.name}</td>
-                        <td className="px-6 py-4 text-slate-600">
+                      <tr key={department.departmentId} className="hover:bg-gray-50 transition">
+                        <td className="px-6 py-4 text-gray-900 font-medium">{department.name}</td>
+                        <td className="px-6 py-4 text-gray-600">
                           {universities.find(u => u.universityId === department.universityId)?.universityName}
                         </td>
                         <td className="px-6 py-4">
