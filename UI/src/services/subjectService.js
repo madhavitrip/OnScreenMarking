@@ -4,18 +4,31 @@ const subjectService = {
   getAllSubjects: async () => {
     return apiCall("/subject");
   },
+  
   getSubjectByUniversity: async (universityId) => {
     return apiCall(`/Subject/University?universityId=${universityId}`);
   },
-getSubjectByProject: async (projectId) => {
+
+  getSubjectByProject: async (projectId) => {
     return apiCall(`/Subject/Project?projectId=${projectId}`);
   },
+
   getSubjectsByDepartment: async (departmentId) => {
     return apiCall(`/subject?departmentId=${departmentId}`);
   },
 
   getSubjectById: async (subjectId) => {
     return apiCall(`/subject/${subjectId}`);
+  },
+
+  // Get all departments for a subject
+  getSubjectDepartments: async (subjectId) => {
+    return apiCall(`/subject/${subjectId}/departments`);
+  },
+
+  // Get all papers for a subject
+  getSubjectPapers: async (subjectId) => {
+    return apiCall(`/subject/${subjectId}/papers`);
   },
 
   createSubject: async (subjectData) => {
@@ -34,6 +47,20 @@ getSubjectByProject: async (projectId) => {
 
   deleteSubject: async (subjectId) => {
     return apiCall(`/subject/${subjectId}`, {
+      method: "DELETE",
+    });
+  },
+
+  // Add department to subject (many-to-many)
+  addDepartmentToSubject: async (subjectId, departmentId) => {
+    return apiCall(`/subject/${subjectId}/departments/${departmentId}`, {
+      method: "POST",
+    });
+  },
+
+  // Remove department from subject
+  removeDepartmentFromSubject: async (subjectId, departmentId) => {
+    return apiCall(`/subject/${subjectId}/departments/${departmentId}`, {
       method: "DELETE",
     });
   },

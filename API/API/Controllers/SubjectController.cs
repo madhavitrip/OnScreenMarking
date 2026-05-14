@@ -20,20 +20,28 @@ namespace API.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Subject>>> GetSubjects([FromQuery] int? departmentId = null)
+        public async Task<ActionResult<IEnumerable<Subject>>> GetSubjects(
+    [FromQuery] int? departmentId = null)
         {
             try
             {
-                var query = _context.Subjects.AsQueryable();
+                var query = _context.Subjects
+                    .Where(s => s.IsActive)
+                    .Include(s => s.DepartmentSubjects)
+                        .ThenInclude(ds => ds.Department)
+                    .Include(s => s.SubjectPapers)
+                        .ThenInclude(sp => sp.Paper)
+                    .Include(s => s.ExaminerExpertises)
+                    .AsQueryable();
 
                 if (departmentId.HasValue)
-                    query = query.Where(s => s.DepartmentId == departmentId.Value);
+                {
+                    query = query.Where(s =>
+                        s.DepartmentSubjects.Any(ds =>
+                            ds.DepartmentId == departmentId.Value));
+                }
 
                 var subjects = await query
-                    .Where(s => s.IsActive)
-                    .Include(s => s.Department)
-                    .Include(s => s.Papers)
-                    .Include(s => s.ExaminerExpertises)
                     .OrderBy(s => s.SubjectName)
                     .ToListAsync();
 
@@ -41,12 +49,17 @@ namespace API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { success = false, message = ex.Message });
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = ex.Message
+                });
             }
         }
 
         [HttpGet("Project")]
-        public async Task<ActionResult<IEnumerable<Subject>>> GetSubjectByProject([FromQuery] int projectId)
+        public async Task<ActionResult<IEnumerable<Subject>>> GetSubjectByProject(
+     [FromQuery] int projectId)
         {
             try
             {
@@ -65,17 +78,22 @@ namespace API.Controllers
                     });
                 }
 
-                // Get Department Ids of that University
+                // Get department ids of university
                 var departmentIds = await _context.Departments
                     .Where(d => d.UniversityId == universityId)
                     .Select(d => d.DepartmentId)
                     .ToListAsync();
 
-                // Get Subjects by DepartmentIds
+                // Get subjects mapped to those departments
                 var subjects = await _context.Subjects
-                    .Where(s => departmentIds.Contains(s.DepartmentId) && s.IsActive)
-                    .Include(s => s.Department)
-                    .Include(s => s.Papers)
+                    .Where(s =>
+                        s.IsActive &&
+                        s.DepartmentSubjects.Any(ds =>
+                            departmentIds.Contains(ds.DepartmentId)))
+                    .Include(s => s.DepartmentSubjects)
+                        .ThenInclude(ds => ds.Department)
+                    .Include(s => s.SubjectPapers)
+                        .ThenInclude(sp => sp.Paper)
                     .Include(s => s.ExaminerExpertises)
                     .OrderBy(s => s.SubjectName)
                     .ToListAsync();
@@ -91,31 +109,37 @@ namespace API.Controllers
                 });
             }
         }
-
         [HttpGet("University")]
-        public async Task<ActionResult<IEnumerable<Subject>>> GetSubjectByUniversity([FromQuery] int universityId)
+        public async Task<ActionResult<IEnumerable<Subject>>> GetSubjectByUniversity(
+      [FromQuery] int universityId)
         {
             try
             {
                 if (universityId == 0)
                 {
-                    return NotFound(new
+                    return BadRequest(new
                     {
                         success = false,
-                        message = "University not found for this project."
+                        message = "Invalid university id."
                     });
                 }
 
-                // Get Department Ids of that University
+                // Get department ids of university
                 var departmentIds = await _context.Departments
                     .Where(d => d.UniversityId == universityId)
                     .Select(d => d.DepartmentId)
                     .ToListAsync();
 
-                // Get Subjects by DepartmentIds
+                // Get subjects mapped to those departments
                 var subjects = await _context.Subjects
-                    .Where(s => departmentIds.Contains(s.DepartmentId) && s.IsActive)
-                    .Include(s => s.Department)
+                    .Where(s =>
+                        s.IsActive &&
+                        s.DepartmentSubjects.Any(ds =>
+                            departmentIds.Contains(ds.DepartmentId)))
+                    .Include(s => s.DepartmentSubjects)
+                        .ThenInclude(ds => ds.Department)
+                    .Include(s => s.SubjectPapers)
+                        .ThenInclude(sp => sp.Paper)
                     .OrderBy(s => s.SubjectName)
                     .ToListAsync();
 
@@ -130,62 +154,136 @@ namespace API.Controllers
                 });
             }
         }
-
         [HttpGet("{id}")]
         public async Task<ActionResult<Subject>> GetSubject(int id)
         {
             try
             {
                 var subject = await _context.Subjects
-                    .Include(s => s.Department)
-                    .Include(s => s.Papers)
+                    .Include(s => s.DepartmentSubjects)
+                        .ThenInclude(ds => ds.Department)
+                    .Include(s => s.SubjectPapers)
+                        .ThenInclude(sp => sp.Paper)
                     .Include(s => s.ExaminerExpertises)
                     .FirstOrDefaultAsync(s => s.SubjectId == id);
 
                 if (subject == null)
-                    return NotFound(new { success = false, message = "Subject not found" });
+                {
+                    return NotFound(new
+                    {
+                        success = false,
+                        message = "Subject not found"
+                    });
+                }
 
                 return Ok(subject);
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { success = false, message = ex.Message });
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = ex.Message
+                });
             }
         }
-
         [HttpPost]
         [Authorize(Roles = "admin,coordinator")]
-        public async Task<ActionResult<Subject>> CreateSubject([FromBody] SubjectDto subjectDto)
+        public async Task<ActionResult<Subject>> CreateSubject(
+     [FromBody] SubjectDto subjectDto)
         {
             try
             {
-                if (string.IsNullOrEmpty(subjectDto.SubjectName))
-                    return BadRequest(new { success = false, message = "Subject name is required" });
+                if (string.IsNullOrWhiteSpace(subjectDto.SubjectName))
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Subject name is required"
+                    });
+                }
 
                 if (subjectDto.DepartmentId <= 0)
-                    return BadRequest(new { success = false, message = "Department ID is required" });
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Department ID is required"
+                    });
+                }
 
                 // Verify department exists
-                var department = await _context.Departments.FindAsync(subjectDto.DepartmentId);
+                var department = await _context.Departments
+                    .FirstOrDefaultAsync(d =>
+                        d.DepartmentId == subjectDto.DepartmentId &&
+                        d.IsActive);
+
                 if (department == null)
-                    return BadRequest(new { success = false, message = "Department not found" });
-
-                var subject = new Subject
                 {
-                    SubjectName = subjectDto.SubjectName,
-                    DepartmentId = subjectDto.DepartmentId,
-                    IsActive = true,
-                    CreatedAt = DateTime.UtcNow
-                };
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Department not found"
+                    });
+                }
 
-                _context.Subjects.Add(subject);
-                await _context.SaveChangesAsync();
+                // Optional duplicate check
+                var existingSubject = await _context.Subjects
+                    .FirstOrDefaultAsync(s =>
+                        s.SubjectName == subjectDto.SubjectName);
 
-                return CreatedAtAction(nameof(GetSubject), new { id = subject.SubjectId }, subject);
+                Subject subject;
+
+                if (existingSubject != null)
+                {
+                    subject = existingSubject;
+                }
+                else
+                {
+                    subject = new Subject
+                    {
+                        SubjectName = subjectDto.SubjectName,
+                        IsActive = true,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+
+                    _context.Subjects.Add(subject);
+
+                    await _context.SaveChangesAsync();
+                }
+
+                // Check mapping already exists
+                var mappingExists = await _context.DepartmentSubjects
+                    .AnyAsync(ds =>
+                        ds.DepartmentId == subjectDto.DepartmentId &&
+                        ds.SubjectId == subject.SubjectId);
+
+                if (!mappingExists)
+                {
+                    var departmentSubject = new DepartmentSubject
+                    {
+                        DepartmentId = subjectDto.DepartmentId,
+                        SubjectId = subject.SubjectId
+                    };
+
+                    _context.DepartmentSubjects.Add(departmentSubject);
+
+                    await _context.SaveChangesAsync();
+                }
+
+                return CreatedAtAction(
+                    nameof(GetSubject),
+                    new { id = subject.SubjectId },
+                    subject);
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { success = false, message = ex.Message });
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = ex.Message
+                });
             }
         }
 
@@ -218,8 +316,10 @@ namespace API.Controllers
         {
             try
             {
-                var papers = await _context.Papers
-                    .Where(p => p.SubjectId == id && p.IsActive)
+                var papers = await _context.SubjectPapers
+                    .Where(sp => sp.SubjectId == id)
+                    .Select(sp => sp.Paper)
+                    .Where(p => p.IsActive)
                     .Include(p => p.Sections)
                     .OrderBy(p => p.PaperNumber)
                     .ToListAsync();
@@ -228,7 +328,11 @@ namespace API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { success = false, message = ex.Message });
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = ex.Message
+                });
             }
         }
 

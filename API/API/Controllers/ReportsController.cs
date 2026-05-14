@@ -67,43 +67,74 @@ namespace API.Controllers
 
                 foreach (var department in departments)
                 {
-                    var subjects = await _context.Subjects
-                        .Where(s => s.DepartmentId == department.DepartmentId)
-                        .Select(s => s.SubjectId)
+                    // Get subject ids mapped to department
+                    var subjectIds = await _context.DepartmentSubjects
+                        .Where(ds => ds.DepartmentId == department.DepartmentId)
+                        .Select(ds => ds.SubjectId)
                         .ToListAsync();
 
-                    var papers = await _context.Papers
-                        .Where(p => subjects.Contains(p.SubjectId))
-                        .Select(p => p.PaperId)
+                    // Get paper ids mapped to subjects
+                    var paperIds = await _context.SubjectPapers
+                        .Where(sp => subjectIds.Contains(sp.SubjectId))
+                        .Select(sp => sp.PaperId)
+                        .Distinct()
                         .ToListAsync();
 
+                    // Get scripts
                     var scripts = await _context.Scripts
-                        .Where(s => papers.Contains(s.PaperId))
+                        .Where(s => paperIds.Contains(s.PaperId))
                         .ToListAsync();
 
+                    var scriptIds = scripts
+                        .Select(s => s.Id)
+                        .ToList();
+
+                    // Get submitted markings
                     var markings = await _context.Markings
-                        .Where(m => scripts.Select(s => s.Id).Contains(m.ScriptId) && m.Status == "submitted")
+                        .Where(m =>
+                            scriptIds.Contains(m.ScriptId) &&
+                            m.Status == "submitted")
                         .ToListAsync();
 
                     decimal totalMarks = markings.Sum(m => m.TotalMarks);
-                    decimal avgScore = markings.Count > 0 ? totalMarks / markings.Count : 0;
+
+                    decimal avgScore = markings.Count > 0
+                        ? totalMarks / markings.Count
+                        : 0;
 
                     departmentStats.Add(new
                     {
                         department = department.Name,
+
                         total = scripts.Count,
+
                         evaluated = markings.Count,
+
                         pending = scripts.Count - markings.Count,
+
                         avgScore = Math.Round(avgScore, 2),
-                        progress = scripts.Count > 0 ? Math.Round((markings.Count / (decimal)scripts.Count) * 100, 2) : 0
+
+                        progress = scripts.Count > 0
+                            ? Math.Round(
+                                (markings.Count / (decimal)scripts.Count) * 100,
+                                2)
+                            : 0
                     });
                 }
 
-                return Ok(new { success = true, data = departmentStats });
+                return Ok(new
+                {
+                    success = true,
+                    data = departmentStats
+                });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { success = false, message = ex.Message });
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = ex.Message
+                });
             }
         }
 
@@ -146,31 +177,31 @@ namespace API.Controllers
             }
         }
 
-       /* [HttpGet("score-distribution")]
-        public async Task<IActionResult> GetScoreDistribution()
-        {
-            try
-            {
-                var markings = await _context.Markings
-                    .Where(m => m.Status == "submitted")
-                    .ToListAsync();
+        /* [HttpGet("score-distribution")]
+         public async Task<IActionResult> GetScoreDistribution()
+         {
+             try
+             {
+                 var markings = await _context.Markings
+                     .Where(m => m.Status == "submitted")
+                     .ToListAsync();
 
-                var distribution = new
-                {
-                    @"90-100" = markings.Count(m => m.Percentage >= 90),
-                    @"80-89" = markings.Count(m => m.Percentage >= 80 && m.Percentage < 90),
-                    @"70-79" = markings.Count(m => m.Percentage >= 70 && m.Percentage < 80),
-                    @"60-69" = markings.Count(m => m.Percentage >= 60 && m.Percentage < 70),
-                    @"below-60" = markings.Count(m => m.Percentage < 60)
-                };
+                 var distribution = new
+                 {
+                     @"90-100" = markings.Count(m => m.Percentage >= 90),
+                     @"80-89" = markings.Count(m => m.Percentage >= 80 && m.Percentage < 90),
+                     @"70-79" = markings.Count(m => m.Percentage >= 70 && m.Percentage < 80),
+                     @"60-69" = markings.Count(m => m.Percentage >= 60 && m.Percentage < 70),
+                     @"below-60" = markings.Count(m => m.Percentage < 60)
+                 };
 
-                return Ok(new { success = true, data = distribution });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { success = false, message = ex.Message });
-            }
-        }*/
+                 return Ok(new { success = true, data = distribution });
+             }
+             catch (Exception ex)
+             {
+                 return StatusCode(500, new { success = false, message = ex.Message });
+             }
+         }*/
 
         [HttpGet("examiner/{examinerId}")]
         public async Task<IActionResult> GetExaminerReport(int examinerId)
@@ -178,39 +209,62 @@ namespace API.Controllers
             try
             {
                 var markings = await _context.Markings
-                    .Where(m => m.ExaminerId == examinerId && m.Status == "submitted")
+                    .Where(m => m.ExaminerId == examinerId &&
+                                m.Status == "submitted")
                     .Include(m => m.Script)
+                        .ThenInclude(s => s.Paper)
+                            .ThenInclude(p => p.SubjectPapers)
+                                .ThenInclude(sp => sp.Subject)
                     .Include(m => m.Allocation)
                     .ToListAsync();
 
                 decimal totalMarks = markings.Sum(m => m.TotalMarks);
-                decimal avgMarks = markings.Count > 0 ? totalMarks / markings.Count : 0;
+
+                decimal avgMarks = markings.Count > 0
+                    ? totalMarks / markings.Count
+                    : 0;
 
                 var subjectBreakdown = markings
-                    .GroupBy(m => m.Script?.Paper?.Subject?.SubjectName ?? "Unassigned")
+                    .SelectMany(m =>
+                        m.Script.Paper.SubjectPapers.Select(sp => new
+                        {
+                            SubjectName = sp.Subject.SubjectName,
+                            Marking = m
+                        }))
+                    .GroupBy(x => x.SubjectName)
                     .Select(g => new
                     {
                         subject = g.Key,
+
                         count = g.Count(),
-                        totalMarks = g.Sum(m => m.TotalMarks)
+
+                        totalMarks = g.Sum(x => x.Marking.TotalMarks)
                     })
                     .ToList();
 
                 return Ok(new
                 {
                     success = true,
+
                     data = new
                     {
                         totalScriptsEvaluated = markings.Count,
+
                         averageMarks = Math.Round(avgMarks, 2),
+
                         subjectBreakdown,
+
                         markings
                     }
                 });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { success = false, message = ex.Message });
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = ex.Message
+                });
             }
         }
     }

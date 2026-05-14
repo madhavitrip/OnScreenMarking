@@ -10,8 +10,7 @@ namespace API.Models
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int PaperId { get; set; }
-        public int SubjectId { get; set; }
-        public Subject Subject { get; set; }
+     
         public string PaperCode { get; set; } // e.g., "MATH-2024-P1", "MATH-2024-P2"
         public string PaperName { get; set; } // e.g., "Paper 1", "Paper 2"
         public int PaperNumber { get; set; } // 1, 2, 3, etc.
@@ -24,8 +23,10 @@ namespace API.Models
         public string CatchNo { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-        
+
         // Navigation properties
+        public ICollection<SubjectPaper> SubjectPapers { get; set; }
+    = new List<SubjectPaper>();
         public ICollection<Section> Sections { get; set; } = new List<Section>();
         public ICollection<Script> Scripts { get; set; } = new List<Script>();
     }

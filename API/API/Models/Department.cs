@@ -16,9 +16,9 @@ namespace API.Models
         public University? University { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-        
+
         // Navigation properties
-        public ICollection<Subject> Subjects { get; set; } = new List<Subject>();
+        public ICollection<DepartmentSubject> DepartmentSubjects { get; set; }
         public ICollection<User> Users { get; set; } = new List<User>();
     }
 }
