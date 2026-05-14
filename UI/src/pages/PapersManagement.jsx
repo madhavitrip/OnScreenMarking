@@ -24,6 +24,7 @@ export default function PapersManagement() {
   const [papers, setPapers] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [projects, setProjects] = useState([]);
+  const [selectedSubjects, setSelectedSubjects] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({
@@ -34,7 +35,6 @@ export default function PapersManagement() {
     totalQuestions: 0,
     description: "",
     catchNo: "",
-    subjectId: subjectId || "",
     projectId: projectId || "",
     isActive: true,
   });
@@ -144,23 +144,36 @@ export default function PapersManagement() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (selectedSubjects.length === 0) {
+      setError("Please select at least one subject");
+      return;
+    }
+
     try {
       const method = editingId ? "PUT" : "POST";
       const url = editingId ? `/papers/${editingId}` : `/papers`;
 
       const payload = {
         ...formData,
-        subjectId: parseInt(formData.subjectId, 10),
         projectId: parseInt(formData.projectId, 10),
         paperNumber: parseInt(formData.paperNumber, 10),
         maxMarks: parseFloat(formData.maxMarks),
         totalQuestions: parseInt(formData.totalQuestions, 10),
       };
 
-      await apiCall(url, {
+      const result = await apiCall(url, {
         method,
         body: JSON.stringify(payload)
       });
+
+      // Add subjects to paper
+      if (!editingId) {
+        for (const subjId of selectedSubjects) {
+          await apiCall(`/papers/${result.paperId}/subjects/${subjId}`, {
+            method: 'POST'
+          });
+        }
+      }
 
       handleCancel();
       fetchPapers();
@@ -180,10 +193,13 @@ export default function PapersManagement() {
       totalQuestions: paper.totalQuestions,
       description: paper.description,
       catchNo: paper.catchNo || "",
-      subjectId: paper.subjectId,
       projectId: paper.projectId,
       isActive: paper.isActive,
     });
+    // Set selected subjects from paper's subject papers
+    if (paper.subjectPapers && paper.subjectPapers.length > 0) {
+      setSelectedSubjects(paper.subjectPapers.map(sp => sp.subjectId));
+    }
     setEditingId(paper.paperId);
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -198,13 +214,21 @@ export default function PapersManagement() {
       totalQuestions: 0,
       description: "",
       catchNo: "",
-      subjectId: subjectId || "",
       projectId: projectId || "",
       isActive: true,
     });
+    setSelectedSubjects([]);
     setEditingId(null);
     setShowForm(false);
     setError("");
+  };
+
+  const toggleSubject = (subjId) => {
+    setSelectedSubjects(prev =>
+      prev.includes(subjId)
+        ? prev.filter(id => id !== subjId)
+        : [...prev, subjId]
+    );
   };
 
   return (
@@ -303,18 +327,26 @@ export default function PapersManagement() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">Subject *</label>
-                  <select
-                    value={formData.subjectId}
-                    onChange={(e) => setFormData({ ...formData, subjectId: e.target.value })}
-                    className="w-full bg-gray-50 border border-gray-200 text-gray-900 px-4 py-2.5 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                    required
-                  >
-                    <option value="">Select Subject</option>
-                    {subjects.map((s) => (
-                      <option key={s.subjectId} value={s.subjectId}>{s.subjectName}</option>
-                    ))}
-                  </select>
+                  <label className="block text-sm font-bold text-gray-700 mb-3">
+                    Subjects ({selectedSubjects.length} selected) *
+                  </label>
+                  <div className="grid grid-cols-1 gap-2 bg-gray-50 p-4 rounded-xl border border-gray-200 max-h-[200px] overflow-y-auto">
+                    {subjects.length === 0 ? (
+                      <p className="text-gray-500 text-sm">No subjects available</p>
+                    ) : (
+                      subjects.map((s) => (
+                        <label key={s.subjectId} className="flex items-center gap-3 cursor-pointer hover:bg-white p-2 rounded transition">
+                          <input
+                            type="checkbox"
+                            checked={selectedSubjects.includes(s.subjectId)}
+                            onChange={() => toggleSubject(s.subjectId)}
+                            className="w-4 h-4 rounded border-gray-300"
+                          />
+                          <span className="text-gray-700 text-sm">{s.subjectName}</span>
+                        </label>
+                      ))
+                    )}
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">Project *</label>
@@ -436,11 +468,22 @@ export default function PapersManagement() {
                         </div>
                       </td>
                       <td className="px-6 py-5">
-                        <div className="flex flex-col gap-1">
-                          <span className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
-                            <BookOpen size={14} className="text-gray-400" />
-                            {subjects.find(s => s.subjectId === paper.subjectId)?.subjectName}
-                          </span>
+                        <div className="flex flex-col gap-2">
+                          <div>
+                            <p className="text-xs text-gray-500 font-semibold mb-1">Subjects:</p>
+                            <div className="flex flex-wrap gap-1">
+                              {paper.subjectPapers && paper.subjectPapers.length > 0 ? (
+                                paper.subjectPapers.map((sp) => (
+                                  <span key={sp.id} className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-1 rounded-lg">
+                                    <BookOpen size={12} />
+                                    {sp.subject?.subjectName}
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="text-xs text-gray-500">No subjects</span>
+                              )}
+                            </div>
+                          </div>
                           <span className="text-xs text-gray-400 flex items-center gap-1.5">
                             <Filter size={14} />
                             {projects.find(p => p.projectId === paper.projectId)?.projectName}

@@ -20,18 +20,23 @@ namespace API.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Department>>> GetDepartments([FromQuery] int? universityId = null)
+        public async Task<ActionResult<IEnumerable<Department>>> GetDepartments(
+     [FromQuery] int? universityId = null)
         {
             try
             {
                 var query = _context.Departments.AsQueryable();
 
                 if (universityId.HasValue)
-                    query = query.Where(d => d.UniversityId == universityId.Value);
+                {
+                    query = query.Where(d =>
+                        d.UniversityId == universityId.Value);
+                }
 
                 var departments = await query
                     .Where(d => d.IsActive)
-                    .Include(d => d.Subjects)
+                    .Include(d => d.DepartmentSubjects)
+                        .ThenInclude(ds => ds.Subject)
                     .OrderBy(d => d.Name)
                     .ToListAsync();
 
@@ -39,7 +44,11 @@ namespace API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { success = false, message = ex.Message });
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = ex.Message
+                });
             }
         }
 
@@ -49,7 +58,8 @@ namespace API.Controllers
             try
             {
                 var department = await _context.Departments
-                    .Include(d => d.Subjects)
+                    .Include(d => d.DepartmentSubjects)
+                    .ThenInclude (ds => ds.Subject)
                     .Include(d => d.Users)
                     .FirstOrDefaultAsync(d => d.DepartmentId == id);
 
@@ -139,9 +149,12 @@ namespace API.Controllers
         {
             try
             {
-                var subjects = await _context.Subjects
-                    .Where(s => s.DepartmentId == id && s.IsActive)
-                    .Include(s => s.Papers)
+                var subjects = await _context.DepartmentSubjects
+                    .Where(ds => ds.DepartmentId == id)
+                    .Select(ds => ds.Subject)
+                    .Where(s => s.IsActive)
+                    .Include(s => s.SubjectPapers)
+                        .ThenInclude(sp => sp.Paper)
                     .OrderBy(s => s.SubjectName)
                     .ToListAsync();
 
@@ -149,7 +162,11 @@ namespace API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { success = false, message = ex.Message });
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = ex.Message
+                });
             }
         }
     }

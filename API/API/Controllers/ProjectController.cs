@@ -146,7 +146,8 @@ namespace API.Controllers
             {
                 var papers = await _context.Papers
                     .Where(p => p.ProjectId == id && p.IsActive)
-                    .Include(p => p.Subject)
+                    .Include(p => p.SubjectPapers)
+                        .ThenInclude(sp => sp.Subject)
                     .Include(p => p.Sections)
                     .OrderBy(p => p.PaperNumber)
                     .ToListAsync();
@@ -155,7 +156,11 @@ namespace API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { success = false, message = ex.Message });
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = ex.Message
+                });
             }
         }
     }

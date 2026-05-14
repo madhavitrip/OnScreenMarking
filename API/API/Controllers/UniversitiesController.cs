@@ -115,14 +115,20 @@ namespace API.Controllers
             {
                 var departments = await _context.Departments
                     .Where(d => d.UniversityId == id && d.IsActive)
-                    .Include(d => d.Subjects)
+                    .Include(d => d.DepartmentSubjects)
+                        .ThenInclude(ds => ds.Subject)
+                    .OrderBy(d => d.Name)
                     .ToListAsync();
 
                 return Ok(departments);
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { success = false, message = ex.Message });
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = ex.Message
+                });
             }
         }
 

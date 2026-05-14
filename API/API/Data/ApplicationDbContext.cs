@@ -25,6 +25,8 @@ namespace API.Data
         public DbSet<Allocation> Allocations { get; set; }
         public DbSet<Marking> Markings { get; set; }
         public DbSet<PaperExaminer> PaperExaminers { get; set; }
+        public DbSet<SubjectPaper> SubjectPapers { get; set; }
+        public DbSet<DepartmentSubject> DepartmentSubjects { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -51,11 +53,6 @@ namespace API.Data
             // Department configuration
             modelBuilder.Entity<Department>()
                 .HasKey(d => d.DepartmentId);
-            modelBuilder.Entity<Department>()
-                .HasMany(d => d.Subjects)
-                .WithOne(s => s.Department)
-                .HasForeignKey(s => s.DepartmentId)
-                .OnDelete(DeleteBehavior.Cascade);
 
             // User configuration
             modelBuilder.Entity<User>()
@@ -105,11 +102,26 @@ namespace API.Data
             // Subject configuration
             modelBuilder.Entity<Subject>()
                 .HasKey(s => s.SubjectId);
-            modelBuilder.Entity<Subject>()
-                .HasMany(s => s.Papers)
-                .WithOne(p => p.Subject)
-                .HasForeignKey(p => p.SubjectId)
-                .OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<DepartmentSubject>()
+    .HasOne(ds => ds.Department)
+    .WithMany(d => d.DepartmentSubjects)
+    .HasForeignKey(ds => ds.DepartmentId)
+    .OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<DepartmentSubject>()
+    .HasOne(ds => ds.Subject)
+    .WithMany(s => s.DepartmentSubjects)
+    .HasForeignKey(ds => ds.SubjectId)
+    .OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<SubjectPaper>()
+    .HasOne(sp => sp.Paper)
+    .WithMany(p => p.SubjectPapers)
+    .HasForeignKey(sp => sp.PaperId)
+    .OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<SubjectPaper>()
+    .HasOne(sp => sp.Subject)
+    .WithMany(s => s.SubjectPapers)
+    .HasForeignKey(sp => sp.SubjectId)
+    .OnDelete(DeleteBehavior.Cascade);
             modelBuilder.Entity<Subject>()
                 .HasMany(s => s.ExaminerExpertises)
                 .WithOne(ee => ee.Subject)

@@ -24,24 +24,27 @@ namespace API.Controllers
         {
             try
             {
-                var query = _context.Papers.AsQueryable();
+                var query = _context.Papers
+            .Include(p => p.Project)
+            .Include(p => p.SubjectPapers)
+                .ThenInclude(sp => sp.Subject)
+            .AsQueryable();
 
                 if (subjectId.HasValue)
-                    query = query.Where(p => p.SubjectId == subjectId.Value);
-
+                {
+                    query = query.Where(p =>
+                        p.SubjectPapers.Any(sp => sp.SubjectId == subjectId.Value));
+                }
                 if (projectId.HasValue)
                     query = query.Where(p => p.ProjectId == projectId.Value);
 
                 var papers = await query
-                    .Include(p => p.Subject)
-                    .Include(p => p.Project)
                     .OrderBy(p => p.PaperNumber)
                     .ToListAsync();
 
                 var paperDtos = papers.Select(p => new PaperDto
                 {
                     PaperId = p.PaperId,
-                    SubjectId = p.SubjectId,
                     ProjectId = p.ProjectId,
                     PaperCode = p.PaperCode,
                     PaperName = p.PaperName,
@@ -49,7 +52,14 @@ namespace API.Controllers
                     MaxMarks = p.MaxMarks,
                     TotalQuestions = p.TotalQuestions,
                     Description = p.Description,
-                    IsActive = p.IsActive
+                    IsActive = p.IsActive,
+                    SubjectIds = p.SubjectPapers
+                .Select(sp => sp.SubjectId)
+                .ToList(),
+
+                    SubjectNames = p.SubjectPapers
+                .Select(sp => sp.Subject.SubjectName)
+                .ToList()
                 }).ToList();
 
                 return Ok(paperDtos);
@@ -66,10 +76,11 @@ namespace API.Controllers
             try
             {
                 var paper = await _context.Papers
-                    .Include(p => p.Subject)
-                    .Include(p => p.Project)
-                    .Include(p => p.Sections)
-                    .FirstOrDefaultAsync(p => p.PaperId == id);
+           .Include(p => p.Project)
+           .Include(p => p.Sections)
+           .Include(p => p.SubjectPapers)
+               .ThenInclude(sp => sp.Subject)
+           .FirstOrDefaultAsync(p => p.PaperId == id);
 
                 if (paper == null)
                     return NotFound(new { success = false, message = "Paper not found" });
@@ -77,7 +88,6 @@ namespace API.Controllers
                 var paperDto = new PaperDto
                 {
                     PaperId = paper.PaperId,
-                    SubjectId = paper.SubjectId,
                     ProjectId = paper.ProjectId,
                     PaperCode = paper.PaperCode,
                     PaperName = paper.PaperName,
@@ -85,7 +95,14 @@ namespace API.Controllers
                     MaxMarks = paper.MaxMarks,
                     TotalQuestions = paper.TotalQuestions,
                     Description = paper.Description,
-                    IsActive = paper.IsActive
+                    IsActive = paper.IsActive,
+                    SubjectIds = paper.SubjectPapers
+                .Select(sp => sp.SubjectId)
+                .ToList(),
+
+                    SubjectNames = paper.SubjectPapers
+                .Select(sp => sp.Subject.SubjectName)
+                .ToList()
                 };
 
                 return Ok(paperDto);
@@ -98,27 +115,51 @@ namespace API.Controllers
 
         [HttpPost]
         [Authorize(Roles = "admin,coordinator")]
-        public async Task<ActionResult<PaperDto>> CreatePaper([FromBody] PaperDto paperDto)
+        public async Task<ActionResult<PaperDto>> CreatePaper(
+      [FromBody] PaperDto paperDto)
         {
             try
             {
-                // Validate subject exists
-                var subject = await _context.Subjects.FindAsync(paperDto.SubjectId);
-                if (subject == null)
-                    return BadRequest(new { success = false, message = "Subject not found" });
-
                 // Validate project exists
-                var project = await _context.Projects.FindAsync(paperDto.ProjectId);
-                if (project == null)
-                    return BadRequest(new { success = false, message = "Project not found" });
+                var project = await _context.Projects
+                    .FindAsync(paperDto.ProjectId);
 
-                // Check if paper code already exists
-                if (await _context.Papers.AnyAsync(p => p.PaperCode == paperDto.PaperCode))
-                    return BadRequest(new { success = false, message = "Paper code already exists" });
+                if (project == null)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Project not found"
+                    });
+                }
+
+                // Validate subjects exist
+                var subjects = await _context.Subjects
+                    .Where(s => paperDto.SubjectIds.Contains(s.SubjectId))
+                    .ToListAsync();
+
+                if (subjects.Count != paperDto.SubjectIds.Count)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "One or more subjects not found"
+                    });
+                }
+
+                // Check duplicate paper code
+                if (await _context.Papers
+                    .AnyAsync(p => p.PaperCode == paperDto.PaperCode))
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Paper code already exists"
+                    });
+                }
 
                 var paper = new Paper
                 {
-                    SubjectId = paperDto.SubjectId,
                     ProjectId = paperDto.ProjectId,
                     PaperCode = paperDto.PaperCode,
                     PaperName = paperDto.PaperName,
@@ -133,13 +174,33 @@ namespace API.Controllers
                 };
 
                 _context.Papers.Add(paper);
+
                 await _context.SaveChangesAsync();
 
-                return CreatedAtAction(nameof(GetPaper), new { id = paper.PaperId }, paperDto);
+                // Create mappings
+                foreach (var subjectId in paperDto.SubjectIds)
+                {
+                    _context.SubjectPapers.Add(new SubjectPaper
+                    {
+                        SubjectId = subjectId,
+                        PaperId = paper.PaperId
+                    });
+                }
+
+                await _context.SaveChangesAsync();
+
+                return CreatedAtAction(
+                    nameof(GetPaper),
+                    new { id = paper.PaperId },
+                    paperDto);
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { success = false, message = ex.Message });
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = ex.Message
+                });
             }
         }
 
