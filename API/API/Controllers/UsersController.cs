@@ -104,5 +104,144 @@ namespace API.Controllers
                 return StatusCode(500, new { success = false, message = ex.Message });
             }
         }
+
+        [HttpPut("{id}/approve")]
+        public async Task<IActionResult> ApproveUser(int id)
+        {
+            try
+            {
+                var loggedInUserType = User.FindFirst("userType")?.Value;
+                var loggedInUserIdStr = User.FindFirst("id")?.Value;
+
+                if (string.IsNullOrEmpty(loggedInUserIdStr))
+                {
+                    return Unauthorized(new { success = false, message = "Invalid token claims" });
+                }
+
+                int loggedInUserId = int.Parse(loggedInUserIdStr);
+                var currentUser = await _context.Users.FindAsync(loggedInUserId);
+                
+                if (currentUser == null)
+                {
+                    return Unauthorized(new { success = false, message = "User not found" });
+                }
+
+                var targetUser = await _context.Users.FindAsync(id);
+                if (targetUser == null)
+                {
+                    return NotFound(new { success = false, message = "Examiner not found" });
+                }
+
+                // If logged-in user is a coordinator, they can only approve examiners of their own university!
+                if (loggedInUserType == "coordinator")
+                {
+                    if (targetUser.UniversityId != currentUser.UniversityId)
+                    {
+                        return StatusCode(403, new { success = false, message = "You can only approve examiners for your own university." });
+                    }
+                }
+                else if (loggedInUserType != "admin")
+                {
+                    return StatusCode(403, new { success = false, message = "Only coordinators or admins can approve users." });
+                }
+
+                targetUser.IsActive = true;
+                targetUser.UpdatedAt = DateTime.UtcNow;
+                
+                await _context.SaveChangesAsync();
+                return Ok(new { success = true, message = "User approved successfully" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpPost("invite")]
+        public async Task<IActionResult> InviteUser([FromBody] InviteRequest request)
+        {
+            try
+            {
+                if (request == null || string.IsNullOrWhiteSpace(request.Email))
+                {
+                    return BadRequest(new { success = false, message = "Email is required" });
+                }
+
+                var loggedInUserType = User.FindFirst("userType")?.Value;
+                var loggedInUserIdStr = User.FindFirst("id")?.Value;
+
+                if (string.IsNullOrEmpty(loggedInUserIdStr))
+                {
+                    return Unauthorized(new { success = false, message = "Invalid token claims" });
+                }
+
+                int loggedInUserId = int.Parse(loggedInUserIdStr);
+                var currentUser = await _context.Users.FindAsync(loggedInUserId);
+                
+                if (currentUser == null)
+                {
+                    return Unauthorized(new { success = false, message = "User not found" });
+                }
+
+                // Verify permissions
+                if (loggedInUserType == "coordinator")
+                {
+                    if (request.UniversityId != currentUser.UniversityId)
+                    {
+                        return StatusCode(403, new { success = false, message = "You can only invite examiners for your own university." });
+                    }
+                }
+                else if (loggedInUserType != "admin")
+                {
+                    return StatusCode(403, new { success = false, message = "Only coordinators or admins can invite users." });
+                }
+
+                // Check if user already exists in system
+                if (await _context.Users.AnyAsync(u => u.Email == request.Email))
+                {
+                    return BadRequest(new { success = false, message = "A user with this email address is already registered." });
+                }
+
+                // Generate a unique token for the invitation
+                var token = Guid.NewGuid().ToString("N");
+                
+                // Create invitation record
+                var invitation = new Invitation
+                {
+                    Email = request.Email.Trim().ToLower(),
+                    Token = token,
+                    UniversityId = request.UniversityId,
+                    DepartmentId = request.DepartmentId,
+                    ExpiresAt = DateTime.UtcNow.AddDays(7),
+                    IsUsed = false
+                };
+
+                _context.Invitations.Add(invitation);
+                await _context.SaveChangesAsync();
+
+                // Build a simulated invitation link
+                var invitationLink = $"http://localhost:5173/accept-invitation?token={token}";
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "Invitation generated successfully.",
+                    invitation = new
+                    {
+                        invitation.Id,
+                        invitation.Email,
+                        invitation.Token,
+                        invitation.UniversityId,
+                        invitation.DepartmentId,
+                        invitation.ExpiresAt,
+                        InvitationLink = invitationLink
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
     }
 }

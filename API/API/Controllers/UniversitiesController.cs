@@ -1,4 +1,4 @@
-﻿using API.Data;
+using API.Data;
 using API.Models;
 using API.Models.DTOs;
 using Microsoft.AspNetCore.Authorization;
@@ -20,6 +20,7 @@ namespace API.Controllers
         }
 
         [HttpGet]
+        [AllowAnonymous]
         public async Task<ActionResult<IEnumerable<University>>> GetUniversities()
         {
             try
@@ -109,6 +110,7 @@ namespace API.Controllers
         }
 
         [HttpGet("{id}/departments")]
+        [AllowAnonymous]
         public async Task<ActionResult<IEnumerable<Department>>> GetUniversityDepartments(int id)
         {
             try

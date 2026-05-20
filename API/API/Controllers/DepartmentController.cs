@@ -18,7 +18,7 @@ namespace API.Controllers
         {
             _context = context;
         }
-
+        [AllowAnonymous]
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Department>>> GetDepartments(
      [FromQuery] int? universityId = null)

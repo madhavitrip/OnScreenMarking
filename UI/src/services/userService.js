@@ -28,6 +28,19 @@ const userService = {
     return apiCall(`/users/${userId}`, {
       method: 'DELETE'
     });
+  },
+
+  approveUser: async (userId) => {
+    return apiCall(`/users/${userId}/approve`, {
+      method: 'PUT'
+    });
+  },
+
+  inviteUser: async (inviteData) => {
+    return apiCall('/users/invite', {
+      method: 'POST',
+      body: JSON.stringify(inviteData)
+    });
   }
 };
 

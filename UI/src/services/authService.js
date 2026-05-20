@@ -15,6 +15,17 @@ const authService = {
     });
   },
 
+  getInvitationDetails: async (token) => {
+    return apiCall(`/Auth/invitation-details?token=${encodeURIComponent(token)}`);
+  },
+
+  acceptInvitation: async (acceptData) => {
+    return apiCall('/Auth/accept-invitation', {
+      method: 'POST',
+      body: JSON.stringify(acceptData)
+    });
+  },
+
   logout: () => {
     localStorage.removeItem('token');
     localStorage.removeItem('userType');
@@ -22,6 +33,8 @@ const authService = {
     localStorage.removeItem('userId');
     localStorage.removeItem('userEmail');
     localStorage.removeItem('profileImage');
+    localStorage.removeItem('universityId');
+    localStorage.removeItem('departmentId');
   }
 };
 
