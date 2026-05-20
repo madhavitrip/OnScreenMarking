@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using API.Data;
+using API.Services;
+using API.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,6 +25,15 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
         ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("DefaultConnection"))
     )
 );
+
+// Add Email Service
+builder.Services.AddScoped<IEmailService, EmailService>();
+
+// Add Password Generation Service
+builder.Services.AddScoped<IPasswordGenerationService, PasswordGenerationService>();
+
+// Add Logging Service
+builder.Services.AddScoped<ILoggingService, LoggingService>();
 
 // Add CORS
 builder.Services.AddCors(options => {
@@ -82,6 +93,7 @@ else
 
 app.UseHttpsRedirection();
 app.UseCors();
+app.UseLoggingMiddleware();
 app.UseAuthentication();
 app.UseAuthorization();
 

@@ -25,8 +25,11 @@ namespace API.Data
         public DbSet<Allocation> Allocations { get; set; }
         public DbSet<Marking> Markings { get; set; }
         public DbSet<PaperExaminer> PaperExaminers { get; set; }
+        public DbSet<EventLog> EventLogs { get; set; }
+        public DbSet<ErrorLog> ErrorLogs { get; set; }
         public DbSet<SubjectPaper> SubjectPapers { get; set; }
         public DbSet<DepartmentSubject> DepartmentSubjects { get; set; }
+       
         public DbSet<Invitation> Invitations { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
