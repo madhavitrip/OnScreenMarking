@@ -39,6 +39,7 @@ namespace API.Models.DTOs
         public string Address { get; set; }
         public string ProfileImage { get; set; }
         public bool IsActive { get; set; } = true;
+        public bool IsApproved { get; set; } = false;
         public University University { get; set; }
     }
 
@@ -54,15 +55,41 @@ namespace API.Models.DTOs
     {
         public int PaperId { get; set; }
         public List<int> SubjectIds { get; set; }
-        public List<string> SubjectNames { get; set; }
+        public List<string>? SubjectNames { get; set; }
         public int ProjectId { get; set; }
         public string PaperCode { get; set; }
         public string PaperName { get; set; }
         public int PaperNumber { get; set; }
         public decimal MaxMarks { get; set; }
         public int TotalQuestions { get; set; }
-        public string Description { get; set; }
-        public string CatchNo { get; set; }
+        public string? Description { get; set; }
+        public string? CatchNo { get; set; }
         public bool IsActive { get; set; }
+    }
+
+    public class AcceptInvitationRequest
+    {
+        public string Token { get; set; }
+        public string Name { get; set; }
+        public string Password { get; set; }
+        public string Phone { get; set; }
+        public string Address { get; set; }
+        public string ProfileImage { get; set; }
+    }
+
+    public class InvitationDetailsDto
+    {
+        public string Email { get; set; }
+        public int UniversityId { get; set; }
+        public string UniversityName { get; set; }
+        public int? DepartmentId { get; set; }
+        public string DepartmentName { get; set; }
+    }
+
+    public class InviteRequest
+    {
+        public string Email { get; set; }
+        public int UniversityId { get; set; }
+        public int? DepartmentId { get; set; }
     }
 }

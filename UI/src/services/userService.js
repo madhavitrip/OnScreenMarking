@@ -1,8 +1,9 @@
 import apiCall from './api';
 
 const userService = {
-  getAllUsers: async () => {
-    return apiCall('/users');
+  getAllUsers: async (universityId) => {
+    const url = `/users${universityId ? `?universityId=${universityId}` : ''}`;
+    return apiCall(url);
   },
 
   getUserById: async (userId) => {
@@ -26,6 +27,19 @@ const userService = {
   deleteUser: async (userId) => {
     return apiCall(`/users/${userId}`, {
       method: 'DELETE'
+    });
+  },
+
+  approveUser: async (userId) => {
+    return apiCall(`/users/${userId}/approve`, {
+      method: 'PUT'
+    });
+  },
+
+  inviteUser: async (inviteData) => {
+    return apiCall('/users/invite', {
+      method: 'POST',
+      body: JSON.stringify(inviteData)
     });
   }
 };

@@ -7,6 +7,10 @@ import departmentService from '../services/departmentService';
 export default function SubjectManagement() {
   const [searchParams] = useSearchParams();
   const departmentId = searchParams.get('departmentId');
+  const universityId = searchParams.get('universityId');
+  const userType = localStorage.getItem('userType');
+  const userUniversityId = localStorage.getItem('universityId');
+  const activeUniversityId = userType === 'coordinator' ? userUniversityId : universityId;
 
   const [subjects, setSubjects] = useState([]);
   const [departments, setDepartments] = useState([]);
@@ -30,11 +34,13 @@ export default function SubjectManagement() {
     } else {
       fetchAllSubjects();
     }
-  }, [departmentId]);
+  }, [departmentId, activeUniversityId]);
 
   const fetchDepartments = async () => {
     try {
-      const data = await departmentService.getAllDepartments();
+      const data = activeUniversityId
+        ? await departmentService.getDepartmentsByUniversity(activeUniversityId)
+        : await departmentService.getAllDepartments();
       setDepartments(data);
     } catch (err) {
       console.error('Failed to fetch departments');
@@ -44,7 +50,9 @@ export default function SubjectManagement() {
   const fetchAllSubjects = async () => {
     try {
       setLoading(true);
-      const data = await subjectService.getAllSubjects();
+      const data = activeUniversityId
+        ? await subjectService.getSubjectByUniversity(activeUniversityId)
+        : await subjectService.getAllSubjects();
       setSubjects(data);
     } catch (err) {
       setError('Failed to fetch subjects');
@@ -67,7 +75,7 @@ export default function SubjectManagement() {
 
   const fetchSubjectDepartments = async (subjectId) => {
     try {
-      const data = await subjectService.getSubjectDepartments(subjectId);
+      const data = await subjectService.getSubjectDepartments(subjectId, activeUniversityId);
       return data;
     } catch (err) {
       console.error('Failed to fetch subject departments:', err);
@@ -86,16 +94,59 @@ export default function SubjectManagement() {
       setLoading(true);
       
       if (editingId) {
-        // Update subject
-        await subjectService.updateSubject(editingId, formData);
+        // Update subject details
+        const updatePayload = {
+          subjectName: formData.subjectName,
+          subjectCode: formData.subjectCode,
+          isActive: formData.isActive,
+          departmentId: selectedDepartments[0] // Send first department for compatibility
+        };
+        await subjectService.updateSubject(editingId, updatePayload);
+
+        // Synchronize many-to-many department mappings
+        const existingDepts = await fetchSubjectDepartments(editingId);
+        const existingDeptIds = existingDepts.map(d => d.departmentId);
+
+        // Add newly selected departments
+        for (const deptId of selectedDepartments) {
+          if (!existingDeptIds.includes(deptId)) {
+            try {
+              await subjectService.addDepartmentToSubject(editingId, deptId);
+            } catch (err) {
+              console.error(`Failed to add department ${deptId}:`, err);
+            }
+          }
+        }
+
+        // Remove unselected departments
+        for (const deptId of existingDeptIds) {
+          if (!selectedDepartments.includes(deptId)) {
+            try {
+              await subjectService.removeDepartmentFromSubject(editingId, deptId);
+            } catch (err) {
+              console.error(`Failed to remove department ${deptId}:`, err);
+            }
+          }
+        }
+
         setSuccess('Subject updated successfully');
       } else {
-        // Create subject
-        const newSubject = await subjectService.createSubject(formData);
+        // Create subject with first department
+        const createPayload = {
+          subjectName: formData.subjectName,
+          subjectCode: formData.subjectCode,
+          isActive: formData.isActive,
+          departmentId: selectedDepartments[0]
+        };
+        const newSubject = await subjectService.createSubject(createPayload);
         
-        // Add departments to subject
-        for (const deptId of selectedDepartments) {
-          await subjectService.addDepartmentToSubject(newSubject.subjectId, deptId);
+        // Add remaining departments to subject
+        for (let i = 1; i < selectedDepartments.length; i++) {
+          try {
+            await subjectService.addDepartmentToSubject(newSubject.subjectId, selectedDepartments[i]);
+          } catch (err) {
+            console.error(`Failed to add department ${selectedDepartments[i]}:`, err);
+          }
         }
         setSuccess('Subject created successfully');
       }
@@ -104,6 +155,7 @@ export default function SubjectManagement() {
       setSelectedDepartments([]);
       setEditingId(null);
       setShowForm(false);
+      fetchDepartments();
       
       if (departmentId) {
         fetchSubjects(departmentId);
@@ -119,6 +171,32 @@ export default function SubjectManagement() {
 
   const handleEdit = async (subject) => {
     const depts = await fetchSubjectDepartments(subject.subjectId);
+    
+    // If the subject has departments, filter the available departments list by their university
+    const subjectUniId = depts[0]?.universityId;
+    if (subjectUniId) {
+      try {
+        const uniDepts = await departmentService.getDepartmentsByUniversity(subjectUniId);
+        setDepartments(uniDepts);
+      } catch (err) {
+        console.error('Failed to fetch university departments on edit:', err);
+      }
+    } else if (activeUniversityId) {
+      try {
+        const uniDepts = await departmentService.getDepartmentsByUniversity(activeUniversityId);
+        setDepartments(uniDepts);
+      } catch (err) {
+        console.error('Failed to fetch departments on edit:', err);
+      }
+    } else {
+      try {
+        const allDepts = await departmentService.getAllDepartments();
+        setDepartments(allDepts);
+      } catch (err) {
+        console.error('Failed to fetch all departments on edit:', err);
+      }
+    }
+
     setFormData({
       subjectName: subject.subjectName,
       subjectCode: subject.subjectCode || '',
@@ -135,6 +213,7 @@ export default function SubjectManagement() {
     setEditingId(null);
     setShowForm(false);
     setError('');
+    fetchDepartments();
   };
 
   const toggleDepartment = (deptId) => {
@@ -343,7 +422,7 @@ export default function SubjectManagement() {
                           Edit
                         </button>
                         <a
-                          href={`/admin/papers?subjectId=${subject.subjectId}`}
+                          href={`/admin/papers?subjectId=${subject.subjectId}&universityId=${activeUniversityId}`}
                           className="text-green-600 hover:text-green-800 font-semibold"
                         >
                           View Papers

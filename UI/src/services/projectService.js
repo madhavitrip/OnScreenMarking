@@ -2,8 +2,13 @@ import apiCall from './api';
 
 const projectService = {
   // Get all projects
-  getAllProjects: async () => {
-    return apiCall('/project');
+  getAllProjects: async (universityId) => {
+    const url = `/project${universityId ? `?universityId=${universityId}` : ''}`;
+    return apiCall(url);
+  },
+
+  getProjects: async (universityId) => {
+    return projectService.getAllProjects(universityId);
   },
 
   // Get project by ID
@@ -35,9 +40,9 @@ const projectService = {
   },
 
   // Get projects by session
-  getProjectsBySession: async (sessionId) => {
-    const projects = await apiCall('/project');
-    return projects.filter(p => p.sessionId === sessionId);
+  getProjectsBySession: async (sessionId, universityId) => {
+    const url = `/project?sessionId=${sessionId}${universityId ? `&universityId=${universityId}` : ''}`;
+    return apiCall(url);
   }
 };
 

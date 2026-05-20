@@ -29,6 +29,8 @@ namespace API.Data
         public DbSet<ErrorLog> ErrorLogs { get; set; }
         public DbSet<SubjectPaper> SubjectPapers { get; set; }
         public DbSet<DepartmentSubject> DepartmentSubjects { get; set; }
+       
+        public DbSet<Invitation> Invitations { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -244,6 +246,20 @@ namespace API.Data
             // QuestionMark configuration
             modelBuilder.Entity<QuestionMark>()
                 .HasKey(qm => qm.Id);
+
+            // Invitation configuration
+            modelBuilder.Entity<Invitation>()
+                .HasKey(i => i.Id);
+            modelBuilder.Entity<Invitation>()
+                .HasOne(i => i.University)
+                .WithMany()
+                .HasForeignKey(i => i.UniversityId)
+                .OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<Invitation>()
+                .HasOne(i => i.Department)
+                .WithMany()
+                .HasForeignKey(i => i.DepartmentId)
+                .OnDelete(DeleteBehavior.SetNull);
         }
     }
 }

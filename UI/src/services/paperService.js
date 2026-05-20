@@ -2,8 +2,9 @@ import apiCall from './api';
 
 const paperService = {
   // Get all papers
-  getAllPapers: async () => {
-    return apiCall('/papers');
+  getAllPapers: async (universityId) => {
+    const url = `/papers${universityId ? `?universityId=${universityId}` : ''}`;
+    return apiCall(url);
   },
 
   // Get papers by project

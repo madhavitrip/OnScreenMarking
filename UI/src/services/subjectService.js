@@ -22,8 +22,9 @@ const subjectService = {
   },
 
   // Get all departments for a subject
-  getSubjectDepartments: async (subjectId) => {
-    return apiCall(`/subject/${subjectId}/departments`);
+  getSubjectDepartments: async (subjectId, universityId) => {
+    const url = `/subject/${subjectId}/departments${universityId ? `?universityId=${universityId}` : ''}`;
+    return apiCall(url);
   },
 
   // Get all papers for a subject

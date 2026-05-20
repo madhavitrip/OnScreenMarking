@@ -18,6 +18,8 @@ import SessionProjectManagement from './pages/SessionProjectManagement';
 import PapersManagement from './pages/PapersManagement';
 import UsersManagement from './pages/UsersManagement';
 import RoleManagement from './pages/RoleManagement';
+import Register from './pages/Register';
+import AcceptInvitation from './pages/AcceptInvitation';
 
 function App() {
   // Set default admin token for testing (remove in production)
@@ -39,6 +41,8 @@ function App() {
         <Routes>
           {/* Public Routes */}
           <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/accept-invitation" element={<AcceptInvitation />} />
           
           {/* Admin Routes - Manage all universities */}
           {userType === 'admin' && (

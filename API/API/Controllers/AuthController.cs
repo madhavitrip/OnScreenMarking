@@ -7,6 +7,7 @@ using API.Data;
 using API.Models;
 using API.Models.DTOs;
 using API.Services;
+using Microsoft.EntityFrameworkCore;
 
 namespace API.Controllers
 {
@@ -46,7 +47,7 @@ namespace API.Controllers
                 }
 
                 // Check if user already exists
-                if (_context.Users.Any(u => u.Email == request.Email))
+                if (_context.Users.Any(u => u.Email == request.Email && u.UniversityId==request.UniversityId))
                 {
                     return BadRequest(new AuthResponse
                     {
@@ -92,7 +93,9 @@ namespace API.Controllers
                 return Ok(new AuthResponse
                 {
                     Success = true,
-                    Message = "User registered successfully",
+                    Message = user.IsActive 
+                        ? "User registered successfully" 
+                        : "Registration successful! Your account is pending approval by the coordinator.",
                     Token = token,
                     User = new UserDto
                     {
@@ -104,7 +107,9 @@ namespace API.Controllers
                         DepartmentId = user.DepartmentId,
                         Phone = user.Phone,
                         Address = user.Address,
-                        ProfileImage = user.ProfileImage
+                        ProfileImage = user.ProfileImage,
+                        IsActive = user.IsActive,
+                        IsApproved = user.IsApproved,
                     }
                 });
             }
@@ -134,6 +139,15 @@ namespace API.Controllers
                     });
                 }
 
+                if (!user.IsActive)
+                {
+                    return BadRequest(new AuthResponse
+                    {
+                        Success = false,
+                        Message = "Your account is pending approval by the coordinator or has been deactivated."
+                    });
+                }
+
                 var token = GenerateJwtToken(user);
 
                 return Ok(new AuthResponse
@@ -151,7 +165,147 @@ namespace API.Controllers
                         DepartmentId = user.DepartmentId,
                         Phone = user.Phone,
                         Address = user.Address,
-                        ProfileImage = user.ProfileImage
+                        ProfileImage = user.ProfileImage,
+                        IsActive = user.IsActive
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new AuthResponse
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
+            }
+        }
+
+        [HttpGet("invitation-details")]
+        public async Task<ActionResult<InvitationDetailsDto>> GetInvitationDetails([FromQuery] string token)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(token))
+                {
+                    return BadRequest(new { success = false, message = "Token is required" });
+                }
+
+                var invitation = _context.Invitations
+                    .Include(i => i.University)
+                    .Include(i => i.Department)
+                    .FirstOrDefault(i => i.Token == token);
+
+                if (invitation == null)
+                {
+                    return NotFound(new { success = false, message = "Invitation not found" });
+                }
+
+                if (invitation.IsUsed)
+                {
+                    return BadRequest(new { success = false, message = "Invitation has already been used" });
+                }
+
+                if (invitation.ExpiresAt < DateTime.UtcNow)
+                {
+                    return BadRequest(new { success = false, message = "Invitation has expired" });
+                }
+
+                return Ok(new InvitationDetailsDto
+                {
+                    Email = invitation.Email,
+                    UniversityId = invitation.UniversityId,
+                    UniversityName = invitation.University?.UniversityName ?? "Unknown University",
+                    DepartmentId = invitation.DepartmentId,
+                    DepartmentName = invitation.Department?.Name ?? "General"
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpPost("accept-invitation")]
+        public async Task<ActionResult<AuthResponse>> AcceptInvitation(AcceptInvitationRequest request)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(request.Token) || 
+                    string.IsNullOrWhiteSpace(request.Name) || 
+                    string.IsNullOrWhiteSpace(request.Password))
+                {
+                    return BadRequest(new AuthResponse
+                    {
+                        Success = false,
+                        Message = "Token, Name, and Password are required"
+                    });
+                }
+
+                var invitation = _context.Invitations.FirstOrDefault(i => i.Token == request.Token);
+                if (invitation == null)
+                {
+                    return BadRequest(new AuthResponse { Success = false, Message = "Invalid invitation token" });
+                }
+
+                if (invitation.IsUsed)
+                {
+                    return BadRequest(new AuthResponse { Success = false, Message = "This invitation has already been used" });
+                }
+
+                if (invitation.ExpiresAt < DateTime.UtcNow)
+                {
+                    return BadRequest(new AuthResponse { Success = false, Message = "This invitation has expired" });
+                }
+
+                // Check if user already exists
+                if (_context.Users.Any(u => u.Email == invitation.Email))
+                {
+                    return BadRequest(new AuthResponse
+                    {
+                        Success = false,
+                        Message = "A user with this email address is already registered"
+                    });
+                }
+
+                // Create new active examiner user
+                var user = new User
+                {
+                    Name = request.Name,
+                    Email = invitation.Email,
+                    PasswordHash = HashPassword(request.Password),
+                    UserType = "examiner",
+                    UniversityId = invitation.UniversityId,
+                    DepartmentId = invitation.DepartmentId,
+                    Phone = request.Phone,
+                    Address = request.Address,
+                    ProfileImage = request.ProfileImage,
+                    IsActive = true // Accounts created via invitation are active immediately
+                };
+
+                _context.Users.Add(user);
+                invitation.IsUsed = true;
+                
+                await _context.SaveChangesAsync();
+
+                var token = GenerateJwtToken(user);
+
+                return Ok(new AuthResponse
+                {
+                    Success = true,
+                    Message = "Invitation accepted and account activated successfully",
+                    Token = token,
+                    User = new UserDto
+                    {
+                        Id = user.Id,
+                        Name = user.Name,
+                        Email = user.Email,
+                        UserType = user.UserType,
+                        UniversityId = user.UniversityId,
+                        DepartmentId = user.DepartmentId,
+                        Phone = user.Phone,
+                        Address = user.Address,
+                        ProfileImage = user.ProfileImage,
+                        IsActive = user.IsActive
                     }
                 });
             }

@@ -203,6 +203,15 @@ namespace API.Controllers
                     });
                 }
 
+                if (string.IsNullOrWhiteSpace(subjectDto.SubjectCode))
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Subject code is required"
+                    });
+                }
+
                 if (subjectDto.DepartmentId <= 0)
                 {
                     return BadRequest(new
@@ -243,6 +252,7 @@ namespace API.Controllers
                     subject = new Subject
                     {
                         SubjectName = subjectDto.SubjectName,
+                        SubjectCode = subjectDto.SubjectCode,
                         IsActive = true,
                         CreatedAt = DateTime.UtcNow,
                         UpdatedAt = DateTime.UtcNow
@@ -297,7 +307,13 @@ namespace API.Controllers
                 if (subject == null)
                     return NotFound(new { success = false, message = "Subject not found" });
 
+                if (string.IsNullOrWhiteSpace(subjectDto.SubjectCode))
+                {
+                    return BadRequest(new { success = false, message = "Subject code is required" });
+                }
+
                 subject.SubjectName = subjectDto.SubjectName;
+                subject.SubjectCode = subjectDto.SubjectCode;
                 subject.IsActive = subjectDto.IsActive;
 
                 _context.Subjects.Update(subject);
@@ -347,6 +363,94 @@ namespace API.Controllers
                     .ToListAsync();
 
                 return Ok(examiners);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpGet("{id}/departments")]
+        public async Task<ActionResult<IEnumerable<Department>>> GetSubjectDepartments(int id, [FromQuery] int? universityId = null)
+        {
+            try
+            {
+                var query = _context.DepartmentSubjects
+                    .Where(ds => ds.SubjectId == id)
+                    .Select(ds => ds.Department)
+                    .Where(d => d.IsActive)
+                    .AsQueryable();
+
+                if (universityId.HasValue && universityId.Value > 0)
+                {
+                    query = query.Where(d => d.UniversityId == universityId.Value);
+                }
+
+                var departments = await query
+                    .OrderBy(d => d.Name)
+                    .ToListAsync();
+
+                return Ok(departments);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpPost("{subjectId}/departments/{departmentId}")]
+        [Authorize(Roles = "admin,coordinator")]
+        public async Task<IActionResult> AddDepartmentToSubject(int subjectId, int departmentId)
+        {
+            try
+            {
+                var subject = await _context.Subjects.FindAsync(subjectId);
+                if (subject == null)
+                    return NotFound(new { success = false, message = "Subject not found" });
+
+                var department = await _context.Departments.FindAsync(departmentId);
+                if (department == null)
+                    return NotFound(new { success = false, message = "Department not found" });
+
+                var mappingExists = await _context.DepartmentSubjects
+                    .AnyAsync(ds => ds.DepartmentId == departmentId && ds.SubjectId == subjectId);
+
+                if (!mappingExists)
+                {
+                    var departmentSubject = new DepartmentSubject
+                    {
+                        DepartmentId = departmentId,
+                        SubjectId = subjectId
+                    };
+
+                    _context.DepartmentSubjects.Add(departmentSubject);
+                    await _context.SaveChangesAsync();
+                }
+
+                return Ok(new { success = true, message = "Department added to subject successfully" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpDelete("{subjectId}/departments/{departmentId}")]
+        [Authorize(Roles = "admin,coordinator")]
+        public async Task<IActionResult> RemoveDepartmentFromSubject(int subjectId, int departmentId)
+        {
+            try
+            {
+                var mapping = await _context.DepartmentSubjects
+                    .FirstOrDefaultAsync(ds => ds.DepartmentId == departmentId && ds.SubjectId == subjectId);
+
+                if (mapping == null)
+                    return NotFound(new { success = false, message = "Mapping not found" });
+
+                _context.DepartmentSubjects.Remove(mapping);
+                await _context.SaveChangesAsync();
+
+                return Ok(new { success = true, message = "Department removed from subject successfully" });
             }
             catch (Exception ex)
             {

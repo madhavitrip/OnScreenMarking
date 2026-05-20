@@ -7,7 +7,10 @@ import { useBreadcrumb } from '../context/BreadcrumbContext';
 
 export default function SessionProjectManagement() {
   const [searchParams] = useSearchParams();
-  const universityId = searchParams.get('universityId');
+  const userType = localStorage.getItem('userType');
+  const userUniversityId = localStorage.getItem('universityId');
+  const universityIdFromUrl = searchParams.get('universityId');
+  const activeUniversityId = userType === 'coordinator' ? userUniversityId : universityIdFromUrl;
   const { setBreadcrumb } = useBreadcrumb();
 
   const [sessions, setSessions] = useState([]);
@@ -36,7 +39,7 @@ export default function SessionProjectManagement() {
     if (selectedSessionId) {
       fetchProjects(selectedSessionId);
     }
-  }, [selectedSessionId]);
+  }, [selectedSessionId, activeUniversityId]);
 
   const fetchSessions = async () => {
     try {
@@ -53,9 +56,10 @@ export default function SessionProjectManagement() {
 
   const fetchProjects = async (sessionId) => {
     try {
-      const data = await apiCall('/project');
-      // Filter projects by session and university if provided
-      const filtered = data.filter(p => p.sessionId === sessionId && (!universityId || p.universityId === parseInt(universityId)));
+      const url = activeUniversityId ? `/project?universityId=${activeUniversityId}` : '/project';
+      const data = await apiCall(url);
+      // Filter projects by session
+      const filtered = data.filter(p => p.sessionId === sessionId);
       setProjects(filtered);
     } catch (err) {
       setError('Failed to fetch projects');
@@ -102,7 +106,7 @@ export default function SessionProjectManagement() {
         body: JSON.stringify({
           projectName: formData.projectName,
           sessionId: selectedSessionId,
-          universityId: universityId ? parseInt(universityId) : 1,
+          universityId: activeUniversityId ? parseInt(activeUniversityId, 10) : 1,
           isActive: formData.isActive
         })
       });
@@ -379,7 +383,7 @@ export default function SessionProjectManagement() {
                               Configure
                             </a>
                             <a
-                              href={`/admin/papers?projectId=${encryptId(project.projectId)}`}
+                              href={`/admin/papers?projectId=${encryptId(project.projectId)}&universityId=${activeUniversityId}`}
                               className="text-green-600 hover:text-green-700 font-semibold"
                             >
                               Papers

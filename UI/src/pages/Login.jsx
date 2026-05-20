@@ -110,9 +110,18 @@ const Login = () => {
           </button>
         </form>
 
-        <div className="mt-6 pt-6 border-t border-gray-200">
-          <p className="text-xs text-gray-500 text-center">
-            Demo Credentials: examiner@cbse.gov.in / password
+        <div className="mt-6 pt-6 border-t border-gray-200 text-center">
+          <p className="text-sm text-gray-600 mb-2">
+            Are you an Examiner?{' '}
+            <span 
+              onClick={() => navigate('/register')} 
+              className="text-blue-600 hover:text-blue-800 font-semibold cursor-pointer transition-all hover:underline"
+            >
+              Register Here
+            </span>
+          </p>
+          <p className="text-xs text-gray-500">
+            Demo Credentials: examiner@uv.gov.in / password
           </p>
         </div>
       </div>

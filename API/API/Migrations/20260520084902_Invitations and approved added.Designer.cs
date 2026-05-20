@@ -3,6 +3,7 @@ using System;
 using API.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace API.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260520084902_Invitations and approved added")]
+    partial class Invitationsandapprovedadded
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -85,63 +88,28 @@ namespace API.Migrations
                     b.ToTable("Departments");
                 });
 
-            modelBuilder.Entity("API.Models.ErrorLog", b =>
+            modelBuilder.Entity("API.Models.DepartmentSubject", b =>
                 {
-                    b.Property<int>("ErrorID")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    b.Property<string>("Error")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<DateTime>("LoggedAt")
+                    b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<string>("Message")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("OccuranceSpace")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.HasKey("ErrorID");
-
-                    b.ToTable("ErrorLogs");
-                });
-
-            modelBuilder.Entity("API.Models.EventLog", b =>
-                {
-                    b.Property<int>("EventID")
-                        .ValueGeneratedOnAdd()
+                    b.Property<int>("DepartmentId")
                         .HasColumnType("int");
 
-                    b.Property<string>("Category")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("Event")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<int>("EventTriggeredBy")
+                    b.Property<int>("SubjectId")
                         .HasColumnType("int");
 
-                    b.Property<DateTime>("LoggedAt")
-                        .HasColumnType("datetime(6)");
+                    b.HasKey("Id");
 
-                    b.Property<string>("NewValue")
-                        .IsRequired()
-                        .HasColumnType("longtext");
+                    b.HasIndex("DepartmentId");
 
-                    b.Property<string>("OldValue")
-                        .IsRequired()
-                        .HasColumnType("longtext");
+                    b.HasIndex("SubjectId");
 
-                    b.HasKey("EventID");
-
-                    b.ToTable("EventLogs");
+                    b.ToTable("DepartmentSubjects");
                 });
 
             modelBuilder.Entity("API.Models.ExaminerExpertise", b =>
@@ -170,6 +138,44 @@ namespace API.Migrations
                         .IsUnique();
 
                     b.ToTable("ExaminerExpertises");
+                });
+
+            modelBuilder.Entity("API.Models.Invitation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int?>("DepartmentId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<bool>("IsUsed")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<int>("UniversityId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DepartmentId");
+
+                    b.HasIndex("UniversityId");
+
+                    b.ToTable("Invitations");
                 });
 
             modelBuilder.Entity("API.Models.Marking", b =>
@@ -268,9 +274,6 @@ namespace API.Migrations
                     b.Property<int>("ProjectId")
                         .HasColumnType("int");
 
-                    b.Property<int>("SubjectId")
-                        .HasColumnType("int");
-
                     b.Property<int>("TotalQuestions")
                         .HasColumnType("int");
 
@@ -283,8 +286,6 @@ namespace API.Migrations
                         .IsUnique();
 
                     b.HasIndex("ProjectId");
-
-                    b.HasIndex("SubjectId");
 
                     b.ToTable("Papers");
                 });
@@ -554,11 +555,12 @@ namespace API.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<int>("DepartmentId")
-                        .HasColumnType("int");
-
                     b.Property<bool>("IsActive")
                         .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("SubjectCode")
+                        .IsRequired()
+                        .HasColumnType("longtext");
 
                     b.Property<string>("SubjectName")
                         .IsRequired()
@@ -569,9 +571,31 @@ namespace API.Migrations
 
                     b.HasKey("SubjectId");
 
-                    b.HasIndex("DepartmentId");
-
                     b.ToTable("Subjects");
+                });
+
+            modelBuilder.Entity("API.Models.SubjectPaper", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("PaperId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SubjectId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PaperId");
+
+                    b.HasIndex("SubjectId");
+
+                    b.ToTable("SubjectPapers");
                 });
 
             modelBuilder.Entity("API.Models.University", b =>
@@ -608,10 +632,6 @@ namespace API.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
-                    b.Property<string>("AutoGeneratedPassword")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
 
@@ -623,6 +643,9 @@ namespace API.Migrations
                         .HasColumnType("varchar(255)");
 
                     b.Property<bool>("IsActive")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("IsApproved")
                         .HasColumnType("tinyint(1)");
 
                     b.Property<string>("Name")
@@ -693,6 +716,25 @@ namespace API.Migrations
                     b.Navigation("University");
                 });
 
+            modelBuilder.Entity("API.Models.DepartmentSubject", b =>
+                {
+                    b.HasOne("API.Models.Department", "Department")
+                        .WithMany("DepartmentSubjects")
+                        .HasForeignKey("DepartmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("API.Models.Subject", "Subject")
+                        .WithMany("DepartmentSubjects")
+                        .HasForeignKey("SubjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Department");
+
+                    b.Navigation("Subject");
+                });
+
             modelBuilder.Entity("API.Models.ExaminerExpertise", b =>
                 {
                     b.HasOne("API.Models.User", "Examiner")
@@ -710,6 +752,24 @@ namespace API.Migrations
                     b.Navigation("Examiner");
 
                     b.Navigation("Subject");
+                });
+
+            modelBuilder.Entity("API.Models.Invitation", b =>
+                {
+                    b.HasOne("API.Models.Department", "Department")
+                        .WithMany()
+                        .HasForeignKey("DepartmentId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("API.Models.University", "University")
+                        .WithMany()
+                        .HasForeignKey("UniversityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Department");
+
+                    b.Navigation("University");
                 });
 
             modelBuilder.Entity("API.Models.Marking", b =>
@@ -747,15 +807,7 @@ namespace API.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("API.Models.Subject", "Subject")
-                        .WithMany("Papers")
-                        .HasForeignKey("SubjectId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.Navigation("Project");
-
-                    b.Navigation("Subject");
                 });
 
             modelBuilder.Entity("API.Models.PaperExaminer", b =>
@@ -848,15 +900,23 @@ namespace API.Migrations
                     b.Navigation("Paper");
                 });
 
-            modelBuilder.Entity("API.Models.Subject", b =>
+            modelBuilder.Entity("API.Models.SubjectPaper", b =>
                 {
-                    b.HasOne("API.Models.Department", "Department")
-                        .WithMany("Subjects")
-                        .HasForeignKey("DepartmentId")
+                    b.HasOne("API.Models.Paper", "Paper")
+                        .WithMany("SubjectPapers")
+                        .HasForeignKey("PaperId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Department");
+                    b.HasOne("API.Models.Subject", "Subject")
+                        .WithMany("SubjectPapers")
+                        .HasForeignKey("SubjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Paper");
+
+                    b.Navigation("Subject");
                 });
 
             modelBuilder.Entity("API.Models.User", b =>
@@ -877,7 +937,7 @@ namespace API.Migrations
 
             modelBuilder.Entity("API.Models.Department", b =>
                 {
-                    b.Navigation("Subjects");
+                    b.Navigation("DepartmentSubjects");
 
                     b.Navigation("Users");
                 });
@@ -892,6 +952,8 @@ namespace API.Migrations
                     b.Navigation("Scripts");
 
                     b.Navigation("Sections");
+
+                    b.Navigation("SubjectPapers");
                 });
 
             modelBuilder.Entity("API.Models.Project", b =>
@@ -923,9 +985,11 @@ namespace API.Migrations
 
             modelBuilder.Entity("API.Models.Subject", b =>
                 {
+                    b.Navigation("DepartmentSubjects");
+
                     b.Navigation("ExaminerExpertises");
 
-                    b.Navigation("Papers");
+                    b.Navigation("SubjectPapers");
                 });
 
             modelBuilder.Entity("API.Models.University", b =>

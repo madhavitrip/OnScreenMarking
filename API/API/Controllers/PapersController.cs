@@ -20,7 +20,7 @@ namespace API.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<PaperDto>>> GetPapers([FromQuery] int? subjectId = null, [FromQuery] int? projectId = null)
+        public async Task<ActionResult<IEnumerable<PaperDto>>> GetPapers([FromQuery] int? subjectId = null, [FromQuery] int? projectId = null, [FromQuery] int? universityId = null)
         {
             try
             {
@@ -37,6 +37,9 @@ namespace API.Controllers
                 }
                 if (projectId.HasValue)
                     query = query.Where(p => p.ProjectId == projectId.Value);
+
+                if (universityId.HasValue)
+                    query = query.Where(p => p.Project.UniversityId == universityId.Value);
 
                 var papers = await query
                     .OrderBy(p => p.PaperNumber)

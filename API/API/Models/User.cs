@@ -11,10 +11,12 @@ namespace API.Models
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; }
         public string Name { get; set; }
+        [EmailAddress]
         public string Email { get; set; }
         public string PasswordHash { get; set; }
         public string UserType { get; set; } // examiner, coordinator, admin
         public bool IsActive { get; set; } = true;
+        public bool IsApproved { get; set; } = false;
         public string ProfileImage { get; set; }
         public string Phone { get; set; }
         public string Address { get; set; }

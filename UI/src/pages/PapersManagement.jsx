@@ -15,11 +15,16 @@ import {
   BookOpen
 } from "lucide-react";
 import apiCall from "../services/api";
+import { decryptId } from "../utils/encryption";
+import subjectService from "../services/subjectService";
+import projectService from "../services/projectService";
 
 export default function PapersManagement() {
   const [searchParams] = useSearchParams();
-  const projectId = searchParams.get("projectId");
+  const encryptedProjectId = searchParams.get("projectId");
+  const projectId = encryptedProjectId ? decryptId(encryptedProjectId) : null;
   const subjectId = searchParams.get("subjectId");
+  const universityId = searchParams.get("universityId");
 
   const [papers, setPapers] = useState([]);
   const [subjects, setSubjects] = useState([]);
@@ -53,17 +58,24 @@ export default function PapersManagement() {
 
   useEffect(() => {
     fetchInitialData();
-  }, [subjectId, projectId]);
+  }, [subjectId, projectId, universityId]);
 
   const fetchInitialData = async () => {
     setLoading(true);
     try {
-      const [subs, projs] = await Promise.all([
-        apiCall('/subject'),
-        apiCall('/project')
-      ]);
-      setSubjects(subs);
+      const projs = await projectService.getProjects(universityId);
       setProjects(projs);
+
+      const subjectUrl = universityId 
+        ? `/subject/University?universityId=${universityId}`
+        : null;
+      
+      if (subjectUrl) {
+        const subs = await apiCall(subjectUrl);
+        setSubjects(subs);
+      } else {
+        setSubjects([]);
+      }
       
       await fetchPapers();
     } catch (err) {
@@ -79,6 +91,7 @@ export default function PapersManagement() {
       const params = [];
       if (subjectId) params.push(`subjectId=${subjectId}`);
       if (projectId) params.push(`projectId=${projectId}`);
+      if (universityId) params.push(`universityId=${universityId}`);
       if (params.length > 0) url += "?" + params.join("&");
 
       const data = await apiCall(url);
@@ -86,6 +99,24 @@ export default function PapersManagement() {
     } catch (err) {
       setError("Failed to fetch papers");
     }
+  };
+
+  useEffect(() => {
+    const loadProjectSubjects = async () => {
+      if (universityId) {
+        try {
+          const subs = await subjectService.getSubjectByUniversity(universityId);
+          setSubjects(subs);
+        } catch (err) {
+          console.error("Failed to fetch subjects for university:", err);
+        }
+      }
+    };
+    loadProjectSubjects();
+  }, [universityId]);
+
+  const handleProjectChange = (projId) => {
+    setFormData(prev => ({ ...prev, projectId: projId }));
   };
 
   // Examiner Allocation Logic
@@ -155,6 +186,7 @@ export default function PapersManagement() {
 
       const payload = {
         ...formData,
+        subjectIds: selectedSubjects.map(id => parseInt(id, 10)),
         projectId: parseInt(formData.projectId, 10),
         paperNumber: parseInt(formData.paperNumber, 10),
         maxMarks: parseFloat(formData.maxMarks),
@@ -166,15 +198,6 @@ export default function PapersManagement() {
         body: JSON.stringify(payload)
       });
 
-      // Add subjects to paper
-      if (!editingId) {
-        for (const subjId of selectedSubjects) {
-          await apiCall(`/papers/${result.paperId}/subjects/${subjId}`, {
-            method: 'POST'
-          });
-        }
-      }
-
       handleCancel();
       fetchPapers();
       setSuccess("Paper saved successfully");
@@ -184,7 +207,7 @@ export default function PapersManagement() {
     }
   };
 
-  const handleEdit = (paper) => {
+  const handleEdit = async (paper) => {
     setFormData({
       paperCode: paper.paperCode,
       paperName: paper.paperName,
@@ -196,6 +219,18 @@ export default function PapersManagement() {
       projectId: paper.projectId,
       isActive: paper.isActive,
     });
+    
+    // Fetch subjects for this paper's project's university
+    const project = projects.find(p => p.projectId === paper.projectId);
+    if (project && project.universityId) {
+      try {
+        const subs = await apiCall(`/subject/University?universityId=${project.universityId}`);
+        setSubjects(subs);
+      } catch (err) {
+        console.error("Failed to fetch subjects for project's university on edit:", err);
+      }
+    }
+
     // Set selected subjects from paper's subject papers
     if (paper.subjectPapers && paper.subjectPapers.length > 0) {
       setSelectedSubjects(paper.subjectPapers.map(sp => sp.subjectId));
@@ -221,6 +256,7 @@ export default function PapersManagement() {
     setEditingId(null);
     setShowForm(false);
     setError("");
+    fetchInitialData();
   };
 
   const toggleSubject = (subjId) => {
@@ -331,9 +367,7 @@ export default function PapersManagement() {
                     Subjects ({selectedSubjects.length} selected) *
                   </label>
                   <div className="grid grid-cols-1 gap-2 bg-gray-50 p-4 rounded-xl border border-gray-200 max-h-[200px] overflow-y-auto">
-                    {subjects.length === 0 ? (
-                      <p className="text-gray-500 text-sm">No subjects available</p>
-                    ) : (
+                   {(
                       subjects.map((s) => (
                         <label key={s.subjectId} className="flex items-center gap-3 cursor-pointer hover:bg-white p-2 rounded transition">
                           <input
@@ -352,7 +386,7 @@ export default function PapersManagement() {
                   <label className="block text-sm font-bold text-gray-700 mb-2">Project *</label>
                   <select
                     value={formData.projectId}
-                    onChange={(e) => setFormData({ ...formData, projectId: e.target.value })}
+                    onChange={(e) => handleProjectChange(e.target.value)}
                     className="w-full bg-gray-50 border border-gray-200 text-gray-900 px-4 py-2.5 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
                     required
                   >

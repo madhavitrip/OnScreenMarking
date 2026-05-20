@@ -70,7 +70,8 @@ export default function DepartmentManagement() {
       setLoading(true);
       const payload = {
         ...formData,
-        universityId: parseInt(formData.universityId, 10)
+        universityId: parseInt(formData.universityId, 10),
+        departmentSubjects: [] // Send empty array for many-to-many relationship
       };
 
       if (editingId) {
