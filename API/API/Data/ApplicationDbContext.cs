@@ -31,6 +31,7 @@ namespace API.Data
         public DbSet<DepartmentSubject> DepartmentSubjects { get; set; }
        
         public DbSet<Invitation> Invitations { get; set; }
+        public DbSet<Role> Roles { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
