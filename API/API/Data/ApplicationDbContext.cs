@@ -32,6 +32,7 @@ namespace API.Data
        
         public DbSet<Invitation> Invitations { get; set; }
         public DbSet<Role> Roles { get; set; }
+        public DbSet<Attendance> Attendances { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -261,6 +262,15 @@ namespace API.Data
                 .WithMany()
                 .HasForeignKey(i => i.DepartmentId)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            // Attendance configuration
+            modelBuilder.Entity<Attendance>()
+                .HasKey(a => a.AttendanceId);
+            modelBuilder.Entity<Attendance>()
+                .HasOne(a => a.Examiner)
+                .WithMany()
+                .HasForeignKey(a => a.ExaminerId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

@@ -26,7 +26,7 @@ namespace API.Controllers
             try
             {
                 var query = _context.Subjects
-                    .Where(s => s.IsActive)
+                    .Where(s => s.Status)
                     .Include(s => s.DepartmentSubjects)
                         .ThenInclude(ds => ds.Department)
                     .Include(s => s.SubjectPapers)
@@ -42,7 +42,7 @@ namespace API.Controllers
                 }
 
                 var subjects = await query
-                    .OrderBy(s => s.SubjectName)
+                    .OrderBy(s => s.SubName)
                     .ToListAsync();
 
                 return Ok(subjects);
@@ -87,7 +87,7 @@ namespace API.Controllers
                 // Get subjects mapped to those departments
                 var subjects = await _context.Subjects
                     .Where(s =>
-                        s.IsActive &&
+                        s.Status &&
                         s.DepartmentSubjects.Any(ds =>
                             departmentIds.Contains(ds.DepartmentId)))
                     .Include(s => s.DepartmentSubjects)
@@ -95,7 +95,7 @@ namespace API.Controllers
                     .Include(s => s.SubjectPapers)
                         .ThenInclude(sp => sp.Paper)
                     .Include(s => s.ExaminerExpertises)
-                    .OrderBy(s => s.SubjectName)
+                    .OrderBy(s => s.SubName)
                     .ToListAsync();
 
                 return Ok(subjects);
@@ -133,14 +133,14 @@ namespace API.Controllers
                 // Get subjects mapped to those departments
                 var subjects = await _context.Subjects
                     .Where(s =>
-                        s.IsActive &&
+                        s.Status &&
                         s.DepartmentSubjects.Any(ds =>
                             departmentIds.Contains(ds.DepartmentId)))
                     .Include(s => s.DepartmentSubjects)
                         .ThenInclude(ds => ds.Department)
                     .Include(s => s.SubjectPapers)
                         .ThenInclude(sp => sp.Paper)
-                    .OrderBy(s => s.SubjectName)
+                    .OrderBy(s => s.SubName)
                     .ToListAsync();
 
                 return Ok(subjects);
@@ -239,7 +239,7 @@ namespace API.Controllers
                 // Optional duplicate check
                 var existingSubject = await _context.Subjects
                     .FirstOrDefaultAsync(s =>
-                        s.SubjectName == subjectDto.SubjectName);
+                        s.SubName == subjectDto.SubjectName);
 
                 Subject subject;
 
@@ -251,11 +251,11 @@ namespace API.Controllers
                 {
                     subject = new Subject
                     {
-                        SubjectName = subjectDto.SubjectName,
-                        SubjectCode = subjectDto.SubjectCode,
-                        IsActive = true,
-                        CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow
+                        SubName = subjectDto.SubjectName,
+                        SubCode = subjectDto.SubjectCode,
+                        Status = true,
+                        created_at = DateTime.UtcNow,
+                        updated_at = DateTime.UtcNow
                     };
 
                     _context.Subjects.Add(subject);
@@ -312,9 +312,9 @@ namespace API.Controllers
                     return BadRequest(new { success = false, message = "Subject code is required" });
                 }
 
-                subject.SubjectName = subjectDto.SubjectName;
-                subject.SubjectCode = subjectDto.SubjectCode;
-                subject.IsActive = subjectDto.IsActive;
+                subject.SubName = subjectDto.SubjectName;
+                subject.SubCode = subjectDto.SubjectCode;
+                subject.Status = subjectDto.IsActive;
 
                 _context.Subjects.Update(subject);
                 await _context.SaveChangesAsync();
