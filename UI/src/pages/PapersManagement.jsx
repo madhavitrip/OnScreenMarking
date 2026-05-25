@@ -73,7 +73,8 @@ export default function PapersManagement() {
       
       if (subjectUrl) {
         const subs = await apiCall(subjectUrl);
-        setSubjects(subs);
+        const mappedSubs = subs.map(s => ({ ...s, subjectName: s.subName || s.subjectName || '' }));
+        setSubjects(mappedSubs);
       } else {
         setSubjects([]);
       }
@@ -96,7 +97,17 @@ export default function PapersManagement() {
       if (params.length > 0) url += "?" + params.join("&");
 
       const data = await apiCall(url);
-      setPapers(data);
+      const mappedData = data.map(paper => ({
+        ...paper,
+        subjectPapers: paper.subjectPapers?.map(sp => ({
+          ...sp,
+          subject: sp.subject ? {
+            ...sp.subject,
+            subjectName: sp.subject.subName || sp.subject.subjectName || ''
+          } : null
+        }))
+      }));
+      setPapers(mappedData);
     } catch (err) {
       setError("Failed to fetch papers");
     }
@@ -107,7 +118,8 @@ export default function PapersManagement() {
       if (universityId) {
         try {
           const subs = await subjectService.getSubjectByUniversity(universityId);
-          setSubjects(subs);
+          const mappedSubs = subs.map(s => ({ ...s, subjectName: s.subName || s.subjectName || '' }));
+          setSubjects(mappedSubs);
         } catch (err) {
           console.error("Failed to fetch subjects for university:", err);
         }
@@ -115,6 +127,18 @@ export default function PapersManagement() {
     };
     loadProjectSubjects();
   }, [universityId]);
+
+  useEffect(() => {
+    if (searchParams.get("add") === "true") {
+      setShowForm(true);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (subjectId) {
+      setSelectedSubjects([parseInt(subjectId, 10)]);
+    }
+  }, [subjectId]);
 
   const handleProjectChange = (projId) => {
     setFormData(prev => ({ ...prev, projectId: projId }));
@@ -226,7 +250,8 @@ export default function PapersManagement() {
     if (project && project.universityId) {
       try {
         const subs = await apiCall(`/subject/University?universityId=${project.universityId}`);
-        setSubjects(subs);
+        const mappedSubs = subs.map(s => ({ ...s, subjectName: s.subName || s.subjectName || '' }));
+        setSubjects(mappedSubs);
       } catch (err) {
         console.error("Failed to fetch subjects for project's university on edit:", err);
       }

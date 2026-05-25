@@ -675,21 +675,21 @@ namespace API.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<bool>("IsActive")
+                    b.Property<bool>("Status")
                         .HasColumnType("tinyint(1)");
 
-                    b.Property<string>("SubjectCode")
+                    b.Property<string>("SubCode")
                         .IsRequired()
                         .HasColumnType("longtext");
 
-                    b.Property<string>("SubjectName")
+                    b.Property<string>("SubName")
                         .IsRequired()
                         .HasColumnType("longtext");
 
-                    b.Property<DateTime>("UpdatedAt")
+                    b.Property<DateTime>("created_at")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("updated_at")
                         .HasColumnType("datetime(6)");
 
                     b.HasKey("SubjectId");

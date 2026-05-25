@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace API.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260520084902_Invitations and approved added")]
-    partial class Invitationsandapprovedadded
+    [Migration("20260525061625_init")]
+    partial class init
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -57,6 +57,38 @@ namespace API.Migrations
                     b.HasIndex("ScriptId");
 
                     b.ToTable("Allocations");
+                });
+
+            modelBuilder.Entity("API.Models.Attendance", b =>
+                {
+                    b.Property<int>("AttendanceId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("ExaminerId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Remarks")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("AttendanceId");
+
+                    b.HasIndex("ExaminerId");
+
+                    b.ToTable("Attendances");
                 });
 
             modelBuilder.Entity("API.Models.Department", b =>
@@ -110,6 +142,65 @@ namespace API.Migrations
                     b.HasIndex("SubjectId");
 
                     b.ToTable("DepartmentSubjects");
+                });
+
+            modelBuilder.Entity("API.Models.ErrorLog", b =>
+                {
+                    b.Property<int>("ErrorID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<string>("Error")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime>("LoggedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("OccuranceSpace")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.HasKey("ErrorID");
+
+                    b.ToTable("ErrorLogs");
+                });
+
+            modelBuilder.Entity("API.Models.EventLog", b =>
+                {
+                    b.Property<int>("EventID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Event")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<int>("EventTriggeredBy")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("LoggedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("NewValue")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("OldValue")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.HasKey("EventID");
+
+                    b.ToTable("EventLogs");
                 });
 
             modelBuilder.Entity("API.Models.ExaminerExpertise", b =>
@@ -423,6 +514,41 @@ namespace API.Migrations
                     b.ToTable("QuestionMarks");
                 });
 
+            modelBuilder.Entity("API.Models.Role", b =>
+                {
+                    b.Property<int>("RoleId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<int>("HierarchyLevel")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("Permissions")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("RoleName")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("RoleId");
+
+                    b.ToTable("Roles");
+                });
+
             modelBuilder.Entity("API.Models.Script", b =>
                 {
                     b.Property<int>("Id")
@@ -552,21 +678,21 @@ namespace API.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<bool>("IsActive")
+                    b.Property<bool>("Status")
                         .HasColumnType("tinyint(1)");
 
-                    b.Property<string>("SubjectCode")
+                    b.Property<string>("SubCode")
                         .IsRequired()
                         .HasColumnType("longtext");
 
-                    b.Property<string>("SubjectName")
+                    b.Property<string>("SubName")
                         .IsRequired()
                         .HasColumnType("longtext");
 
-                    b.Property<DateTime>("UpdatedAt")
+                    b.Property<DateTime>("created_at")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("updated_at")
                         .HasColumnType("datetime(6)");
 
                     b.HasKey("SubjectId");
@@ -629,6 +755,10 @@ namespace API.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("Address")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("AutoGeneratedPassword")
                         .IsRequired()
                         .HasColumnType("longtext");
 
@@ -703,6 +833,17 @@ namespace API.Migrations
                     b.Navigation("Examiner");
 
                     b.Navigation("Script");
+                });
+
+            modelBuilder.Entity("API.Models.Attendance", b =>
+                {
+                    b.HasOne("API.Models.User", "Examiner")
+                        .WithMany()
+                        .HasForeignKey("ExaminerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Examiner");
                 });
 
             modelBuilder.Entity("API.Models.Department", b =>

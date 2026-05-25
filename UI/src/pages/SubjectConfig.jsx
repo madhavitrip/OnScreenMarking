@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { subjectService, sectionService, paperService } from '../services';
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import apiCall from '../services/api';
 import { decryptId, encryptId } from '../utils/encryption';
@@ -32,6 +32,34 @@ export default function SubjectConfig() {
   const projectId = encryptedProjectId ? decryptId(encryptedProjectId) : null;
   const { userType } = useAuth();
   const { setBreadcrumb } = useBreadcrumb();
+
+  const [projectData, setProjectData] = useState(null);
+  const [subjects, setSubjects] = useState([]);
+  const [papers, setPapers] = useState([]);
+  const [sections, setSections] = useState([]);
+  
+  const [selectedSubject, setSelectedSubject] = useState(null);
+  const [selectedPaper, setSelectedPaper] = useState(null);
+  const [currentStep, setCurrentStep] = useState(1);
+  
+  const [showSectionForm, setShowSectionForm] = useState(false);
+  const [showQuestionPreview, setShowQuestionPreview] = useState(false);
+  const [editingSectionId, setEditingSectionId] = useState(null);
+  const [expandedSections, setExpandedSections] = useState({});
+  
+  const [sectionForm, setSectionForm] = useState({
+    name: '',
+    description: '',
+    startQuestion: 1,
+    endQuestion: 10,
+    totalMarks: 10,
+    maxQuestionsToAttempt: 10,
+  });
+  const [questions, setQuestions] = useState([]);
+  
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   useEffect(() => {
     if (projectId) {
@@ -74,11 +102,12 @@ export default function SubjectConfig() {
       // Fetch paper counts for each subject in parallel
       const subjectsWithCounts = await Promise.all(
         subjectsData.map(async (subject) => {
+          const subjectName = subject.subName || subject.subjectName || '';
           try {
             const papers = await subjectService.getSubjectPapers(subject.subjectId);
-            return { ...subject, paperCount: papers.length };
+            return { ...subject, subjectName, paperCount: papers.length };
           } catch (e) {
-            return { ...subject, paperCount: 0 };
+            return { ...subject, subjectName, paperCount: 0 };
           }
         })
       );
@@ -95,9 +124,8 @@ export default function SubjectConfig() {
   const fetchPapers = async () => {
     try {
       setLoading(true);
-      const data = await paperService.getAllPapers();
-      const filtered = data.filter(p => p.subjectId === selectedSubject.subjectId);
-      setPapers(filtered);
+      const data = await subjectService.getSubjectPapers(selectedSubject.subjectId);
+      setPapers(data);
     } catch (err) {
       setError('Failed to fetch papers');
       console.error(err);
@@ -182,6 +210,7 @@ export default function SubjectConfig() {
       setLoading(true);
       const sectionData = {
         ...sectionForm,
+        totalQuestions: sectionForm.endQuestion - sectionForm.startQuestion + 1,
         paperId: selectedPaper.paperId,
         questions: questions.map(q => ({
           ...q,
@@ -263,8 +292,17 @@ export default function SubjectConfig() {
 
   const isAddSectionDisabled = () => {
     if (!selectedPaper) return true;
+    
+    // Block if allocated marks reaches or exceeds paper's max marks
     const totalSectionMarks = calculateTotalSectionMarks();
-    return totalSectionMarks >= selectedPaper.maxMarks;
+    if (totalSectionMarks >= selectedPaper.maxMarks) return true;
+    
+    // Block if configured endQuestion in any section reaches or exceeds paper's totalQuestions
+    if (selectedPaper.totalQuestions > 0 && sections.some(s => s.endQuestion >= selectedPaper.totalQuestions)) {
+      return true;
+    }
+    
+    return false;
   };
 
   // Helper component for Stat Cards
@@ -392,7 +430,7 @@ export default function SubjectConfig() {
                     ))}
                   </div>
                 </div>
-              ) : selectedUniversity ? (
+              ) : loading ? (
                 <div className="h-40 flex flex-col items-center justify-center bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
                   <p className="text-gray-400 text-sm font-medium">Fetching subjects...</p>
@@ -400,7 +438,7 @@ export default function SubjectConfig() {
               ) : (
                 <div className="h-40 flex flex-col items-center justify-center bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl">
                   <AlertCircle className="w-8 h-8 text-gray-300 mb-2" />
-                  <p className="text-gray-400 text-sm font-medium">Please select a university to view subjects</p>
+                  <p className="text-gray-400 text-sm font-medium">No subjects found for this project</p>
                 </div>
               )}
             </div>
@@ -424,12 +462,13 @@ export default function SubjectConfig() {
                     <p className="text-gray-500 font-medium">Configure sections for <span className="text-blue-600 font-bold">{selectedSubject?.subjectName || 'Subject'}</span></p>
                   </div>
                 </div>
-                <button
+                <Link
+                  to={`/admin/papers?projectId=${encryptedProjectId}&universityId=${projectData?.universityId || ''}&subjectId=${selectedSubject?.subjectId || ''}&add=true`}
                   className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-md transition-all active:scale-95"
                 >
                   <Plus className="w-5 h-5" />
                   Add Paper
-                </button>
+                </Link>
               </div>
 
               {papers.length > 0 ? (
@@ -652,6 +691,30 @@ export default function SubjectConfig() {
                         </button>
                       )}
                     </div>
+
+                    {showQuestionPreview && (
+                      <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100 animate-in slide-in-from-top-2 duration-300">
+                        <label className="block text-blue-800 text-xs font-bold mb-2 uppercase tracking-tight">Bulk Options</label>
+                        <div className="space-y-1">
+                          <p className="text-[10px] text-blue-600 font-semibold mb-1">Set Type for All Questions:</p>
+                          <select
+                            value=""
+                            onChange={(e) => {
+                              const selectedType = e.target.value;
+                              if (selectedType) {
+                                setQuestions(prev => prev.map(q => ({ ...q, type: selectedType })));
+                              }
+                            }}
+                            className="w-full bg-white px-3 py-2 rounded-lg border border-blue-200 text-sm focus:ring-2 focus:ring-blue-500 outline-none font-bold text-gray-700 shadow-sm transition-all"
+                          >
+                            <option value="">Choose Type...</option>
+                            {['MCQ', 'SA', 'LA', 'CS', 'NP', 'EXP', 'RC', 'WS', 'LIT', 'GV'].map(type => (
+                              <option key={type} value={type}>{type}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Right Column: Questions Grid */}

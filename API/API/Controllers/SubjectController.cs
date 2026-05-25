@@ -332,10 +332,8 @@ namespace API.Controllers
         {
             try
             {
-                var papers = await _context.SubjectPapers
-                    .Where(sp => sp.SubjectId == id)
-                    .Select(sp => sp.Paper)
-                    .Where(p => p.IsActive)
+                var papers = await _context.Papers
+                    .Where(p => p.IsActive && p.SubjectPapers.Any(sp => sp.SubjectId == id))
                     .Include(p => p.Sections)
                     .OrderBy(p => p.PaperNumber)
                     .ToListAsync();
