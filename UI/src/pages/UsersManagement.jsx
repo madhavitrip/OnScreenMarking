@@ -65,11 +65,6 @@ export default function UsersManagement() {
   const [inviteUniId, setInviteUniId] = useState(activeUniversityId || "");
   const [inviteLoading, setInviteLoading] = useState(false);
   
-  // Simulated Email Sandbox State
-  const [showSandbox, setShowSandbox] = useState(false);
-  const [sandboxData, setSandboxData] = useState(null);
-  const [copiedLink, setCopiedLink] = useState(false);
-
   // Profile Image Zoom Modal State
   const [zoomUser, setZoomUser] = useState(null);
 
@@ -162,35 +157,15 @@ export default function UsersManagement() {
       const res = await userService.inviteUser(payload);
       
       if (res.success) {
-        const uniObj = universities.find(u => u.universityId === parseInt(finalUniId, 10));
-        const deptObj = departments.find(d => d.departmentId === parseInt(inviteDeptId, 10));
-        
-        setSandboxData({
-          email: res.invitation.email,
-          token: res.invitation.token,
-          invitationLink: res.invitation.invitationLink,
-          universityName: uniObj ? uniObj.universityName : "On-Screen Marking Portal",
-          departmentName: deptObj ? deptObj.name : "General / All Departments"
-        });
-
-        setShowSandbox(true);
         setInviteEmail("");
         setInviteDeptId("");
-        setSuccess("Invitation generated and logged successfully!");
+        setSuccess("Invitation email has been sent successfully!");
         fetchUsers();
       }
     } catch (err) {
-      setError(err.message || "Failed to generate invitation.");
+      setError(err.message || "Failed to send invitation.");
     } finally {
       setInviteLoading(false);
-    }
-  };
-
-  const copyInvitationLink = () => {
-    if (sandboxData && sandboxData.invitationLink) {
-      navigator.clipboard.writeText(sandboxData.invitationLink);
-      setCopiedLink(true);
-      setTimeout(() => setCopiedLink(false), 2000);
     }
   };
 
@@ -313,7 +288,7 @@ export default function UsersManagement() {
   });
 
   // Filter pending examiners (inactive, type examiner)
-  const pendingExaminers = users.filter((u) => !u.isActive && u.userType === "examiner");
+  const pendingExaminers = users.filter((u) => u.isApproved==false && u.userType === "examiner");
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 lg:p-8">
@@ -336,7 +311,7 @@ export default function UsersManagement() {
               className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-5 py-2.5 rounded-xl font-semibold transition-all duration-200 shadow-md flex items-center gap-2"
             >
               {showForm ? <X size={18} /> : <UserPlus size={18} />}
-              {showForm ? "Cancel" : "Add Direct User"}
+              {showForm ? "Cancel" : "Add User"}
             </button>
           )}
         </div>
@@ -629,7 +604,7 @@ export default function UsersManagement() {
             {/* List and search */}
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4">
-                <h3 className="text-lg font-bold text-slate-900">User Roster</h3>
+                <h3 className="text-lg font-bold text-slate-900">User</h3>
                 <div className="relative max-w-sm w-full">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                   <input
@@ -881,14 +856,6 @@ export default function UsersManagement() {
                   </div>
                 </div>
 
-                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-start gap-3">
-                  <Info className="text-blue-600 mt-0.5 flex-shrink-0" size={18} />
-                  <div className="text-xs text-slate-600 leading-relaxed font-medium">
-                    <p className="font-bold text-slate-800 mb-1">Demonstration Mode Enabled:</p>
-                    Since standard mail servers are bypassed in development, this dashboard will capture the unique activation token and display the active link in a simulated sandbox immediately so you can copy and verify the examiner flow seamlessly!
-                  </div>
-                </div>
-
                 <button
                   type="submit"
                   disabled={inviteLoading}
@@ -897,12 +864,12 @@ export default function UsersManagement() {
                   {inviteLoading ? (
                     <>
                       <Loader className="animate-spin" size={16} />
-                      Generating Invitation...
+                      Sending Invitation...
                     </>
                   ) : (
                     <>
                       <Sparkles size={16} />
-                      Generate & Send Invitation
+                      Send Invitation Email
                     </>
                   )}
                 </button>
@@ -911,115 +878,6 @@ export default function UsersManagement() {
           </div>
         )}
       </div>
-
-      {/* Simulated Email Sandbox Modal */}
-      {showSandbox && sandboxData && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-slate-900 text-slate-100 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl border border-slate-800 animate-slide-up flex flex-col" style={{ maxHeight: "90vh" }}>
-            {/* Sandbox Titlebar */}
-            <div className="bg-slate-950 px-6 py-4 flex justify-between items-center border-b border-slate-800">
-              <div className="flex items-center gap-2.5">
-                <div className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></div>
-                <span className="text-sm font-extrabold text-amber-500 tracking-wider uppercase">Simulated Email Server Sandbox</span>
-              </div>
-              <button
-                onClick={() => setShowSandbox(false)}
-                className="text-slate-400 hover:text-slate-100 transition p-1 hover:bg-white/10 rounded-lg"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            {/* Simulated Email Envelope details */}
-            <div className="bg-slate-950/80 px-6 py-4 border-b border-slate-800 text-xs text-slate-300 space-y-2 font-mono">
-              <div>
-                <span className="text-slate-500">From:</span> On-Screen Marking System &lt;noreply@osm-portal.gov.in&gt;
-              </div>
-              <div>
-                <span className="text-slate-500">To:</span> {sandboxData.email}
-              </div>
-              <div>
-                <span className="text-slate-500">Subject:</span> 🔐 Invitation to join On-Screen Marking Portal as Examiner
-              </div>
-              <div>
-                <span className="text-slate-500">Timestamp:</span> {new Date().toLocaleString()}
-              </div>
-            </div>
-
-            {/* Email Body Card */}
-            <div className="flex-1 overflow-y-auto p-6 md:p-8 bg-slate-900 text-slate-800">
-              <div className="bg-white rounded-xl shadow-md border border-slate-200 p-6 md:p-8 max-w-xl mx-auto space-y-6 text-left">
-                {/* Brand header */}
-                <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-                  <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center text-white font-extrabold shadow-sm">
-                    OSM
-                  </div>
-                  <div>
-                    <h4 className="text-base font-extrabold text-slate-900">On-Screen Marking Portal</h4>
-                    <p className="text-xs text-slate-500">Secure Digital Evaluation</p>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <p className="text-sm font-bold text-slate-900">Dear Examiner,</p>
-                  <p className="text-sm text-slate-600 leading-relaxed">
-                    You have been pre-registered and invited by the university coordinator of <strong>{sandboxData.universityName}</strong> to join the digital assessment team as an Examiner.
-                  </p>
-                  <p className="text-sm text-slate-600 leading-relaxed font-semibold">
-                    Associated Department: {sandboxData.departmentName}
-                  </p>
-                  
-                  <div className="py-4 text-center">
-                    <a
-                      href={sandboxData.invitationLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-block bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-sm px-6 py-3 rounded-xl shadow-md transition-all transform hover:-translate-y-0.5"
-                    >
-                      Set Password & Activate Account
-                    </a>
-                  </div>
-
-                  <div className="bg-slate-50 rounded-lg p-3 border border-slate-100 font-mono text-[11px] text-slate-500 break-all select-all">
-                    <p className="font-bold text-slate-700 mb-1">Raw Activation Link:</p>
-                    {sandboxData.invitationLink}
-                  </div>
-
-                  <p className="text-xs text-slate-400">
-                    * This invitation link is unique to your credentials and will expire in 7 days.
-                  </p>
-                </div>
-
-                <div className="border-t border-slate-100 pt-4 text-xs text-slate-400 text-center">
-                  On-Screen Marking Board • Secure System Infrastructure
-                </div>
-              </div>
-            </div>
-
-            {/* Sandbox footer actions */}
-            <div className="bg-slate-950 px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-4 border-t border-slate-800">
-              <p className="text-xs text-slate-400 text-center sm:text-left">
-                Use the button to copy the link and open it in an Incognito / Private Tab to test the Examiner's activation flow.
-              </p>
-              <div className="flex gap-3 w-full sm:w-auto">
-                <button
-                  onClick={copyInvitationLink}
-                  className="flex-1 sm:flex-none bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold px-4 py-2 rounded-xl transition shadow flex items-center justify-center gap-2"
-                >
-                  {copiedLink ? <Check size={16} /> : <Copy size={16} />}
-                  {copiedLink ? "Link Copied!" : "Copy Activation Link"}
-                </button>
-                <button
-                  onClick={() => setShowSandbox(false)}
-                  className="flex-1 sm:flex-none bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-semibold px-4 py-2 rounded-xl transition"
-                >
-                  Close Sandbox
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Profile Photo Zoom Modal */}
       {zoomUser && (

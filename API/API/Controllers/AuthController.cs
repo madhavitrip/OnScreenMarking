@@ -71,7 +71,7 @@ namespace API.Controllers
                     Phone = request.Phone,
                     Address = request.Address,
                     ProfileImage = request.ProfileImage,
-                    IsActive = true
+                    IsActive = false
                 };
 
                 _context.Users.Add(user);

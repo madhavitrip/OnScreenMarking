@@ -278,5 +278,174 @@ namespace API.Controllers
                 return StatusCode(500, new { success = false, message = ex.Message });
             }
         }
+
+        [HttpGet("{markingId}/details")]
+        public async Task<ActionResult<object>> GetMarkingDetails(int markingId)
+        {
+            try
+            {
+                var marking = await _context.Markings
+                    .Include(m => m.Script)
+                        .ThenInclude(s => s.Paper)
+                            .ThenInclude(p => p.Sections)
+                                .ThenInclude(sec => sec.Questions)
+                    .Include(m => m.Examiner)
+                    .Include(m => m.Allocation)
+                    .Include(m => m.QuestionMarks)
+                        .ThenInclude(qm => qm.Question)
+                    .FirstOrDefaultAsync(m => m.Id == markingId);
+
+                if (marking == null)
+                    return NotFound(new { success = false, message = "Marking not found" });
+
+                var sections = marking.Script.Paper.Sections.Select(s => new
+                {
+                    id = s.Id,
+                    name = s.Name,
+                    description = s.Description,
+                    totalQuestions = s.TotalQuestions,
+                    totalMarks = s.TotalMarks,
+                    startQuestion = s.StartQuestion,
+                    endQuestion = s.EndQuestion,
+                    questions = s.Questions.Select(q => new
+                    {
+                        questionId = q.QuestionId,
+                        questionNo = q.QuestionNo,
+                        marks = q.Marks,
+                        type = q.Type,
+                        isOptional = q.IsOptional,
+                        optionalGroupCode = q.OptionalGroupCode,
+                        marksAwarded = marking.QuestionMarks
+                            .FirstOrDefault(qm => qm.QuestionId == q.QuestionId)?.MarksAwarded ?? 0,
+                        isSkipped = marking.QuestionMarks
+                            .FirstOrDefault(qm => qm.QuestionId == q.QuestionId)?.IsSkipped ?? false,
+                        remarks = marking.QuestionMarks
+                            .FirstOrDefault(qm => qm.QuestionId == q.QuestionId)?.Remarks ?? "",
+                        isAttempted = marking.QuestionMarks
+                            .FirstOrDefault(qm => qm.QuestionId == q.QuestionId)?.IsAttempted ?? false
+                    }).ToList()
+                }).ToList();
+
+                return Ok(new
+                {
+                    marking = new
+                    {
+                        id = marking.Id,
+                        scriptId = marking.ScriptId,
+                        examinerId = marking.ExaminerId,
+                        examinerName = marking.Examiner.Name,
+                        allocationId = marking.AllocationId,
+                        totalMarks = marking.TotalMarks,
+                        maxMarks = marking.MaxMarks,
+                        percentage = marking.Percentage,
+                        remarks = marking.Remarks,
+                        status = marking.Status,
+                        startedAt = marking.StartedAt,
+                        submittedAt = marking.SubmittedAt
+                    },
+                    script = new
+                    {
+                        id = marking.Script.Id,
+                        scriptId = marking.Script.ScriptId,
+                        barcode = marking.Script.Barcode,
+                        paperId = marking.Script.PaperId,
+                        cleanPdfUrl = marking.Script.CleanPdfUrl,
+                        status = marking.Script.Status,
+                        maxMarks = marking.Script.MaxMarks
+                    },
+                    sections = sections
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpPost("{markingId}/question-marks")]
+        [Authorize(Roles = "examiner")]
+        public async Task<IActionResult> SaveQuestionMarks(int markingId, [FromBody] List<QuestionMarkDto> questionMarks)
+        {
+            try
+            {
+                var marking = await _context.Markings
+                    .Include(m => m.QuestionMarks)
+                    .Include(m => m.Script)
+                    .FirstOrDefaultAsync(m => m.Id == markingId);
+
+                if (marking == null)
+                    return NotFound(new { success = false, message = "Marking not found" });
+
+                if (marking.Status == "submitted")
+                    return BadRequest(new { success = false, message = "Cannot update submitted marking" });
+
+                // Remove existing question marks
+                _context.QuestionMarks.RemoveRange(marking.QuestionMarks);
+
+                // Add new question marks
+                decimal totalMarks = 0;
+                foreach (var qm in questionMarks)
+                {
+                    var question = await _context.Questions.FirstOrDefaultAsync(q => q.QuestionId == qm.QuestionId);
+                    if (question == null)
+                        continue;
+
+                    var questionMark = new QuestionMark
+                    {
+                        MarkingId = markingId,
+                        QuestionId = qm.QuestionId,
+                        MarksAwarded = qm.MarksAwarded,
+                        IsSkipped = qm.IsSkipped,
+                        Remarks = qm.Remarks ?? "",
+                        IsAttempted = qm.IsAttempted
+                    };
+
+                    _context.QuestionMarks.Add(questionMark);
+                    if (!qm.IsSkipped)
+                        totalMarks += qm.MarksAwarded;
+                }
+
+                // Update marking totals
+                marking.TotalMarks = totalMarks;
+                marking.Percentage = (totalMarks / marking.MaxMarks) * 100;
+                marking.UpdatedAt = DateTime.UtcNow;
+
+                _context.Markings.Update(marking);
+                await _context.SaveChangesAsync();
+
+                return Ok(new { success = true, message = "Question marks saved successfully", totalMarks = totalMarks });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpGet("{markingId}/question-marks")]
+        public async Task<ActionResult<List<QuestionMarkDto>>> GetQuestionMarks(int markingId)
+        {
+            try
+            {
+                var questionMarks = await _context.QuestionMarks
+                    .Where(qm => qm.MarkingId == markingId)
+                    .Include(qm => qm.Question)
+                    .Select(qm => new QuestionMarkDto
+                    {
+                        QuestionId = qm.QuestionId,
+                        QuestionNo = qm.Question.QuestionNo,
+                        MarksAwarded = qm.MarksAwarded,
+                        IsSkipped = qm.IsSkipped,
+                        Remarks = qm.Remarks,
+                        IsAttempted = qm.IsAttempted
+                    })
+                    .ToListAsync();
+
+                return Ok(questionMarks);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
     }
 }

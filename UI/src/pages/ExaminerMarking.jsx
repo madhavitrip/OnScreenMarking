@@ -1,319 +1,496 @@
-import { useState, useEffect } from 'react';
-import { ChevronDown, ChevronUp, Save, AlertCircle, CheckCircle, RotateCcw } from 'lucide-react';
-import { getSubjectConfig } from '../data/subjectConfig';
+import { useState, useEffect } from "react";
+import {
+  ChevronDown,
+  ChevronUp,
+  Save,
+  CheckCircle,
+  RotateCcw,
+  Loader,
+  Type,
+  X,
+  FileText,
+  AlertCircle
+} from "lucide-react";
+import PDFAnnotator from "../components/PDFAnnotator";
+import sectionService from "../services/sectionService";
+import markingService from "../services/markingService";
 
 const ExaminerMarking = () => {
-  const [selectedScript, setSelectedScript] = useState({
-    id: 'OSM-2024-001',
-    rollNo: '001',
-    name: 'Aarav Kumar',
-    subject: 'mathematics',
-    date: '2024-04-28',
-  });
-
-  const [subjectConfig, setSubjectConfig] = useState(null);
+  const [sections, setSections] = useState([]);
+  const [paperInfo, setPaperInfo] = useState(null);
   const [expandedSections, setExpandedSections] = useState({});
-  const [marks, setMarks] = useState({});
+  const [questionMarks, setQuestionMarks] = useState({});
   const [totalObtained, setTotalObtained] = useState(0);
-  const [remarks, setRemarks] = useState('');
+  const [remarks, setRemarks] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [annotations, setAnnotations] = useState([]);
+  const [selectedQuestion, setSelectedQuestion] = useState(null);
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [markingId, setMarkingId] = useState(null);
+  const [saveStatus, setSaveStatus] = useState(null); // { type: 'success'|'error', msg: string }
 
   useEffect(() => {
-    const config = getSubjectConfig(selectedScript.subject);
-    setSubjectConfig(config);
-    
-    // Initialize expanded sections
-    if (config) {
-      const expanded = {};
-      config.sections.forEach(section => {
-        expanded[section.id] = true;
-      });
-      setExpandedSections(expanded);
+    fetchPaperData();
+  }, []);
+
+  const fetchPaperData = async () => {
+    try {
+      setLoading(true);
+      // Using paperId 2 as per user's requirement/snippet
+      const data = await sectionService.getAllSections(2);
+      
+      if (data && data.length > 0) {
+        setSections(data);
+        // Extract paper info from the first section's paper object
+        if (data[0].paper) {
+          setPaperInfo(data[0].paper);
+        }
+
+        const expanded = {};
+        const marks = {};
+        
+        data.forEach((section) => {
+          expanded[section.id] = true;
+          section.questions?.forEach((q) => {
+            marks[q.questionId] = {
+              marksAwarded: 0,
+              isSkipped: false,
+              remarks: "",
+              isAttempted: false,
+              maxMarks: q.marks,
+              questionNo: q.questionNo
+            };
+          });
+        });
+        
+        setExpandedSections(expanded);
+        setQuestionMarks(marks);
+      }
+    } catch (err) {
+      setError("Failed to fetch paper data. Please check connection.");
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
-  }, [selectedScript.subject]);
+  };
+
+  const handleAnnotationsChange = (newAnnotations) => {
+    setAnnotations(newAnnotations);
+    
+    // SYNC LOGIC: Map marks from annotations back to the question Palette
+    setQuestionMarks(prev => {
+      const updated = { ...prev };
+      
+      // Reset marks for all questions to recalculate from annotations
+      Object.keys(updated).forEach(id => {
+        updated[id].marksAwarded = 0;
+        updated[id].isAttempted = false;
+        updated[id].isSkipped = false;
+      });
+
+      // Sum marks from annotations for each question
+      newAnnotations.forEach(anno => {
+        if (anno.questionId && anno.marks !== undefined) {
+          const q = findQuestionByNo(anno.questionId);
+          if (q && updated[q.questionId]) {
+            // If question is marked as skipped, set the flag
+            if (anno.isSkipped) {
+              updated[q.questionId].isSkipped = true;
+              updated[q.questionId].marksAwarded = 0;
+              updated[q.questionId].isAttempted = false;
+            } else {
+              updated[q.questionId].marksAwarded += anno.marks;
+              updated[q.questionId].isAttempted = true;
+              
+              // Cap at max marks for the question
+              if (updated[q.questionId].marksAwarded > q.marks) {
+                updated[q.questionId].marksAwarded = q.marks;
+              }
+            }
+          }
+        }
+      });
+
+      calculateTotal(updated);
+      return updated;
+    });
+  };
+
+  const findQuestionByNo = (qNo) => {
+    for (const section of sections) {
+      const q = section.questions?.find((q) => q.questionNo === parseInt(qNo));
+      if (q) return q;
+    }
+    return null;
+  };
+
+  const findQuestionById = (qId) => {
+    for (const section of sections) {
+      const q = section.questions?.find((q) => q.questionId === qId);
+      if (q) return q;
+    }
+    return null;
+  };
+
+  const calculateTotal = (marks) => {
+    let total = 0;
+    Object.values(marks).forEach((mark) => {
+      if (!mark.isSkipped) {
+        total += mark.marksAwarded || 0;
+      }
+    });
+    setTotalObtained(total);
+  };
+
+  const getSectionMarks = (sectionId) => {
+    const section = sections.find((s) => s.id === sectionId);
+    if (!section) return 0;
+
+    return section.questions?.reduce((sum, q) => {
+      const mark = questionMarks[q.questionId];
+      return sum + (mark && !mark.isSkipped ? mark.marksAwarded || 0 : 0);
+    }, 0) || 0;
+  };
 
   const toggleSection = (sectionId) => {
-    setExpandedSections(prev => ({
+    setExpandedSections((prev) => ({
       ...prev,
       [sectionId]: !prev[sectionId],
     }));
   };
 
   const handleMarkChange = (questionId, value) => {
-    const numValue = Math.max(0, Math.min(value, 100));
-    setMarks(prev => ({
-      ...prev,
-      [questionId]: numValue,
-    }));
-    calculateTotal();
-  };
+    const question = findQuestionById(questionId);
+    if (!question) return;
 
-  const calculateTotal = () => {
-    let total = 0;
-    Object.values(marks).forEach(mark => {
-      total += mark || 0;
+    const numValue = Math.max(0, Math.min(value, question.marks));
+    setQuestionMarks((prev) => {
+      const updated = {
+        ...prev,
+        [questionId]: {
+          ...prev[questionId],
+          marksAwarded: numValue,
+          isAttempted: numValue > 0,
+        },
+      };
+      calculateTotal(updated);
+      return updated;
     });
-    setTotalObtained(total);
   };
 
-  const handleSubmit = () => {
-    if (totalObtained === 0) {
-      alert('Please enter marks for at least one question');
+  const handleSkipQuestion = (questionId) => {
+    setQuestionMarks((prev) => {
+      const updated = {
+        ...prev,
+        [questionId]: {
+          ...prev[questionId],
+          isSkipped: !prev[questionId]?.isSkipped,
+          marksAwarded: !prev[questionId]?.isSkipped ? 0 : prev[questionId]?.marksAwarded,
+        },
+      };
+      calculateTotal(updated);
+      return updated;
+    });
+  };
+
+  const handleNextQuestion = () => {
+    if (!selectedQuestion) return;
+    
+    // Find flat list of all questions to find the next one
+    const allQuestions = sections.flatMap(s => s.questions || []);
+    const currentIndex = allQuestions.findIndex(q => q.questionId === selectedQuestion);
+    
+    if (currentIndex !== -1 && currentIndex < allQuestions.length - 1) {
+      setSelectedQuestion(allQuestions[currentIndex + 1].questionId);
+    }
+  };
+
+  const buildQuestionMarksPayload = () => {
+    return Object.entries(questionMarks).map(([qId, mark]) => ({
+      questionId: parseInt(qId),
+      questionNo: mark.questionNo,
+      marksAwarded: mark.marksAwarded || 0,
+      isSkipped: mark.isSkipped || false,
+      isAttempted: mark.isAttempted || false,
+      remarks: mark.remarks || "",
+    }));
+  };
+
+  const showStatus = (type, msg) => {
+    setSaveStatus({ type, msg });
+    setTimeout(() => setSaveStatus(null), 3500);
+  };
+
+  const handleSaveMarks = async () => {
+    if (!markingId) {
+      showStatus("error", "No active marking session. Cannot persist marks.");
       return;
     }
-    setSubmitted(true);
-    alert(`Marks submitted successfully!\nTotal: ${totalObtained}/${subjectConfig.totalMarks}`);
+    try {
+      setSaving(true);
+      const payload = buildQuestionMarksPayload();
+      await markingService.saveQuestionMarks(markingId, payload);
+      showStatus("success", "Draft saved — marks stored in QuestionMark table.");
+    } catch (err) {
+      showStatus("error", "Error saving marks: " + (err?.message || err));
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleReset = () => {
-    setMarks({});
-    setTotalObtained(0);
-    setRemarks('');
-    setSubmitted(false);
+  const handleSubmitMarking = async () => {
+    if (totalObtained === 0) {
+      showStatus("error", "Cannot submit with zero total marks. Please annotate/mark questions.");
+      return;
+    }
+    if (!markingId) {
+      showStatus("error", "No active marking session. Cannot submit.");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      // 1. Persist question marks first
+      const payload = buildQuestionMarksPayload();
+      await markingService.saveQuestionMarks(markingId, payload);
+      // 2. Submit the marking
+      await markingService.submitMarking(markingId);
+      setSubmitted(true);
+      showStatus("success", `Submitted! Total: ${totalObtained} / ${paperInfo?.maxMarks || 100}`);
+    } catch (err) {
+      showStatus("error", "Submission failed: " + (err?.message || err));
+    } finally {
+      setSaving(false);
+    }
   };
 
-  if (!subjectConfig) {
-    return <div className="p-6">Loading...</div>;
+  if (loading) {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center bg-gray-50">
+        <Loader className="w-12 h-12 text-blue-600 animate-spin mb-4" />
+        <p className="text-gray-600 font-bold animate-pulse">Initializing Marking Interface...</p>
+      </div>
+    );
   }
 
-  const getQuestionTypeColor = (type) => {
-    const colors = {
-      MCQ: 'bg-blue-100 text-blue-800',
-      SA: 'bg-green-100 text-green-800',
-      LA: 'bg-purple-100 text-purple-800',
-      CS: 'bg-orange-100 text-orange-800',
-      NP: 'bg-red-100 text-red-800',
-      EXP: 'bg-indigo-100 text-indigo-800',
-      RC: 'bg-cyan-100 text-cyan-800',
-      WS: 'bg-pink-100 text-pink-800',
-      LIT: 'bg-yellow-100 text-yellow-800',
-      GV: 'bg-teal-100 text-teal-800',
-    };
-    return colors[type] || 'bg-gray-100 text-gray-800';
-  };
-
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg shadow-lg p-6">
-        <h1 className="text-3xl font-bold mb-2">Examiner Marking Interface</h1>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-          <div>
-            <p className="text-blue-100 text-sm">Script ID</p>
-            <p className="font-bold text-lg">{selectedScript.id}</p>
+    <div className="bg-gray-50 min-h-screen flex flex-col overflow-hidden">
+      {/* HEADER */}
+      <header className="bg-white text-gray-900 shadow-md px-6 py-4 flex justify-between items-center z-50 border-b border-gray-200">
+        <div className="flex items-center gap-6">
+          <div className="border-r border-gray-300 pr-6">
+            <h1 className="text-2xl font-bold text-gray-900">
+              OSM <span className="text-blue-600">Marking</span>
+            </h1>
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mt-1">Answer Sheet Evaluation</p>
           </div>
-          <div>
-            <p className="text-blue-100 text-sm">Student Name</p>
-            <p className="font-bold text-lg">{selectedScript.name}</p>
+          
+          <div className="hidden md:block">
+            <p className="text-xs uppercase font-semibold text-gray-500 mb-1">Paper</p>
+            <p className="font-semibold text-sm text-gray-900">
+              {paperInfo?.paperName || "Maths"} <span className="text-gray-400">({paperInfo?.paperCode || "2340"})</span>
+            </p>
           </div>
-          <div>
-            <p className="text-blue-100 text-sm">Roll Number</p>
-            <p className="font-bold text-lg">{selectedScript.rollNo}</p>
-          </div>
-          <div>
-            <p className="text-blue-100 text-sm">Subject</p>
-            <p className="font-bold text-lg">{subjectConfig.name}</p>
+
+          <div className="hidden md:block bg-gray-50 px-4 py-2 rounded-lg border border-gray-200">
+            <p className="text-xs uppercase font-semibold text-gray-500 mb-1">Max Marks</p>
+            <p className="font-bold text-lg text-gray-900">{paperInfo?.maxMarks || "100"}</p>
           </div>
         </div>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Main Marking Area */}
-        <div className="lg:col-span-3 space-y-4">
-          {/* Script Viewer */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">Answer Sheet</h2>
-            <div className="bg-gray-100 rounded-lg p-12 text-center border-2 border-dashed border-gray-300">
-              <p className="text-gray-600 text-lg">📄 Scanned Answer Sheet</p>
-              <p className="text-gray-500 text-sm mt-2">High-resolution scanned image would be displayed here</p>
-            </div>
+        <div className="flex items-center gap-4">
+          <div className="bg-blue-50 px-6 py-3 rounded-lg border border-blue-200 flex flex-col items-center">
+            <p className="text-xs uppercase font-semibold text-blue-600 mb-1">Total Score</p>
+            <p className="text-3xl font-bold text-blue-900">
+              {totalObtained.toFixed(1)} <span className="text-sm font-normal text-blue-600">/ {paperInfo?.maxMarks || 100}</span>
+            </p>
+          </div>
+          
+          <button
+            onClick={handleSubmitMarking}
+            disabled={submitted || saving}
+            className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-6 py-3 rounded-lg font-semibold uppercase text-sm transition-colors shadow-md"
+          >
+            {saving ? "Saving..." : "Submit"}
+          </button>
+        </div>
+      </header>
+
+      {/* MAIN LAYOUT */}
+      <main className="flex-1 p-4 grid grid-cols-12 gap-4 overflow-hidden">
+        {/* LEFT: ANNOTATOR AREA */}
+        <section className="col-span-9 bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden flex flex-col">
+          <PDFAnnotator 
+            onAnnotationsChange={handleAnnotationsChange}
+            currentQuestionId={selectedQuestion ? findQuestionById(selectedQuestion)?.questionNo : null}
+            maxMarks={selectedQuestion ? findQuestionById(selectedQuestion)?.marks : 0}
+            onNextQuestion={handleNextQuestion}
+            sections={sections}
+          />
+        </section>
+
+        {/* RIGHT: MARKING PANEL */}
+        <aside className="col-span-3 flex flex-col gap-4 overflow-hidden">
+          {/* CONTROL CENTER */}
+          <div className="grid grid-cols-2 gap-2">
+            <button 
+              onClick={handleSaveMarks}
+              className="flex items-center justify-center gap-2 bg-white border border-blue-200 text-blue-600 hover:bg-blue-50 font-semibold py-2 rounded-lg shadow-sm transition-colors text-xs uppercase"
+            >
+              <Save size={16} /> Save
+            </button>
+            <button 
+              onClick={() => {if(window.confirm("Reset all marks?")) window.location.reload();}}
+              className="flex items-center justify-center gap-2 bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 font-semibold py-2 rounded-lg shadow-sm transition-colors text-xs uppercase"
+            >
+              <RotateCcw size={16} /> Reset
+            </button>
           </div>
 
-          {/* Marking Sections */}
-          <div className="space-y-4">
-            {subjectConfig.sections.map((section) => (
-              <div key={section.id} className="bg-white rounded-lg shadow overflow-hidden">
-                {/* Section Header */}
-                <button
-                  onClick={() => toggleSection(section.id)}
-                  className="w-full bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 p-4 flex items-center justify-between transition-colors"
-                >
-                  <div className="text-left">
-                    <h3 className="font-bold text-gray-900">{section.name}</h3>
-                    <p className="text-sm text-gray-600">{section.description}</p>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <span className="text-sm font-medium text-gray-700">
-                      {section.totalQuestions} Q | {section.totalMarks} Marks
-                    </span>
-                    {expandedSections[section.id] ? (
-                      <ChevronUp size={20} className="text-gray-600" />
-                    ) : (
-                      <ChevronDown size={20} className="text-gray-600" />
-                    )}
-                  </div>
-                </button>
+          {/* QUESTION PALETTE */}
+          <div className="bg-white rounded-lg border border-gray-200 flex-1 flex flex-col overflow-hidden shadow-md">
+            <div className="bg-gray-900 text-white px-4 py-3 flex justify-between items-center shrink-0">
+              <div className="flex items-center gap-2">
+                <FileText size={16} className="text-blue-400" />
+                <h3 className="font-semibold text-xs uppercase tracking-wide">Questions</h3>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                <span className="text-xs font-medium uppercase">Active</span>
+              </div>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-3 bg-gray-50 space-y-3">
+              {sections.length === 0 && (
+                <div className="h-full flex flex-col items-center justify-center p-6 text-center text-gray-400">
+                  <AlertCircle size={40} className="mb-2 opacity-30" />
+                  <p className="text-xs font-medium uppercase">No sections loaded</p>
+                </div>
+              )}
 
-                {/* Section Content */}
-                {expandedSections[section.id] && (
-                  <div className="p-4 border-t border-gray-200 space-y-3">
-                    {section.questions.map((question) => {
-                      const currentMark = marks[question.qNo] || 0;
-                      const isFullMarks = currentMark === question.marks;
-                      const isPartialMarks = currentMark > 0 && currentMark < question.marks;
+              {sections.map((sec) => (
+                <div key={sec.id} className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                  <div 
+                    onClick={() => toggleSection(sec.id)}
+                    className="flex justify-between items-center bg-gray-100 p-3 border-b border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors"
+                  >
+                    <span className="font-semibold text-sm text-gray-900 uppercase">{sec.name}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-100">
+                        {getSectionMarks(sec.id)} / {sec.totalMarks}
+                      </span>
+                      {expandedSections[sec.id] ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </div>
+                  </div>
 
-                      return (
-                        <div
-                          key={question.qNo}
-                          className="bg-gray-50 rounded-lg p-4 border border-gray-200 hover:border-blue-300 transition-colors"
-                        >
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-3 mb-2">
-                                <span className="font-bold text-gray-900">Q{question.qNo}</span>
-                                <span className={`px-2 py-1 rounded text-xs font-medium ${getQuestionTypeColor(question.type)}`}>
-                                  {question.type}
-                                </span>
-                                <span className="text-sm text-gray-600">Max: {question.marks} marks</span>
+                  {expandedSections[sec.id] && (
+                    <div className="p-2 grid grid-cols-1 gap-2">
+                      {sec.questions?.map((q) => {
+                        const m = questionMarks[q.questionId] || {};
+                        const isSelected = selectedQuestion === q.questionId;
+                        const isMarked = m.marksAwarded > 0 || m.isAttempted;
+                        
+                        return (
+                          <div 
+                            key={q.questionId}
+                            onClick={() => setSelectedQuestion(q.questionId)}
+                            className={`group flex items-center justify-between p-2 rounded-lg border-2 cursor-pointer transition-all ${
+                              isSelected 
+                                ? "bg-blue-50 border-blue-500 ring-2 ring-blue-100" 
+                                : "bg-white border-gray-200 hover:border-blue-300"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <div className={`w-8 h-8 flex items-center justify-center rounded-lg font-bold text-xs transition-colors ${
+                                isMarked 
+                                  ? "bg-green-100 text-green-700 border border-green-300" 
+                                  : isSelected ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-600"
+                              }`}>
+                                {q.questionNo}
+                              </div>
+                              <div className="leading-tight">
+                                <p className={`text-xs font-semibold mb-0.5 ${isSelected ? "text-blue-900" : "text-gray-500"}`}>
+                                  Max: {q.marks}
+                                </p>
+                                {m.isSkipped && (
+                                  <span className="text-xs bg-red-100 text-red-700 px-1.5 rounded font-semibold">Skipped</span>
+                                )}
                               </div>
                             </div>
 
-                            {/* Mark Input */}
                             <div className="flex items-center gap-2">
                               <input
                                 type="number"
-                                min="0"
-                                max={question.marks}
-                                value={currentMark}
-                                onChange={(e) => handleMarkChange(question.qNo, parseInt(e.target.value) || 0)}
-                                disabled={submitted}
-                                className="w-16 px-3 py-2 border border-gray-300 rounded-lg text-center font-bold focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none disabled:bg-gray-200"
+                                step="0.5"
+                                value={m.marksAwarded || ""}
+                                onChange={(e) => handleMarkChange(q.questionId, parseFloat(e.target.value) || 0)}
+                                className={`w-16 text-center font-semibold rounded-lg border-2 py-1 text-sm outline-none transition-all ${
+                                  isSelected 
+                                    ? "bg-white text-blue-900 border-blue-400 focus:ring-2 ring-blue-300" 
+                                    : "bg-gray-50 text-gray-900 border-gray-300 focus:border-blue-400"
+                                } ${isMarked && !isSelected ? "border-green-300 bg-green-50" : ""}`}
+                                placeholder="0"
                               />
-                              <span className="text-sm text-gray-600 font-medium">/ {question.marks}</span>
-
-                              {/* Status Indicator */}
-                              {isFullMarks && (
-                                <CheckCircle size={20} className="text-green-500" />
-                              )}
-                              {isPartialMarks && (
-                                <AlertCircle size={20} className="text-yellow-500" />
-                              )}
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleSkipQuestion(q.questionId); }}
+                                className={`p-1.5 rounded-lg transition-colors ${
+                                  m.isSkipped 
+                                    ? "bg-red-100 text-red-600" 
+                                    : "text-gray-400 hover:text-red-500 hover:bg-red-50"
+                                }`}
+                                title="Skip question"
+                              >
+                                <X size={16} />
+                              </button>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Sidebar - Summary & Actions */}
-        <div className="space-y-4">
-          {/* Score Summary */}
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg shadow p-6 border border-blue-200">
-            <h3 className="font-bold text-gray-900 mb-4">Score Summary</h3>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-700">Total Obtained:</span>
-                <span className="text-3xl font-bold text-blue-600">{totalObtained}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-700">Total Marks:</span>
-                <span className="text-2xl font-bold text-gray-900">{subjectConfig.totalMarks}</span>
-              </div>
-              <div className="h-2 bg-gray-300 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all"
-                  style={{ width: `${(totalObtained / subjectConfig.totalMarks) * 100}%` }}
-                ></div>
-              </div>
-              <div className="text-center">
-                <span className="text-sm font-medium text-gray-700">
-                  {Math.round((totalObtained / subjectConfig.totalMarks) * 100)}%
-                </span>
-              </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* Section-wise Summary */}
-          <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
-            <h3 className="font-bold text-gray-900 mb-4">Section-wise Marks</h3>
-            <div className="space-y-2">
-              {subjectConfig.sections.map((section) => {
-                const sectionMarks = section.questions.reduce((sum, q) => {
-                  return sum + (marks[q.qNo] || 0);
-                }, 0);
-
-                return (
-                  <div key={section.id} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                    <span className="text-sm font-medium text-gray-700">{section.name}</span>
-                    <span className="font-bold text-gray-900">
-                      {sectionMarks}/{section.totalMarks}
-                    </span>
-                  </div>
-                );
-              })}
+          {/* REMARKS */}
+          <div className="bg-white rounded-lg border border-gray-200 p-3 shadow-md">
+            <div className="flex items-center gap-2 mb-2 text-gray-900">
+              <Type size={16} className="text-blue-600" />
+              <h3 className="font-semibold text-xs uppercase tracking-wide">Remarks</h3>
             </div>
-          </div>
-
-          {/* Remarks */}
-          <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
-            <h3 className="font-bold text-gray-900 mb-3">Examiner Remarks</h3>
             <textarea
               value={remarks}
               onChange={(e) => setRemarks(e.target.value)}
-              disabled={submitted}
-              placeholder="Add any remarks or comments..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none disabled:bg-gray-100"
-              rows="4"
+              placeholder="Enter examiner feedback..."
+              className="w-full p-2 border border-gray-300 rounded-lg bg-white text-sm font-medium focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+              rows="3"
             />
           </div>
+        </aside>
+      </main>
 
-          {/* Status */}
-          {submitted && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <div className="flex items-center gap-2 text-green-800">
-                <CheckCircle size={20} />
-                <span className="font-medium">Marks Submitted</span>
-              </div>
-            </div>
-          )}
-
-          {/* Action Buttons */}
-          <div className="space-y-2">
-            <button
-              onClick={handleSubmit}
-              disabled={submitted}
-              className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-medium py-3 px-4 rounded-lg transition-colors"
-            >
-              <Save size={20} />
-              Submit Marks
-            </button>
-            <button
-              onClick={handleReset}
-              className="w-full flex items-center justify-center gap-2 bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
-            >
-              <RotateCcw size={20} />
-              Reset
-            </button>
-          </div>
-
-          {/* Instructions */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h4 className="font-bold text-blue-900 mb-2">Instructions</h4>
-            <ul className="text-xs text-blue-800 space-y-1">
-              <li>• Enter marks for each question</li>
-              <li>• Marks cannot exceed max marks</li>
-              <li>• Review before submitting</li>
-              <li>• Add remarks if needed</li>
-              <li>• Submit to finalize</li>
-            </ul>
-          </div>
+      {/* STATUS TOAST */}
+      {saveStatus && (
+        <div className={`fixed bottom-6 right-6 px-6 py-4 rounded-lg shadow-lg font-semibold flex items-center gap-3 animate-in slide-in-from-bottom duration-300 ${
+          saveStatus.type === "success"
+            ? "bg-green-600 text-white"
+            : "bg-red-600 text-white"
+        }`}>
+          {saveStatus.type === "success" ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
+          <p>{saveStatus.msg}</p>
         </div>
-      </div>
+      )}
+
+      {/* ERROR FEEDBACK */}
+      {error && (
+        <div className="fixed bottom-6 right-6 bg-red-600 text-white px-6 py-4 rounded-lg shadow-lg font-semibold flex items-center gap-3 animate-in slide-in-from-bottom duration-300">
+          <AlertCircle size={20} />
+          <p>{error}</p>
+        </div>
+      )}
     </div>
   );
 };

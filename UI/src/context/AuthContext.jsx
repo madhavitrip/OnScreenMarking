@@ -4,32 +4,57 @@ import apiCall from '../services/api';
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(() => {
+    const savedUser = localStorage.getItem('user');
+    try {
+      return savedUser ? JSON.parse(savedUser) : null;
+    } catch (e) {
+      console.error('Failed to parse saved user:', e);
+      return null;
+    }
+  });
+  
+  // Only show loading if we have a token but no user data yet
+  const [loading, setLoading] = useState(() => {
+    const token = localStorage.getItem('token');
+    const savedUser = localStorage.getItem('user');
+    return !!token && !savedUser;
+  });
+  
   const [error, setError] = useState(null);
 
-  // Fetch user data from token on mount
+  // Fetch user data from token on mount or refresh
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
       fetchUserData();
     } else {
       setLoading(false);
+      localStorage.removeItem('user');
+      setUser(null);
     }
   }, []);
 
   const fetchUserData = async () => {
     try {
-      setLoading(true);
+      // If we don't have a user, we must show loading
+      if (!user) setLoading(true);
+      
       const userData = await apiCall('/users/me');
       setUser(userData);
+      localStorage.setItem('user', JSON.stringify(userData));
       setError(null);
     } catch (err) {
       console.error('Failed to fetch user data:', err);
-      setError('Failed to load user data');
-      // Clear invalid token
-      localStorage.removeItem('token');
-      setUser(null);
+      
+      // Only logout if it's an authentication error (401/403)
+      // If it's a network error (failed to fetch), keep the cached user
+      if (err.message.includes('401') || err.message.includes('403') || err.message.includes('Unauthorized')) {
+        setError('Session expired. Please login again.');
+        logout();
+      } else {
+        setError('Could not refresh user data. Working with cached data.');
+      }
     } finally {
       setLoading(false);
     }
@@ -40,15 +65,18 @@ export function AuthProvider({ children }) {
       setLoading(true);
       setError(null);
       
+      // Use /Auth/login to match authService.js casing if needed, 
+      // but apiCall usually handles whatever the backend expects.
       const response = await apiCall('/auth/login', {
         method: 'POST',
         body: JSON.stringify({ email, password })
       });
 
-      // Store only the token
+      // Store token and user data
       localStorage.setItem('token', response.token);
+      localStorage.setItem('user', JSON.stringify(response.user));
       
-      // Fetch and set user data
+      // Set user data
       setUser(response.user);
       
       return response;
@@ -62,6 +90,16 @@ export function AuthProvider({ children }) {
 
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    // Clear other potential legacy items from authService.js
+    localStorage.removeItem('userType');
+    localStorage.removeItem('userName');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('userEmail');
+    localStorage.removeItem('profileImage');
+    localStorage.removeItem('universityId');
+    localStorage.removeItem('departmentId');
+    
     setUser(null);
     setError(null);
   };

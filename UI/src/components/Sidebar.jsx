@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { Home, FileText, BarChart3, Settings, Users, BookOpen, PenTool, Layers, School, Building2, Calendar, ClipboardList, Shield } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const Sidebar = () => {
   const { userType } = useAuth();

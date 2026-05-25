@@ -25,9 +25,12 @@ namespace API.Models.DTOs
 
     public class QuestionMarkDto
     {
+        public int QuestionId { get; set; }
         public int QuestionNo { get; set; }
-        public decimal MarksObtained { get; set; }
+        public decimal MarksAwarded { get; set; }
+        public bool IsSkipped { get; set; }
         public string Remarks { get; set; }
+        public bool IsAttempted { get; set; }
     }
 
     public class SectionMarkDto

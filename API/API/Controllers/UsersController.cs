@@ -49,6 +49,7 @@ namespace API.Controllers
                     Address = u.Address,
                     ProfileImage = u.ProfileImage,
                     IsActive = u.IsActive,
+                    IsApproved = u.IsApproved,
                     University = u.University != null ? new University { UniversityId = u.University.UniversityId, UniversityName = u.University.UniversityName } : null
                 }).ToList();
 
@@ -145,7 +146,7 @@ namespace API.Controllers
                     return StatusCode(403, new { success = false, message = "Only coordinators or admins can approve users." });
                 }
 
-                targetUser.IsActive = true;
+                targetUser.IsApproved = true;
                 targetUser.UpdatedAt = DateTime.UtcNow;
                 
                 await _context.SaveChangesAsync();
