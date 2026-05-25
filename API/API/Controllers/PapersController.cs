@@ -61,7 +61,7 @@ namespace API.Controllers
                 .ToList(),
 
                     SubjectNames = p.SubjectPapers
-                .Select(sp => sp.Subject.SubjectName)
+                .Select(sp => sp.Subject.SubName)
                 .ToList()
                 }).ToList();
 
@@ -104,7 +104,7 @@ namespace API.Controllers
                 .ToList(),
 
                     SubjectNames = paper.SubjectPapers
-                .Select(sp => sp.Subject.SubjectName)
+                .Select(sp => sp.Subject.SubName)
                 .ToList()
                 };
 

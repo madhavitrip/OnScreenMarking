@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom';
-import { Home, FileText, BarChart3, Settings, Users, BookOpen, PenTool, Layers, School, Building2, Calendar, ClipboardList, Shield } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { Home, FileText, BarChart3, Settings, Users, BookOpen, PenTool, Layers, School, Building2, Calendar, ClipboardList, Shield, UserCheck } from 'lucide-react';
 
 const Sidebar = () => {
   const { userType } = useAuth();
@@ -16,6 +16,7 @@ const Sidebar = () => {
     { icon: <FileText size={20} />, label: 'Papers', path: '/admin/papers' },
     { icon: <Users size={20} />, label: 'Users', path: '/admin/users' },
     { icon: <Shield size={20} />, label: 'Role Management', path: '/admin/role-management' },
+    { icon: <UserCheck size={20} />, label: 'Attendance', path: '/admin/attendance' },
     { icon: <Settings size={20} />, label: 'Settings', path: '/settings' },
   ];
 

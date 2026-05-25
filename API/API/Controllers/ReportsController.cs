@@ -228,7 +228,7 @@ namespace API.Controllers
                     .SelectMany(m =>
                         m.Script.Paper.SubjectPapers.Select(sp => new
                         {
-                            SubjectName = sp.Subject.SubjectName,
+                            SubjectName = sp.Subject.SubName,
                             Marking = m
                         }))
                     .GroupBy(x => x.SubjectName)

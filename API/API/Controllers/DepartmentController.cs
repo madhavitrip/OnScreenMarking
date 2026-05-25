@@ -152,10 +152,10 @@ namespace API.Controllers
                 var subjects = await _context.DepartmentSubjects
                     .Where(ds => ds.DepartmentId == id)
                     .Select(ds => ds.Subject)
-                    .Where(s => s.IsActive)
+                    .Where(s => s.Status)
                     .Include(s => s.SubjectPapers)
                         .ThenInclude(sp => sp.Paper)
-                    .OrderBy(s => s.SubjectName)
+                    .OrderBy(s => s.SubName)
                     .ToListAsync();
 
                 return Ok(subjects);

@@ -10,11 +10,11 @@ namespace API.Models
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int SubjectId { get; set; }
-        public string SubjectName { get; set; }
-        public string SubjectCode { get; set; }
-        public bool IsActive { get; set; } = true;
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        public string SubName { get; set; }
+        public string SubCode { get; set; }
+        public bool Status { get; set; } = true;
+        public DateTime created_at { get; set; } = DateTime.UtcNow;
+        public DateTime updated_at { get; set; } = DateTime.UtcNow;
         public ICollection<DepartmentSubject> DepartmentSubjects { get; set; }
        = new List<DepartmentSubject>();
 
