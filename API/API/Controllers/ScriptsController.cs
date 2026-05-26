@@ -54,7 +54,6 @@ namespace API.Controllers
                     Status = s.Status,
                     IsReEvaluationRequested = s.IsReEvaluationRequested,
                     TotalMarks = s.TotalMarks,
-                    MaxMarks = s.MaxMarks,
                     Percentage = s.Percentage,
                     Remarks = s.Remarks,
                     SubmittedAt = s.SubmittedAt
@@ -94,13 +93,36 @@ namespace API.Controllers
                     Status = script.Status,
                     IsReEvaluationRequested = script.IsReEvaluationRequested,
                     TotalMarks = script.TotalMarks,
-                    MaxMarks = script.MaxMarks,
                     Percentage = script.Percentage,
                     Remarks = script.Remarks,
                     SubmittedAt = script.SubmittedAt
                 };
 
                 return Ok(scriptDto);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpGet("{id}/pdf")]
+        public async Task<IActionResult> GetScriptPdf(int id)
+        {
+            try
+            {
+                var script = await _context.Scripts.FindAsync(id);
+                if (script == null || string.IsNullOrEmpty(script.CleanPdfUrl))
+                    return NotFound(new { success = false, message = "Script or PDF path not found" });
+
+                // Check if file exists
+                if (!System.IO.File.Exists(script.CleanPdfUrl))
+                {
+                    return NotFound(new { success = false, message = $"PDF file not found on disk at: {script.CleanPdfUrl}" });
+                }
+
+                var fileBytes = await System.IO.File.ReadAllBytesAsync(script.CleanPdfUrl);
+                return File(fileBytes, "application/pdf", System.IO.Path.GetFileName(script.CleanPdfUrl));
             }
             catch (Exception ex)
             {
@@ -125,7 +147,6 @@ namespace API.Controllers
                     PaperId = scriptDto.PaperId,
                     CleanPdfUrl = scriptDto.CleanPdfUrl,
                     Status = "pending",
-                    MaxMarks = scriptDto.MaxMarks
                 };
 
                 _context.Scripts.Add(script);
@@ -234,7 +255,6 @@ namespace API.Controllers
                     Status = s.Status,
                     IsReEvaluationRequested = s.IsReEvaluationRequested,
                     TotalMarks = s.TotalMarks,
-                    MaxMarks = s.MaxMarks,
                     Percentage = s.Percentage,
                     Remarks = s.Remarks,
                     SubmittedAt = s.SubmittedAt
@@ -269,7 +289,6 @@ namespace API.Controllers
                     Status = s.Status,
                     IsReEvaluationRequested = s.IsReEvaluationRequested,
                     TotalMarks = s.TotalMarks,
-                    MaxMarks = s.MaxMarks,
                     Percentage = s.Percentage,
                     Remarks = s.Remarks,
                     SubmittedAt = s.SubmittedAt

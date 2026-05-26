@@ -41,6 +41,37 @@ const userService = {
       method: 'POST',
       body: JSON.stringify(inviteData)
     });
+  },
+
+  getExaminers: async (universityId, subjectId) => {
+    const params = [];
+    if (universityId) params.push(`universityId=${universityId}`);
+    if (subjectId) params.push(`subjectId=${subjectId}`);
+    const queryString = params.length > 0 ? '?' + params.join('&') : '';
+    return apiCall(`/users/examiners${queryString}`);
+  },
+
+  getExaminersBySubjects: async (subjectIds, universityId) => {
+    // Fetch examiners for multiple subjects and combine them
+    if (!subjectIds || subjectIds.length === 0) {
+      return this.getExaminers(universityId);
+    }
+
+    const examinerSets = await Promise.all(
+      subjectIds.map(subId => this.getExaminers(universityId, subId))
+    );
+
+    // Combine all examiners and remove duplicates by ID
+    const examinerMap = new Map();
+    examinerSets.forEach(examiners => {
+      examiners.forEach(examiner => {
+        if (!examinerMap.has(examiner.id)) {
+          examinerMap.set(examiner.id, examiner);
+        }
+      });
+    });
+
+    return Array.from(examinerMap.values());
   }
 };
 

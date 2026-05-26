@@ -1,34 +1,97 @@
-import { useState } from 'react';
-import { Search, Filter, Eye, Download, CheckCircle, Clock } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Search, Filter, Eye, Download, CheckCircle, Clock, AlertCircle, Loader, BookOpen } from 'lucide-react';
+import allocationService from '../services/allocationService';
+import { useAuth } from '../context/AuthContext';
 
 const Scripts = () => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [selectedScript, setSelectedScript] = useState(null);
+  const [scripts, setScripts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const scripts = [
-    { id: 'OSM-2024-001', rollNo: '001', name: 'Aarav Kumar', subject: 'Mathematics', status: 'Completed', score: 85, examiner: 'Dr. Sharma', date: '2024-04-28' },
-    { id: 'OSM-2024-002', rollNo: '002', name: 'Bhavna Singh', subject: 'Physics', status: 'In Progress', score: null, examiner: 'Dr. Patel', date: '2024-04-28' },
-    { id: 'OSM-2024-003', rollNo: '003', name: 'Chirag Verma', subject: 'Chemistry', status: 'Pending', score: null, examiner: 'Unassigned', date: '2024-04-28' },
-    { id: 'OSM-2024-004', rollNo: '004', name: 'Divya Nair', subject: 'English', status: 'Completed', score: 92, examiner: 'Dr. Gupta', date: '2024-04-28' },
-    { id: 'OSM-2024-005', rollNo: '005', name: 'Eshan Reddy', subject: 'Biology', status: 'Pending', score: null, examiner: 'Unassigned', date: '2024-04-28' },
-    { id: 'OSM-2024-006', rollNo: '006', name: 'Fiona Das', subject: 'Mathematics', status: 'Completed', score: 78, examiner: 'Dr. Sharma', date: '2024-04-28' },
-  ];
+  useEffect(() => {
+    fetchAllocatedScripts();
+  }, [user?.id]);
+
+  const fetchAllocatedScripts = async () => {
+    try {
+      setLoading(true);
+      if (!user?.id) {
+        setError('User not authenticated');
+        return;
+      }
+
+      // Fetch allocations for current examiner
+      const allocations = await allocationService.getExaminerAllocations(user.id);
+      
+      // Transform allocations to script format
+      const transformedScripts = allocations.map(allocation => ({
+        id: allocation.script?.scriptId || allocation.scriptId,
+        scriptId: allocation.script?.scriptId || allocation.scriptId,
+        rollNo: allocation.script?.rollNo || 'N/A',
+        name: allocation.script?.studentName || 'Unknown',
+        subject: allocation.script?.paper?.paperName || 'N/A',
+        paperId: allocation.script?.paperId,
+        status: allocation.script?.status || 'Pending',
+        score: allocation.script?.score || null,
+        examiner: user.name,
+        date: new Date(allocation.assignedAt).toLocaleDateString(),
+        allocationId: allocation.id,
+        marking: allocation.script?.marking,
+        cleanPdfUrl: allocation.script?.cleanPdfUrl || null
+      }));
+
+      setScripts(transformedScripts);
+      setError(null);
+    } catch (err) {
+      console.error('Failed to fetch allocated scripts:', err);
+      setError('Failed to load your allocated scripts');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredScripts = scripts.filter(script => {
     const matchesSearch = script.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          script.rollNo.includes(searchTerm) ||
-                         script.id.includes(searchTerm);
+                         script.id.toString().includes(searchTerm);
     const matchesFilter = filterStatus === 'all' || script.status === filterStatus;
     return matchesSearch && matchesFilter;
   });
 
+  const handleStartMarking = (script) => {
+    // Navigate to marking page with script details
+    navigate('/marking', { 
+      state: { 
+        scriptId: script.scriptId,
+        paperId: script.paperId,
+        allocationId: script.allocationId,
+        examinerId: user?.id,
+        studentName: script.name,
+        rollNo: script.rollNo,
+        subject: script.subject,
+        cleanPdfUrl: script.cleanPdfUrl
+      } 
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Answer Scripts</h1>
-        <p className="text-gray-600 mt-1">Manage and evaluate student answer sheets</p>
+        <h1 className="text-3xl font-bold text-gray-900">My Allocated Scripts</h1>
+        <p className="text-gray-600 mt-1">View and mark your assigned answer sheets</p>
       </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg flex items-center gap-3">
+          <AlertCircle size={20} />
+          {error}
+        </div>
+      )}
 
       {/* Search and Filter */}
       <div className="bg-white rounded-lg shadow p-6">
@@ -63,163 +126,72 @@ const Scripts = () => {
 
       {/* Scripts Table */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Script ID</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Roll No</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Student Name</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Subject</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Score</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {filteredScripts.map((script) => (
-                <tr key={script.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 text-sm font-medium text-gray-900">{script.id}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{script.rollNo}</td>
-                  <td className="px-6 py-4 text-sm text-gray-900">{script.name}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{script.subject}</td>
-                  <td className="px-6 py-4 text-sm">
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 w-fit ${
-                        script.status === 'Completed'
-                          ? 'bg-green-100 text-green-800'
-                          : script.status === 'In Progress'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}
-                    >
-                      {script.status === 'Completed' ? <CheckCircle size={14} /> : <Clock size={14} />}
-                      {script.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-sm font-medium text-gray-900">{script.score || '-'}</td>
-                  <td className="px-6 py-4 text-sm">
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setSelectedScript(script)}
-                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                        title="View Script"
-                      >
-                        <Eye size={18} />
-                      </button>
-                      <button
-                        className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                        title="Download"
-                      >
-                        <Download size={18} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Script Viewer Modal */}
-      {selectedScript && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex justify-between items-center">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">{selectedScript.name}</h2>
-                <p className="text-gray-600 text-sm mt-1">{selectedScript.subject} - {selectedScript.id}</p>
-              </div>
-              <button
-                onClick={() => setSelectedScript(null)}
-                className="text-gray-500 hover:text-gray-700 text-2xl"
-              >
-                ×
-              </button>
-            </div>
-
-            <div className="p-6 space-y-6">
-              {/* Script Details */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-xs text-gray-600 uppercase font-medium">Roll Number</p>
-                  <p className="text-lg font-bold text-gray-900 mt-1">{selectedScript.rollNo}</p>
-                </div>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-xs text-gray-600 uppercase font-medium">Subject</p>
-                  <p className="text-lg font-bold text-gray-900 mt-1">{selectedScript.subject}</p>
-                </div>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-xs text-gray-600 uppercase font-medium">Examiner</p>
-                  <p className="text-lg font-bold text-gray-900 mt-1">{selectedScript.examiner}</p>
-                </div>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-xs text-gray-600 uppercase font-medium">Date</p>
-                  <p className="text-lg font-bold text-gray-900 mt-1">{selectedScript.date}</p>
-                </div>
-              </div>
-
-              {/* Script Image Placeholder */}
-              <div className="bg-gray-100 rounded-lg p-8 text-center">
-                <div className="bg-white rounded-lg p-12 border-2 border-dashed border-gray-300">
-                  <p className="text-gray-600 text-lg">📄 Scanned Answer Sheet</p>
-                  <p className="text-gray-500 text-sm mt-2">High-resolution scanned image would be displayed here</p>
-                </div>
-              </div>
-
-              {/* Marking Tools */}
-              {selectedScript.status !== 'Completed' && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                  <h3 className="font-bold text-gray-900 mb-4">Marking Tools</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <button className="bg-white border border-gray-300 hover:border-blue-500 rounded-lg p-3 text-center transition-colors">
-                      <p className="text-2xl">✓</p>
-                      <p className="text-xs font-medium text-gray-700 mt-1">Tick</p>
-                    </button>
-                    <button className="bg-white border border-gray-300 hover:border-blue-500 rounded-lg p-3 text-center transition-colors">
-                      <p className="text-2xl">⭕</p>
-                      <p className="text-xs font-medium text-gray-700 mt-1">Circle</p>
-                    </button>
-                    <button className="bg-white border border-gray-300 hover:border-blue-500 rounded-lg p-3 text-center transition-colors">
-                      <p className="text-2xl">_</p>
-                      <p className="text-xs font-medium text-gray-700 mt-1">Underline</p>
-                    </button>
-                    <button className="bg-white border border-gray-300 hover:border-blue-500 rounded-lg p-3 text-center transition-colors">
-                      <p className="text-2xl">💬</p>
-                      <p className="text-xs font-medium text-gray-700 mt-1">Comment</p>
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Score Input */}
-              {selectedScript.status !== 'Completed' && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-                  <label className="block text-sm font-medium text-gray-900 mb-3">Enter Score</label>
-                  <div className="flex gap-3">
-                    <input
-                      type="number"
-                      placeholder="Enter marks out of 100"
-                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
-                    />
-                    <button className="bg-green-600 hover:bg-green-700 text-white font-medium px-6 py-2 rounded-lg transition-colors">
-                      Submit Score
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {selectedScript.status === 'Completed' && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-                  <p className="text-green-800 font-medium">✓ Evaluation Completed</p>
-                  <p className="text-green-700 text-sm mt-1">Score: {selectedScript.score}/100</p>
-                </div>
-              )}
-            </div>
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader className="animate-spin text-blue-600 mr-3" size={24} />
+            <p className="text-gray-600 font-medium">Loading your allocated scripts...</p>
           </div>
-        </div>
-      )}
+        ) : scripts.length === 0 ? (
+          <div className="p-12 text-center">
+            <BookOpen className="mx-auto text-gray-300 mb-4" size={48} />
+            <p className="text-gray-600 font-medium">No scripts allocated yet</p>
+            <p className="text-gray-500 text-sm mt-1">Check back later for new allocations</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Script ID</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Roll No</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Student Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Subject</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Score</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {filteredScripts.map((script) => (
+                  <tr key={script.scriptId} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{script.scriptId}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{script.rollNo}</td>
+                    <td className="px-6 py-4 text-sm text-gray-900">{script.name}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{script.subject}</td>
+                    <td className="px-6 py-4 text-sm">
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 w-fit ${
+                          script.status === 'Completed'
+                            ? 'bg-green-100 text-green-800'
+                            : script.status === 'In Progress'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}
+                      >
+                        {script.status === 'Completed' ? <CheckCircle size={14} /> : <Clock size={14} />}
+                        {script.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{script.score || '-'}</td>
+                    <td className="px-6 py-4 text-sm">
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleStartMarking(script)}
+                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-xs font-medium flex items-center gap-2"
+                          title="Start Marking"
+                        >
+                          <Eye size={16} />
+                          Mark
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

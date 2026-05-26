@@ -20,10 +20,10 @@ export const allocationService = {
    * @param {Array} allocations - Array of {scriptId, examinerId} objects
    * @returns {Promise} Allocation results
    */
-  bulkAllocateScripts: async (allocations) => {
+  bulkAllocateScripts: async (paperId, allocations) => {
     return apiCall('/allocation/bulk-allocate', {
       method: 'POST',
-      body: JSON.stringify({ allocations })
+      body: JSON.stringify({ paperId, allocations })
     });
   },
 

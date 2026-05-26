@@ -48,7 +48,7 @@ namespace API.Controllers
                     ExaminerId = request.ExaminerId,
                     AllocationId = request.AllocationId,
                     TotalMarks = request.TotalMarks,
-                    Percentage = (request.TotalMarks / allocation.Script.MaxMarks) * 100,
+                    Percentage = (request.TotalMarks) * 100,
                     Remarks = request.Remarks,
                     Status = "draft",
                     StartedAt = DateTime.UtcNow
@@ -343,7 +343,6 @@ namespace API.Controllers
                         paperId = marking.Script.PaperId,
                         cleanPdfUrl = marking.Script.CleanPdfUrl,
                         status = marking.Script.Status,
-                        maxMarks = marking.Script.MaxMarks
                     },
                     sections = sections
                 });

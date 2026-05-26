@@ -6,9 +6,8 @@ import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 // Set up PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
-const PDFAnnotator = ({ onAnnotationsChange, currentQuestionId, onNextQuestion, maxMarks, sections = [] }) => {
+const PDFAnnotator = ({ onAnnotationsChange, currentQuestionId, onNextQuestion, maxMarks, sections = [], pdfUrl }) => {
   const canvasRef = useRef(null);
-  const fileInputRef = useRef(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [draggedItem, setDraggedItem] = useState(null);
@@ -32,6 +31,56 @@ const PDFAnnotator = ({ onAnnotationsChange, currentQuestionId, onNextQuestion, 
   const [stepName, setStepName] = useState('');
   const [pendingAnno, setPendingAnno] = useState(null);
   const [isSkipped, setIsSkipped] = useState(false);
+  const [loadingPdf, setLoadingLoadingPdf] = useState(false);
+
+  // Auto-load PDF from URL
+  useEffect(() => {
+    if (pdfUrl) {
+      loadPdfFromUrl(pdfUrl);
+    }
+  }, [pdfUrl]);
+
+  const loadPdfFromUrl = async (url) => {
+    try {
+      setLoadingLoadingPdf(true);
+      const token = localStorage.getItem('token');
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const arrayBuffer = await response.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      const pages = [];
+
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: 2 });
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+
+        await page.render({
+          canvasContext: context,
+          viewport: viewport,
+        }).promise;
+
+        pages.push(canvas);
+      }
+
+      setPdfPages(pages);
+      setCurrentPage(0);
+      setImageSource(null);
+      if (pages.length > 0) {
+        setCanvasSize({ width: pages[0].width, height: pages[0].height });
+      }
+    } catch (err) {
+      console.error("Failed to load PDF:", err);
+    } finally {
+      setLoadingLoadingPdf(false);
+    }
+  };
 
   // Sync stepName to first section name when sections are loaded
   useEffect(() => {
@@ -366,6 +415,15 @@ const PDFAnnotator = ({ onAnnotationsChange, currentQuestionId, onNextQuestion, 
     setIsSkipped(false);
   };
 
+  const getMarkOptions = () => {
+    const options = [0];
+    const max = maxMarks || 10;
+    for (let i = 0.5; i <= max; i += 0.5) {
+      options.push(i);
+    }
+    return options;
+  };
+
   const submitMark = () => {
     if (pendingAnno) {
       const finalMark = parseFloat(markInput) || 0;
@@ -437,22 +495,11 @@ const PDFAnnotator = ({ onAnnotationsChange, currentQuestionId, onNextQuestion, 
     <div className="space-y-3 h-full flex flex-col">
       {/* Toolbar */}
       <div className="bg-white rounded-lg shadow-sm p-3 space-y-2 border border-gray-200">
-        {/* Upload Section */}
         <div className="flex gap-2 items-center border-b border-gray-200 pb-2">
-          <label className="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm cursor-pointer font-semibold transition-colors">
-            <Upload size={16} />
-            Upload
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*,.pdf"
-              onChange={handleImageUpload}
-              className="hidden"
-            />
-          </label>
+          <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Evaluation Mode: </span>
+          <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-100 uppercase">Q{currentQuestionId || "—"}</span>
           <div className="h-4 w-px bg-gray-300 mx-2" />
-          <span className="text-xs font-medium text-gray-600">Question: </span>
-          <span className="text-xs font-bold text-blue-600">{currentQuestionId || "—"}</span>
+          <span className="text-xs font-medium text-gray-500 italic">Right-click anywhere on the script to mark</span>
         </div>
 
         <div className="flex flex-wrap gap-2 items-center text-xs">
@@ -556,27 +603,6 @@ const PDFAnnotator = ({ onAnnotationsChange, currentQuestionId, onNextQuestion, 
           </div>
         </div>
 
-        {/* Quick Marks */}
-        <div className="flex gap-2 flex-wrap">
-          <button
-            onClick={() => {
-              setColor('#00AA00');
-              setTool('tick');
-            }}
-            className="px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-xs hover:bg-green-200 font-semibold border border-green-300 transition-colors"
-          >
-            ✓ Correct
-          </button>
-          <button
-            onClick={() => {
-              setColor('#FF0000');
-              setTool('cross');
-            }}
-            className="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-xs hover:bg-red-200 font-semibold border border-red-300 transition-colors"
-          >
-            ✗ Wrong
-          </button>
-        </div>
       </div>
 
       {/* Text Input Modal */}
@@ -639,17 +665,7 @@ const PDFAnnotator = ({ onAnnotationsChange, currentQuestionId, onNextQuestion, 
             {!isSkipped && (
               <div className="p-3 max-h-48 overflow-y-auto">
                 <div className="grid grid-cols-4 gap-1">
-                  {(() => {
-                    const options = [];
-                    const limit = parseFloat(maxMarks) || 0;
-                    for (let i = 0; i <= limit; i += 0.5) {
-                      options.push(i);
-                    }
-                    if (limit > 0 && limit % 0.5 !== 0) {
-                      options.push(limit);
-                    }
-                    return options;
-                  })().map((m) => (
+                  {getMarkOptions().map((m) => (
                     <button
                       key={m}
                       onClick={() => {
