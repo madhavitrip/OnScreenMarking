@@ -1,27 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { 
   School, 
   Building2, 
   BookOpen, 
-  Calendar, 
   ClipboardList, 
-  FileText, 
   Users, 
   ChevronRight,
-  TrendingUp,
-  LayoutDashboard,
   ShieldCheck,
-  Activity,
   Plus,
   Settings,
-  AlertCircle
+  AlertCircle,
+  Zap
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import apiCall from '../services/api';
 
 export default function AdminDashboard() {
-  const navigate = useNavigate();
   const { user } = useAuth();
   const [universities, setUniversities] = useState([]);
   const [stats, setStats] = useState({
@@ -66,6 +61,15 @@ export default function AdminDashboard() {
       path: '/admin/users',
       color: 'bg-orange-500',
       lightColor: 'bg-orange-50'
+    },
+    {
+      id: 'allocate',
+      title: 'Script Allocation',
+      description: 'Allocate scripts to examiners by expertise',
+      icon: <Zap size={24} />,
+      path: '/admin/allocate-scripts',
+      color: 'bg-blue-500',
+      lightColor: 'bg-blue-50'
     },
     {
       id: 'config',

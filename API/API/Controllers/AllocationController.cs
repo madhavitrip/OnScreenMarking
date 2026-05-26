@@ -280,5 +280,186 @@ namespace API.Controllers
                 return StatusCode(500, new { success = false, message = ex.Message });
             }
         }
+
+        [HttpGet("paper/{paperId}/pending-scripts")]
+        [Authorize(Roles = "admin,coordinator")]
+        public async Task<ActionResult<dynamic>> GetPendingScriptsByPaper(int paperId)
+        {
+            try
+            {
+                // Get the paper with its subjects
+                var paper = await _context.Papers
+                    .Include(p => p.SubjectPapers)
+                    .ThenInclude(sp => sp.Subject)
+                    .FirstOrDefaultAsync(p => p.PaperId == paperId);
+
+                if (paper == null)
+                    return NotFound(new { success = false, message = "Paper not found" });
+
+                // Get all subject IDs associated with this paper
+                var subjectIds = paper.SubjectPapers.Select(sp => sp.SubjectId).ToList();
+
+                if (!subjectIds.Any())
+                    return Ok(new { scripts = new List<object>(), examiners = new List<object>(), paper = new { } });
+
+                // Get pending scripts for this paper
+                var scripts = await _context.Scripts
+                    .Where(s => s.PaperId == paperId && s.Status == "pending")
+                    .OrderBy(s => s.ScriptId)
+                    .ToListAsync();
+
+                // Get examiners with expertise in ANY of the subjects associated with this paper
+                var examiners = await _context.ExaminerExpertises
+                    .Where(ee => subjectIds.Contains(ee.SubjectId) && ee.IsActive)
+                    .Include(ee => ee.Examiner)
+                    .Include(ee => ee.Subject)
+                    .GroupBy(ee => ee.ExaminerId)
+                    .Select(g => new
+                    {
+                        UserId = g.First().Examiner.UserId,
+                        FirstName = g.First().Examiner.FirstName,
+                        LastName = g.First().Examiner.LastName,
+                        Email = g.First().Examiner.Email,
+                        Expertise = g.Select(ee => ee.Subject.SubName).Distinct().ToList(),
+                        AllocatedCount = _context.Allocations
+                            .Where(a => a.ExaminerId == g.Key && a.Status != "cancelled")
+                            .Count()
+                    })
+                    .ToListAsync();
+
+                var scriptDtos = scripts.Select(s => new
+                {
+                    s.Id,
+                    s.ScriptId,
+                    s.Barcode,
+                    s.PaperId,
+                    s.Status,
+                    s.CreatedAt
+                }).ToList();
+
+                var paperDto = new
+                {
+                    paper.PaperId,
+                    paper.PaperCode,
+                    paper.PaperName,
+                    paper.PaperNumber,
+                    paper.MaxMarks,
+                    Subjects = paper.SubjectPapers.Select(sp => new
+                    {
+                        sp.Subject.SubjectId,
+                        sp.Subject.SubName,
+                        sp.Subject.SubjectCode
+                    }).ToList()
+                };
+
+                return Ok(new
+                {
+                    scripts = scriptDtos,
+                    examiners = examiners,
+                    paper = paperDto
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpPost("bulk-allocate")]
+        [Authorize(Roles = "admin,coordinator")]
+        public async Task<ActionResult<dynamic>> BulkAllocateScripts([FromBody] BulkAllocationRequest request)
+        {
+            try
+            {
+                if (request?.Allocations == null || !request.Allocations.Any())
+                    return BadRequest(new { success = false, message = "No allocations provided" });
+
+                var results = new List<object>();
+                var errors = new List<string>();
+
+                foreach (var alloc in request.Allocations)
+                {
+                    try
+                    {
+                        // Verify script exists
+                        var script = await _context.Scripts.FindAsync(alloc.ScriptId);
+                        if (script == null)
+                        {
+                            errors.Add($"Script {alloc.ScriptId} not found");
+                            continue;
+                        }
+
+                        // Verify examiner exists
+                        var examiner = await _context.Users.FindAsync(alloc.ExaminerId);
+                        if (examiner == null)
+                        {
+                            errors.Add($"Examiner {alloc.ExaminerId} not found");
+                            continue;
+                        }
+
+                        // Check if allocation already exists
+                        var existingAllocation = await _context.Allocations
+                            .FirstOrDefaultAsync(a => a.ScriptId == alloc.ScriptId && a.Status != "cancelled");
+
+                        if (existingAllocation != null)
+                        {
+                            errors.Add($"Script {alloc.ScriptId} already allocated");
+                            continue;
+                        }
+
+                        var allocation = new Allocation
+                        {
+                            ScriptId = alloc.ScriptId,
+                            ExaminerId = alloc.ExaminerId,
+                            AllocatedAt = DateTime.UtcNow,
+                            Status = "allocated"
+                        };
+
+                        _context.Allocations.Add(allocation);
+                        script.Status = "allocated";
+                        script.UpdatedAt = DateTime.UtcNow;
+                        _context.Scripts.Update(script);
+
+                        results.Add(new
+                        {
+                            scriptId = alloc.ScriptId,
+                            examinerId = alloc.ExaminerId,
+                            success = true
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        errors.Add($"Error allocating script {alloc.ScriptId}: {ex.Message}");
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    success = errors.Count == 0,
+                    totalAllocations = results.Count,
+                    successfulAllocations = results.Count,
+                    failedAllocations = errors.Count,
+                    results = results,
+                    errors = errors
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+    }
+
+    public class BulkAllocationRequest
+    {
+        public List<AllocationItem> Allocations { get; set; }
+    }
+
+    public class AllocationItem
+    {
+        public int ScriptId { get; set; }
+        public int ExaminerId { get; set; }
     }
 }

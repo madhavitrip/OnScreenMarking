@@ -154,9 +154,35 @@ export default function PapersManagement() {
       const project = projects.find(p => p.projectId === paper.projectId);
       const universityId = project ? project.universityId : null;
 
-      // Fetch available examiners for this subject and university
-      const examiners = await apiCall(`/users/examiners?subjectId=${paper.subjectId}${universityId ? `&universityId=${universityId}` : ''}`);
-      setAvailableExaminers(examiners);
+      // Get all subject IDs for this paper
+      const subjectIds = paper.subjectPapers?.map(sp => sp.subjectId) || [];
+      
+      // Fetch examiners for all subjects associated with this paper
+      let allExaminers = [];
+      if (subjectIds.length > 0) {
+        // Fetch examiners for each subject and combine them (removing duplicates)
+        const examinerSets = await Promise.all(
+          subjectIds.map(subId => 
+            apiCall(`/users/examiners?subjectId=${subId}${universityId ? `&universityId=${universityId}` : ''}`)
+          )
+        );
+        
+        // Combine all examiners and remove duplicates by ID
+        const examinerMap = new Map();
+        examinerSets.forEach(examiners => {
+          examiners.forEach(examiner => {
+            if (!examinerMap.has(examiner.id)) {
+              examinerMap.set(examiner.id, examiner);
+            }
+          });
+        });
+        allExaminers = Array.from(examinerMap.values());
+      } else {
+        // If no subjects, fetch all examiners for the university
+        allExaminers = await apiCall(`/users/examiners${universityId ? `?universityId=${universityId}` : ''}`);
+      }
+      
+      setAvailableExaminers(allExaminers);
 
       // Fetch currently assigned examiners
       const assigned = await apiCall(`/PaperExaminers/paper/${paper.paperId}`);

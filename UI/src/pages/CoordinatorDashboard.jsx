@@ -6,12 +6,12 @@ import {
   Calendar, 
   ClipboardList, 
   FileText, 
-  Users, 
   ChevronRight,
   TrendingUp,
   LayoutDashboard,
   Activity,
-  AlertCircle
+  AlertCircle,
+  Zap
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import apiCall from '../services/api';
@@ -103,6 +103,15 @@ export default function CoordinatorDashboard() {
       path: '/papers',
       color: 'bg-indigo-500',
       lightColor: 'bg-indigo-50'
+    },
+    {
+      id: 'allocate',
+      title: 'Script Allocation',
+      description: 'Allocate scripts to examiners by expertise',
+      icon: <Zap size={24} />,
+      path: '/allocate-scripts',
+      color: 'bg-blue-500',
+      lightColor: 'bg-blue-50'
     }
   ];
 
