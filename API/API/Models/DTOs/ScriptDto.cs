@@ -3,16 +3,15 @@ namespace API.Models.DTOs
     public class ScriptDto
     {
         public int Id { get; set; }
-        public string InBuiltBarCode { get; set; }
+        public string? InBuiltBarCode { get; set; }
         public string GeneratedBarcode { get; set; }
         public int PaperId { get; set; }
         public string CleanPdfUrl { get; set; }
         public string Status { get; set; }
-        public bool IsReEvaluationRequested { get; set; }
-        public decimal TotalMarks { get; set; }
-        public decimal MaxMarks { get; set; }
-        public decimal Percentage { get; set; }
-        public string Remarks { get; set; }
+        public bool? IsReEvaluationRequested { get; set; }
+        public decimal? TotalMarks { get; set; }
+        public decimal? Percentage { get; set; }
+        public string? Remarks { get; set; }
         public DateTime? SubmittedAt { get; set; }
     }
 

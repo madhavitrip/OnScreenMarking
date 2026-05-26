@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   ChevronDown,
   ChevronUp,
@@ -9,19 +10,39 @@ import {
   Type,
   X,
   FileText,
-  AlertCircle
+  AlertCircle,
+  ChevronLeft
 } from "lucide-react";
 import PDFAnnotator from "../components/PDFAnnotator";
 import sectionService from "../services/sectionService";
 import markingService from "../services/markingService";
+import { useAuth } from "../context/AuthContext";
 
 const ExaminerMarking = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  
+  // Get parameters from location state or URL params
+  const paperId = location.state?.paperId || new URLSearchParams(location.search).get('paperId');
+  const scriptId = location.state?.scriptId;
+  const allocationId = location.state?.allocationId;
+  const examinerId = location.state?.examinerId || user?.id;
+  const studentName = location.state?.studentName;
+  const rollNo = location.state?.rollNo;
+  const subject = location.state?.subject;
+  const cleanPdfUrl = location.state?.cleanPdfUrl;
+
+  const apiBaseUrl = import.meta.env.VITE_API_URL || 'https://localhost:7243/api';
+  const pdfUrl = scriptId ? `${apiBaseUrl}/Scripts/${scriptId}/pdf` : null;
+
   const [sections, setSections] = useState([]);
   const [paperInfo, setPaperInfo] = useState(null);
   const [expandedSections, setExpandedSections] = useState({});
   const [questionMarks, setQuestionMarks] = useState({});
   const [totalObtained, setTotalObtained] = useState(0);
   const [remarks, setRemarks] = useState("");
+  const [sectionAttemptCounts, setSectionAttemptCounts] = useState({}); // Track attempted questions per section
   const [submitted, setSubmitted] = useState(false);
   const [saving, setSaving] = useState(false);
   const [annotations, setAnnotations] = useState([]);
@@ -32,14 +53,44 @@ const ExaminerMarking = () => {
   const [saveStatus, setSaveStatus] = useState(null); // { type: 'success'|'error', msg: string }
 
   useEffect(() => {
+    if (!paperId) {
+      setError('No paper selected. Please select a script from the Scripts page.');
+      setLoading(false);
+      return;
+    }
     fetchPaperData();
-  }, []);
+  }, [paperId]);
+
+  const createMarkingSession = async () => {
+    try {
+      if (!allocationId || !examinerId) {
+        setError('Missing allocation or examiner information');
+        return;
+      }
+
+      // Create a new marking session
+      const markingResponse = await markingService.createMarking(
+        allocationId,
+        examinerId,
+        0, // Initial total marks
+        remarks
+      );
+
+      if (markingResponse && markingResponse.id) {
+        setMarkingId(markingResponse.id);
+        return markingResponse.id;
+      }
+    } catch (err) {
+      console.error('Failed to create marking session:', err);
+      setError('Failed to create marking session. Please try again.');
+    }
+  };
 
   const fetchPaperData = async () => {
     try {
       setLoading(true);
-      // Using paperId 2 as per user's requirement/snippet
-      const data = await sectionService.getAllSections(2);
+      // Use dynamic paperId instead of hardcoded 2
+      const data = await sectionService.getAllSections(paperId);
       
       if (data && data.length > 0) {
         setSections(data);
@@ -50,9 +101,11 @@ const ExaminerMarking = () => {
 
         const expanded = {};
         const marks = {};
+        const attemptCounts = {};
         
         data.forEach((section) => {
           expanded[section.id] = true;
+          attemptCounts[section.id] = 0; // Initialize attempt count for section
           section.questions?.forEach((q) => {
             marks[q.questionId] = {
               marksAwarded: 0,
@@ -67,6 +120,10 @@ const ExaminerMarking = () => {
         
         setExpandedSections(expanded);
         setQuestionMarks(marks);
+        setSectionAttemptCounts(attemptCounts);
+
+        // Create marking session after loading sections
+        await createMarkingSession();
       }
     } catch (err) {
       setError("Failed to fetch paper data. Please check connection.");
@@ -166,13 +223,37 @@ const ExaminerMarking = () => {
     if (!question) return;
 
     const numValue = Math.max(0, Math.min(value, question.marks));
+    
+    // Find the section this question belongs to
+    const section = sections.find(s => s.id === question.sectionId);
+    if (!section) return;
+
+    // Check if marking this question would exceed maxQuestionsToAttempt
+    const currentMarks = questionMarks[questionId];
+    const isCurrentlyAttempted = currentMarks?.isAttempted || currentMarks?.marksAwarded > 0;
+    const isNewAttempt = numValue > 0 && !isCurrentlyAttempted;
+
+    if (isNewAttempt && section.maxQuestionsToAttempt > 0) {
+      // Count how many questions in this section are already attempted
+      const attemptedCount = section.questions?.filter(q => {
+        const marks = questionMarks[q.questionId];
+        return marks?.isAttempted || marks?.marksAwarded > 0;
+      }).length || 0;
+
+      if (attemptedCount >= section.maxQuestionsToAttempt) {
+        setError(`Cannot mark more than ${section.maxQuestionsToAttempt} questions in ${section.name}`);
+        setTimeout(() => setError(''), 3000);
+        return;
+      }
+    }
+
     setQuestionMarks((prev) => {
       const updated = {
         ...prev,
         [questionId]: {
           ...prev[questionId],
           marksAwarded: numValue,
-          isAttempted: numValue > 0,
+          isAttempted: value !== "" && !isNaN(value),
         },
       };
       calculateTotal(updated);
@@ -266,6 +347,10 @@ const ExaminerMarking = () => {
     }
   };
 
+  const totalQuestionsCount = Object.keys(questionMarks).length;
+  const definedQuestionsCount = Object.values(questionMarks).filter(m => m.isAttempted || m.isSkipped).length;
+  const allQuestionsDefined = totalQuestionsCount > 0 && definedQuestionsCount === totalQuestionsCount;
+
   if (loading) {
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-gray-50">
@@ -275,11 +360,34 @@ const ExaminerMarking = () => {
     );
   }
 
+  if (error && !sections.length) {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center bg-gray-50 p-4">
+        <AlertCircle className="w-12 h-12 text-red-600 mb-4" />
+        <p className="text-gray-600 font-bold text-center mb-6">{error}</p>
+        <button
+          onClick={() => navigate('/scripts')}
+          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          Back to Scripts
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-gray-50 min-h-screen flex flex-col overflow-hidden">
       {/* HEADER */}
       <header className="bg-white text-gray-900 shadow-md px-6 py-4 flex justify-between items-center z-50 border-b border-gray-200">
         <div className="flex items-center gap-6">
+          <button
+            onClick={() => navigate('/scripts')}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            title="Back to Scripts"
+          >
+            <ChevronLeft className="text-gray-600" size={24} />
+          </button>
+          
           <div className="border-r border-gray-300 pr-6">
             <h1 className="text-2xl font-bold text-gray-900">
               OSM <span className="text-blue-600">Marking</span>
@@ -288,9 +396,16 @@ const ExaminerMarking = () => {
           </div>
           
           <div className="hidden md:block">
+            <p className="text-xs uppercase font-semibold text-gray-500 mb-1">Student</p>
+            <p className="font-semibold text-sm text-gray-900">
+              {studentName || "Unknown"} <span className="text-gray-400">(Roll: {rollNo || "N/A"})</span>
+            </p>
+          </div>
+
+          <div className="hidden md:block bg-gray-50 px-4 py-2 rounded-lg border border-gray-200">
             <p className="text-xs uppercase font-semibold text-gray-500 mb-1">Paper</p>
             <p className="font-semibold text-sm text-gray-900">
-              {paperInfo?.paperName || "Maths"} <span className="text-gray-400">({paperInfo?.paperCode || "2340"})</span>
+              {paperInfo?.paperName || "Paper"} <span className="text-gray-400">({paperInfo?.paperCode || ""})</span>
             </p>
           </div>
 
@@ -310,8 +425,9 @@ const ExaminerMarking = () => {
           
           <button
             onClick={handleSubmitMarking}
-            disabled={submitted || saving}
-            className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-6 py-3 rounded-lg font-semibold uppercase text-sm transition-colors shadow-md"
+            disabled={submitted || saving || !allQuestionsDefined}
+            className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-6 py-3 rounded-lg font-semibold uppercase text-sm transition-colors shadow-md cursor-pointer disabled:cursor-not-allowed"
+            title={!allQuestionsDefined ? `Please score or skip all questions (${definedQuestionsCount}/${totalQuestionsCount} completed)` : "Submit evaluation"}
           >
             {saving ? "Saving..." : "Submit"}
           </button>
@@ -328,6 +444,7 @@ const ExaminerMarking = () => {
             maxMarks={selectedQuestion ? findQuestionById(selectedQuestion)?.marks : 0}
             onNextQuestion={handleNextQuestion}
             sections={sections}
+            pdfUrl={pdfUrl}
           />
         </section>
 
@@ -370,13 +487,26 @@ const ExaminerMarking = () => {
                 </div>
               )}
 
-              {sections.map((sec) => (
+              {sections.map((sec) => {
+                const attemptedCount = sec.questions?.filter(q => {
+                  const marks = questionMarks[q.questionId];
+                  return marks?.isAttempted || marks?.marksAwarded > 0;
+                }).length || 0;
+
+                return (
                 <div key={sec.id} className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
                   <div 
                     onClick={() => toggleSection(sec.id)}
                     className="flex justify-between items-center bg-gray-100 p-3 border-b border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors"
                   >
-                    <span className="font-semibold text-sm text-gray-900 uppercase">{sec.name}</span>
+                    <div className="flex-1">
+                      <span className="font-semibold text-sm text-gray-900 uppercase">{sec.name}</span>
+                      {sec.maxQuestionsToAttempt > 0 && (
+                        <p className="text-xs text-gray-600 mt-1">
+                          Max Questions: {attemptedCount}/{sec.maxQuestionsToAttempt}
+                        </p>
+                      )}
+                    </div>
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-100">
                         {getSectionMarks(sec.id)} / {sec.totalMarks}
@@ -451,7 +581,8 @@ const ExaminerMarking = () => {
                     </div>
                   )}
                 </div>
-              ))}
+              );
+              })}
             </div>
           </div>
 

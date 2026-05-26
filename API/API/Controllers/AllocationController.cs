@@ -371,21 +371,32 @@ namespace API.Controllers
                 if (request?.Allocations == null || !request.Allocations.Any())
                     return BadRequest(new { success = false, message = "No allocations provided" });
 
+                if (request.PaperId <= 0)
+                    return BadRequest(new { success = false, message = "Valid Paper ID is required" });
+
+                // Get pending scripts for this paper
+                var pendingScripts = await _context.Scripts
+                    .Where(s => s.PaperId == request.PaperId && s.Status == "pending")
+                    .ToListAsync();
+
+                var totalRequested = request.Allocations.Sum(a => a.Count);
+                if (totalRequested > pendingScripts.Count)
+                {
+                    return BadRequest(new { success = false, message = $"Total requested scripts ({totalRequested}) exceeds available pending scripts ({pendingScripts.Count})" });
+                }
+
+                // Randomize/Shuffle scripts in memory
+                var random = new Random();
+                var shuffledScripts = pendingScripts.OrderBy(x => random.Next()).ToList();
+
                 var results = new List<object>();
                 var errors = new List<string>();
+                int scriptIndex = 0;
 
                 foreach (var alloc in request.Allocations)
                 {
                     try
                     {
-                        // Verify script exists
-                        var script = await _context.Scripts.FindAsync(alloc.ScriptId);
-                        if (script == null)
-                        {
-                            errors.Add($"Script {alloc.ScriptId} not found");
-                            continue;
-                        }
-
                         // Verify examiner exists
                         var examiner = await _context.Users.FindAsync(alloc.ExaminerId);
                         if (examiner == null)
@@ -394,39 +405,46 @@ namespace API.Controllers
                             continue;
                         }
 
-                        // Check if allocation already exists
-                        var existingAllocation = await _context.Allocations
-                            .FirstOrDefaultAsync(a => a.ScriptId == alloc.ScriptId && a.Status != "cancelled");
-
-                        if (existingAllocation != null)
+                        for (int i = 0; i < alloc.Count; i++)
                         {
-                            errors.Add($"Script {alloc.ScriptId} already allocated");
-                            continue;
+                            if (scriptIndex >= shuffledScripts.Count) break;
+
+                            var script = shuffledScripts[scriptIndex++];
+
+                            // Check if allocation already exists
+                            var existingAllocation = await _context.Allocations
+                                .FirstOrDefaultAsync(a => a.ScriptId == script.Id && a.Status != "cancelled");
+
+                            if (existingAllocation != null)
+                            {
+                                errors.Add($"Script {script.Id} already allocated");
+                                continue;
+                            }
+
+                            var allocation = new Allocation
+                            {
+                                ScriptId = script.Id,
+                                ExaminerId = alloc.ExaminerId,
+                                AllocatedAt = DateTime.UtcNow,
+                                Status = "allocated"
+                            };
+
+                            _context.Allocations.Add(allocation);
+                            script.Status = "allocated";
+                            script.UpdatedAt = DateTime.UtcNow;
+                            _context.Scripts.Update(script);
+
+                            results.Add(new
+                            {
+                                scriptId = script.Id,
+                                examinerId = alloc.ExaminerId,
+                                success = true
+                            });
                         }
-
-                        var allocation = new Allocation
-                        {
-                            ScriptId = alloc.ScriptId,
-                            ExaminerId = alloc.ExaminerId,
-                            AllocatedAt = DateTime.UtcNow,
-                            Status = "allocated"
-                        };
-
-                        _context.Allocations.Add(allocation);
-                        script.Status = "allocated";
-                        script.UpdatedAt = DateTime.UtcNow;
-                        _context.Scripts.Update(script);
-
-                        results.Add(new
-                        {
-                            scriptId = alloc.ScriptId,
-                            examinerId = alloc.ExaminerId,
-                            success = true
-                        });
                     }
                     catch (Exception ex)
                     {
-                        errors.Add($"Error allocating script {alloc.ScriptId}: {ex.Message}");
+                        errors.Add($"Error allocating to examiner {alloc.ExaminerId}: {ex.Message}");
                     }
                 }
 
@@ -451,12 +469,13 @@ namespace API.Controllers
 
     public class BulkAllocationRequest
     {
+        public int PaperId { get; set; }
         public List<AllocationItem> Allocations { get; set; }
     }
 
     public class AllocationItem
     {
-        public int ScriptId { get; set; }
         public int ExaminerId { get; set; }
+        public int Count { get; set; }
     }
 }
