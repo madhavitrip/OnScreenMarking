@@ -10,11 +10,11 @@ namespace API.Models
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; }
-        public string ScriptId { get; set; }
+        public string InBuiltBarcode { get; set; }
+        public string GeneratedBarcode { get; set; }
         public int PaperId { get; set; }
         public Paper Paper { get; set; }
-        public int PdfId { get; set; }
-        public Pdf_Record Pdf_Record { get; set; }
+        public string CleanPdfUrl { get; set; }
         public string Status { get; set; } = "pending"; // pending, in_progress, completed
         public bool IsReEvaluationRequested { get; set; }
         public decimal TotalMarks { get; set; } = 0;

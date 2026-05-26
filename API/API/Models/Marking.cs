@@ -17,13 +17,11 @@ namespace API.Models
         public int AllocationId { get; set; }
         public Allocation Allocation { get; set; }
         public decimal TotalMarks { get; set; }
-        public decimal MaxMarks { get; set; }
         public decimal Percentage { get; set; }
         public string Remarks { get; set; }
         public string Status { get; set; }
         public DateTime StartedAt { get; set; }
-        public int PdfId { get; set; }
-        public Pdf_Record Pdf_Records { get; set; }
+        public string EvaluatedPdfUrl { get; set; }
         public DateTime SubmittedAt { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

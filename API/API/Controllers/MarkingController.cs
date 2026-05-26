@@ -48,7 +48,6 @@ namespace API.Controllers
                     ExaminerId = request.ExaminerId,
                     AllocationId = request.AllocationId,
                     TotalMarks = request.TotalMarks,
-                    MaxMarks = allocation.Script.MaxMarks,
                     Percentage = (request.TotalMarks / allocation.Script.MaxMarks) * 100,
                     Remarks = request.Remarks,
                     Status = "draft",
@@ -65,7 +64,6 @@ namespace API.Controllers
                     ExaminerId = marking.ExaminerId,
                     AllocationId = marking.AllocationId,
                     TotalMarks = marking.TotalMarks,
-                    MaxMarks = marking.MaxMarks,
                     Percentage = marking.Percentage,
                     Remarks = marking.Remarks,
                     Status = marking.Status,
@@ -101,7 +99,6 @@ namespace API.Controllers
                     ExaminerId = marking.ExaminerId,
                     AllocationId = marking.AllocationId,
                     TotalMarks = marking.TotalMarks,
-                    MaxMarks = marking.MaxMarks,
                     Percentage = marking.Percentage,
                     Remarks = marking.Remarks,
                     Status = marking.Status,
@@ -134,7 +131,7 @@ namespace API.Controllers
                     return BadRequest(new { success = false, message = "Cannot update submitted marking" });
 
                 existingMarking.TotalMarks = request.TotalMarks;
-                existingMarking.Percentage = (request.TotalMarks / existingMarking.MaxMarks) * 100;
+                existingMarking.Percentage = (request.TotalMarks) * 100;
                 existingMarking.Remarks = request.Remarks;
                 existingMarking.UpdatedAt = DateTime.UtcNow;
 
@@ -224,7 +221,6 @@ namespace API.Controllers
                     ExaminerId = m.ExaminerId,
                     AllocationId = m.AllocationId,
                     TotalMarks = m.TotalMarks,
-                    MaxMarks = m.MaxMarks,
                     Percentage = m.Percentage,
                     Remarks = m.Remarks,
                     Status = m.Status,
@@ -263,7 +259,6 @@ namespace API.Controllers
                     ExaminerId = marking.ExaminerId,
                     AllocationId = marking.AllocationId,
                     TotalMarks = marking.TotalMarks,
-                    MaxMarks = marking.MaxMarks,
                     Percentage = marking.Percentage,
                     Remarks = marking.Remarks,
                     Status = marking.Status,
@@ -336,7 +331,6 @@ namespace API.Controllers
                         examinerName = marking.Examiner.Name,
                         allocationId = marking.AllocationId,
                         totalMarks = marking.TotalMarks,
-                        maxMarks = marking.MaxMarks,
                         percentage = marking.Percentage,
                         remarks = marking.Remarks,
                         status = marking.Status,
@@ -346,9 +340,8 @@ namespace API.Controllers
                     script = new
                     {
                         id = marking.Script.Id,
-                        scriptId = marking.Script.ScriptId,
                         paperId = marking.Script.PaperId,
-                        cleanPdfUrl = marking.Script.PdfId,
+                        cleanPdfUrl = marking.Script.CleanPdfUrl,
                         status = marking.Script.Status,
                         maxMarks = marking.Script.MaxMarks
                     },
@@ -406,7 +399,7 @@ namespace API.Controllers
 
                 // Update marking totals
                 marking.TotalMarks = totalMarks;
-                marking.Percentage = (totalMarks / marking.MaxMarks) * 100;
+                marking.Percentage = (totalMarks) * 100;
                 marking.UpdatedAt = DateTime.UtcNow;
 
                 _context.Markings.Update(marking);

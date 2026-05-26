@@ -305,7 +305,7 @@ namespace API.Controllers
                 // Get pending scripts for this paper
                 var scripts = await _context.Scripts
                     .Where(s => s.PaperId == paperId && s.Status == "pending")
-                    .OrderBy(s => s.ScriptId)
+                    .OrderBy(s => s.Id)
                     .ToListAsync();
 
                 // Get examiners with expertise in ANY of the subjects associated with this paper
@@ -329,7 +329,6 @@ namespace API.Controllers
                 var scriptDtos = scripts.Select(s => new
                 {
                     s.Id,
-                    s.ScriptId,
                     s.PaperId,
                     s.Status,
                     s.CreatedAt

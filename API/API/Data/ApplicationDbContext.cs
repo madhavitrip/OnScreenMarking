@@ -29,7 +29,6 @@ namespace API.Data
         public DbSet<ErrorLog> ErrorLogs { get; set; }
         public DbSet<SubjectPaper> SubjectPapers { get; set; }
         public DbSet<DepartmentSubject> DepartmentSubjects { get; set; }
-       public Pdf_Record Pdf_Records { get; set; }
         public DbSet<Invitation> Invitations { get; set; }
         public DbSet<Role> Roles { get; set; }
         public DbSet<Attendance> Attendances { get; set; }
@@ -180,7 +179,7 @@ namespace API.Data
             modelBuilder.Entity<Script>()
                 .HasKey(s => s.Id);
             modelBuilder.Entity<Script>()
-                .HasIndex(s => s.ScriptId)
+                .HasIndex(s => s.GeneratedBarcode)
                 .IsUnique();
             modelBuilder.Entity<Script>()
                 .HasMany(s => s.Allocations)
