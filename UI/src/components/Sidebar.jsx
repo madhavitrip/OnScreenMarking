@@ -11,22 +11,20 @@ const Sidebar = () => {
     { icon: <School size={20} />, label: 'Universities', path: '/admin/universities' },
     { icon: <Building2 size={20} />, label: 'Departments', path: '/admin/departments' },
     { icon: <BookOpen size={20} />, label: 'Subjects', path: '/admin/subjects' },
-    { icon: <Calendar size={20} />, label: 'Sessions', path: '/admin/sessions' },
-    { icon: <ClipboardList size={20} />, label: 'Projects', path: '/admin/projects' },
+    { icon: <Calendar size={20} />, label: 'Sessions & Projects', path: '/admin/sessions' },
     { icon: <FileText size={20} />, label: 'Papers', path: '/admin/papers' },
     { icon: <Users size={20} />, label: 'Users', path: '/admin/users' },
     { icon: <Shield size={20} />, label: 'Role Management', path: '/admin/role-management' },
     { icon: <UserCheck size={20} />, label: 'Attendance', path: '/admin/attendance' },
     { icon: <Settings size={20} />, label: 'Settings', path: '/settings' },
   ];
-
+ 
   // Coordinator navigation
   const coordinatorMenuItems = [
     { icon: <Home size={20} />, label: 'Dashboard', path: '/coordinator/dashboard' },
     { icon: <Building2 size={20} />, label: 'Departments', path: '/departments' },
     { icon: <BookOpen size={20} />, label: 'Subjects', path: '/subjects' },
-    { icon: <Calendar size={20} />, label: 'Sessions', path: '/sessions' },
-    { icon: <ClipboardList size={20} />, label: 'Projects', path: '/projects' },
+    { icon: <Calendar size={20} />, label: 'Sessions & Projects', path: '/sessions' },
     { icon: <FileText size={20} />, label: 'Papers', path: '/papers' },
     { icon: <Settings size={20} />, label: 'Settings', path: '/settings' },
   ];

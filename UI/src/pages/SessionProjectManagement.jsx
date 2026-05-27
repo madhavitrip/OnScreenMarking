@@ -46,6 +46,10 @@ export default function SessionProjectManagement() {
       setLoading(true);
       const data = await apiCall('/session');
       setSessions(data);
+      if (data && data.length > 0) {
+        const active = data.find(s => s.isActive) || data[0];
+        setSelectedSessionId(active.sessionId);
+      }
     } catch (err) {
       setError('Failed to fetch sessions');
       console.error(err);
@@ -162,117 +166,98 @@ export default function SessionProjectManagement() {
           </div>
         )}
 
-        {/* Sessions Section */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-              <Calendar size={20} />
-              Sessions
-            </h2>
+        {/* Sessions Dropdown Toolbar */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex-1 flex flex-col md:flex-row md:items-center gap-3">
+            <label className="text-sm font-bold text-gray-800 flex items-center gap-1.5 whitespace-nowrap">
+              <Calendar size={18} className="text-blue-500" /> Select Session:
+            </label>
+            {loading ? (
+              <div className="text-gray-500 text-sm">Loading sessions...</div>
+            ) : sessions.length === 0 ? (
+              <div className="text-gray-500 text-sm font-semibold">No Sessions Configured</div>
+            ) : (
+              <select
+                value={selectedSessionId || ""}
+                onChange={(e) => setSelectedSessionId(parseInt(e.target.value, 10))}
+                className="w-full md:w-64 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white font-medium text-gray-800"
+              >
+                {sessions.map(s => (
+                  <option key={s.sessionId} value={s.sessionId}>
+                    {s.sessionName} {s.isActive ? '(Active)' : ''}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+          
+          <div className="flex gap-2 shrink-0">
+            <button
+              onClick={() => {
+                const current = sessions.find(s => s.sessionId === selectedSessionId);
+                if (current) handleEditSession(current);
+              }}
+              disabled={!selectedSessionId}
+              className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 disabled:opacity-50 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+            >
+              Edit Current Session
+            </button>
             <button
               onClick={() => setShowSessionForm(!showSessionForm)}
               className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
             >
-              <Plus size={16} />
-              Add Session
+              <Plus size={16} /> Add Session
             </button>
           </div>
-
-          {/* Session Form */}
-          {showSessionForm && (
-            <div className="bg-white rounded-lg border border-gray-200 p-4 mb-4">
-              <h3 className="text-sm font-bold text-gray-900 mb-3">
-                {editingId ? 'Edit Session' : 'Add New Session'}
-              </h3>
-              <form onSubmit={handleSessionSubmit} className="space-y-3">
-                <div>
-                  <label className="block text-gray-700 text-xs font-semibold mb-1">
-                    Session Name
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.sessionName}
-                    onChange={(e) => setFormData({ ...formData, sessionName: e.target.value })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="e.g., 2024-2025"
-                    required
-                  />
-                </div>
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={formData.isActive}
-                    onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                    className="w-4 h-4 rounded border-gray-300"
-                  />
-                  <label className="ml-2 text-gray-700 text-sm">Active</label>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    type="submit"
-                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
-                  >
-                    {editingId ? 'Update' : 'Create'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleCancel}
-                    className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
-
-          {/* Sessions Grid */}
-          {loading ? (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-              <p className="text-gray-600 text-sm">Loading sessions...</p>
-            </div>
-          ) : sessions.length === 0 ? (
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
-              <Calendar className="mx-auto text-gray-400 mb-3" size={32} />
-              <p className="text-gray-600 text-sm font-semibold">No sessions yet</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {sessions.map((session) => (
-                <div
-                  key={session.sessionId}
-                  onClick={() => setSelectedSessionId(session.sessionId)}
-                  className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                    selectedSessionId === session.sessionId
-                      ? 'border-blue-600 bg-blue-50'
-                      : 'border-gray-200 bg-white hover:border-blue-300'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-bold text-gray-900">{session.sessionName}</h3>
-                    <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                      session.isActive
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-red-100 text-red-700'
-                    }`}>
-                      {session.isActive ? 'Active' : 'Off'}
-                    </span>
-                  </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleEditSession(session);
-                    }}
-                    className="text-blue-600 hover:text-blue-700 text-xs font-semibold"
-                  >
-                    Edit
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
+
+        {/* Session Form */}
+        {showSessionForm && (
+          <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6 shadow-sm">
+            <h3 className="text-sm font-bold text-gray-900 mb-3">
+              {editingId ? 'Edit Session' : 'Add New Session'}
+            </h3>
+            <form onSubmit={handleSessionSubmit} className="space-y-3">
+              <div>
+                <label className="block text-gray-700 text-xs font-semibold mb-1">
+                  Session Name
+                </label>
+                <input
+                  type="text"
+                  value={formData.sessionName}
+                  onChange={(e) => setFormData({ ...formData, sessionName: e.target.value })}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g., 2024-2025"
+                  required
+                />
+              </div>
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={formData.isActive}
+                  onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                  className="w-4 h-4 rounded border-gray-300"
+                />
+                <label className="ml-2 text-gray-700 text-sm">Active</label>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+                >
+                  {editingId ? 'Update' : 'Create'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
 
         {/* Projects Section */}
         {selectedSessionId && (

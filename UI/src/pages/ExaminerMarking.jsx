@@ -11,7 +11,8 @@ import {
   X,
   FileText,
   AlertCircle,
-  ChevronLeft
+  ChevronLeft,
+  Barcode
 } from "lucide-react";
 import PDFAnnotator from "../components/PDFAnnotator";
 import sectionService from "../services/sectionService";
@@ -23,17 +24,17 @@ const ExaminerMarking = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   
-  // Get parameters from location state or URL params
-  const paperId = location.state?.paperId || new URLSearchParams(location.search).get('paperId');
-  const scriptId = location.state?.scriptId;
-  const allocationId = location.state?.allocationId;
-  const examinerId = location.state?.examinerId || user?.id;
-  const studentName = location.state?.studentName;
-  const rollNo = location.state?.rollNo;
-  const subject = location.state?.subject;
-  const cleanPdfUrl = location.state?.cleanPdfUrl;
-
-  const apiBaseUrl = import.meta.env.VITE_API_URL || 'https://localhost:7243/api';
+  // Get parameters from location state or URL params (fallback to URL params on refresh)
+  const queryParams = new URLSearchParams(location.search);
+  const paperId = location.state?.paperId || queryParams.get('paperId');
+  const scriptId = location.state?.scriptId || queryParams.get('scriptId');
+  const allocationId = location.state?.allocationId || queryParams.get('allocationId');
+  const examinerId = location.state?.examinerId || queryParams.get('examinerId') || user?.id;
+  const studentName = location.state?.studentName || queryParams.get('studentName');
+  const rollNo = location.state?.rollNo || queryParams.get('rollNo');
+  const subject = location.state?.subject || queryParams.get('subject');
+  const cleanPdfUrl = location.state?.cleanPdfUrl || queryParams.get('cleanPdfUrl');
+  const apiBaseUrl = import.meta.env.VITE_API_URL;
   const pdfUrl = scriptId ? `${apiBaseUrl}/Scripts/${scriptId}/pdf` : null;
 
   const [sections, setSections] = useState([]);
@@ -50,8 +51,7 @@ const ExaminerMarking = () => {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [markingId, setMarkingId] = useState(null);
-  const [saveStatus, setSaveStatus] = useState(null); // { type: 'success'|'error', msg: string }
-
+  const [saveStatus, setSaveStatus] = useState(null); 
   useEffect(() => {
     if (!paperId) {
       setError('No paper selected. Please select a script from the Scripts page.');
@@ -61,6 +61,30 @@ const ExaminerMarking = () => {
     fetchPaperData();
   }, [paperId]);
 
+  const loadExistingQuestionMarks = async (mId, defaultMarks) => {
+    try {
+      const savedMarks = await markingService.getQuestionMarks(mId);
+      if (savedMarks && savedMarks.length > 0) {
+        const updated = { ...defaultMarks };
+        savedMarks.forEach(sm => {
+          if (updated[sm.questionId]) {
+            updated[sm.questionId] = {
+              ...updated[sm.questionId],
+              marksAwarded: sm.marksAwarded,
+              isSkipped: sm.isSkipped,
+              remarks: sm.remarks || "",
+              isAttempted: sm.isAttempted
+            };
+          }
+        });
+        setQuestionMarks(updated);
+        calculateTotal(updated);
+      }
+    } catch (err) {
+      console.error("Failed to load existing question marks:", err);
+    }
+  };
+
   const createMarkingSession = async () => {
     try {
       if (!allocationId || !examinerId) {
@@ -68,7 +92,7 @@ const ExaminerMarking = () => {
         return;
       }
 
-      // Create a new marking session
+      // Create a new marking session (or retrieve existing)
       const markingResponse = await markingService.createMarking(
         allocationId,
         examinerId,
@@ -78,6 +102,9 @@ const ExaminerMarking = () => {
 
       if (markingResponse && markingResponse.id) {
         setMarkingId(markingResponse.id);
+        if (markingResponse.remarks) {
+          setRemarks(markingResponse.remarks);
+        }
         return markingResponse.id;
       }
     } catch (err) {
@@ -123,7 +150,10 @@ const ExaminerMarking = () => {
         setSectionAttemptCounts(attemptCounts);
 
         // Create marking session after loading sections
-        await createMarkingSession();
+        const mId = await createMarkingSession();
+        if (mId) {
+          await loadExistingQuestionMarks(mId, marks);
+        }
       }
     } catch (err) {
       setError("Failed to fetch paper data. Please check connection.");
@@ -152,12 +182,32 @@ const ExaminerMarking = () => {
         if (anno.questionId && anno.marks !== undefined) {
           const q = findQuestionByNo(anno.questionId);
           if (q && updated[q.questionId]) {
+            const section = sections.find(s => s.id === q.sectionId);
+            
             // If question is marked as skipped, set the flag
             if (anno.isSkipped) {
               updated[q.questionId].isSkipped = true;
               updated[q.questionId].marksAwarded = 0;
               updated[q.questionId].isAttempted = false;
             } else {
+              // Enforce maxQuestionsToAttempt restriction
+              const currentMarks = updated[q.questionId];
+              const isCurrentlyAttempted = currentMarks?.isAttempted || currentMarks?.marksAwarded > 0;
+              const willAttempt = anno.marks > 0;
+              
+              if (willAttempt && !isCurrentlyAttempted && section && section.maxQuestionsToAttempt > 0) {
+                const attemptedCount = section.questions?.filter(sq => {
+                  const m = updated[sq.questionId];
+                  return m?.isAttempted || m?.marksAwarded > 0;
+                }).length || 0;
+                
+                if (attemptedCount >= section.maxQuestionsToAttempt) {
+                  setError(`Cannot attempt more than ${section.maxQuestionsToAttempt} questions in ${section.name}. Capped marks at 0.`);
+                  setTimeout(() => setError(''), 4000);
+                  return;
+                }
+              }
+
               updated[q.questionId].marksAwarded += anno.marks;
               updated[q.questionId].isAttempted = true;
               
@@ -167,6 +217,41 @@ const ExaminerMarking = () => {
               }
             }
           }
+        }
+      });
+
+      // Ensure section-wise total marks are not exceeded
+      sections.forEach(sec => {
+        let secSum = 0;
+        const secQuestions = sec.questions || [];
+        
+        // Sum marks awarded for this section
+        secQuestions.forEach(q => {
+          if (updated[q.questionId]) {
+            secSum += updated[q.questionId].marksAwarded || 0;
+          }
+        });
+
+        if (secSum > sec.totalMarks) {
+          let excess = secSum - sec.totalMarks;
+          
+          // Iterate backwards to reduce the excess from attempted questions
+          for (let i = secQuestions.length - 1; i >= 0; i--) {
+            const q = secQuestions[i];
+            if (updated[q.questionId] && updated[q.questionId].marksAwarded > 0) {
+              const currentVal = updated[q.questionId].marksAwarded;
+              if (currentVal >= excess) {
+                updated[q.questionId].marksAwarded = currentVal - excess;
+                excess = 0;
+                break;
+              } else {
+                updated[q.questionId].marksAwarded = 0;
+                excess -= currentVal;
+              }
+            }
+          }
+          setError(`Marks in ${sec.name} capped to not cross section total of ${sec.totalMarks}.`);
+          setTimeout(() => setError(''), 4000);
         }
       });
 
@@ -222,11 +307,24 @@ const ExaminerMarking = () => {
     const question = findQuestionById(questionId);
     if (!question) return;
 
-    const numValue = Math.max(0, Math.min(value, question.marks));
+    let numValue = Math.max(0, Math.min(value, question.marks));
     
     // Find the section this question belongs to
     const section = sections.find(s => s.id === question.sectionId);
     if (!section) return;
+
+    // Calculate current section total excluding this question
+    const sectionOtherQuestionsTotal = section.questions?.reduce((sum, q) => {
+      if (q.questionId === questionId) return sum;
+      const mark = questionMarks[q.questionId];
+      return sum + (mark && !mark.isSkipped ? mark.marksAwarded || 0 : 0);
+    }, 0) || 0;
+
+    if (sectionOtherQuestionsTotal + numValue > section.totalMarks) {
+      numValue = Math.max(0, section.totalMarks - sectionOtherQuestionsTotal);
+      setError(`Marks in ${section.name} cannot exceed section total of ${section.totalMarks}. Capped marks at ${numValue}.`);
+      setTimeout(() => setError(''), 4000);
+    }
 
     // Check if marking this question would exceed maxQuestionsToAttempt
     const currentMarks = questionMarks[questionId];
@@ -241,9 +339,9 @@ const ExaminerMarking = () => {
       }).length || 0;
 
       if (attemptedCount >= section.maxQuestionsToAttempt) {
-        setError(`Cannot mark more than ${section.maxQuestionsToAttempt} questions in ${section.name}`);
+        setError(`Cannot mark more than ${section.maxQuestionsToAttempt} questions in ${section.name}. Capped marks at 0.`);
         setTimeout(() => setError(''), 3000);
-        return;
+        numValue = 0;
       }
     }
 
@@ -305,7 +403,8 @@ const ExaminerMarking = () => {
   };
 
   const handleSaveMarks = async () => {
-    if (!markingId) {
+    
+    if (!markingId) {console.log("enter")
       showStatus("error", "No active marking session. Cannot persist marks.");
       return;
     }
@@ -393,13 +492,6 @@ const ExaminerMarking = () => {
               OSM <span className="text-blue-600">Marking</span>
             </h1>
             <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mt-1">Answer Sheet Evaluation</p>
-          </div>
-          
-          <div className="hidden md:block">
-            <p className="text-xs uppercase font-semibold text-gray-500 mb-1">Student</p>
-            <p className="font-semibold text-sm text-gray-900">
-              {studentName || "Unknown"} <span className="text-gray-400">(Roll: {rollNo || "N/A"})</span>
-            </p>
           </div>
 
           <div className="hidden md:block bg-gray-50 px-4 py-2 rounded-lg border border-gray-200">

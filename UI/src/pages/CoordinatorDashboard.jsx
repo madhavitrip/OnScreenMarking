@@ -79,21 +79,12 @@ export default function CoordinatorDashboard() {
     },
     {
       id: 'sessions',
-      title: 'Sessions',
-      description: 'Manage examination sessions',
+      title: 'Sessions & Projects',
+      description: 'Manage examination sessions and their marking projects',
       icon: <Calendar size={24} />,
       path: '/sessions',
       color: 'bg-yellow-500',
       lightColor: 'bg-yellow-50'
-    },
-    {
-      id: 'projects',
-      title: 'Projects',
-      description: 'Organize marking projects',
-      icon: <ClipboardList size={24} />,
-      path: '/projects',
-      color: 'bg-red-500',
-      lightColor: 'bg-red-50'
     },
     {
       id: 'papers',

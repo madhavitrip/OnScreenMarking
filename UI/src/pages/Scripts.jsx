@@ -27,20 +27,18 @@ const Scripts = () => {
 
       // Fetch allocations for current examiner
       const allocations = await allocationService.getExaminerAllocations(user.id);
-      
+
       // Transform allocations to script format
       const transformedScripts = allocations.map(allocation => ({
-        id: allocation.script?.scriptId || allocation.scriptId,
-        scriptId: allocation.script?.scriptId || allocation.scriptId,
-        rollNo: allocation.script?.rollNo || 'N/A',
-        name: allocation.script?.studentName || 'Unknown',
-        subject: allocation.script?.paper?.paperName || 'N/A',
-        paperId: allocation.script?.paperId,
+        id: allocation.script?.id || allocation.script?.scriptId || allocation.scriptId,
+        barCode: allocation.script?.generatedBarcode,
+        paper: allocation.script?.paper,
+        paperId: allocation.script?.paperId, // Direct fallback to paperId to avoid undefined when paper object is null
         status: allocation.script?.status || 'Pending',
-        score: allocation.script?.score || null,
+        score: allocation.script?.totalMarks,
         examiner: user.name,
         date: new Date(allocation.assignedAt).toLocaleDateString(),
-        allocationId: allocation.id,
+        allocationId: allocation.allocationId,
         marking: allocation.script?.marking,
         cleanPdfUrl: allocation.script?.cleanPdfUrl || null
       }));
@@ -56,26 +54,35 @@ const Scripts = () => {
   };
 
   const filteredScripts = scripts.filter(script => {
-    const matchesSearch = script.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         script.rollNo.includes(searchTerm) ||
-                         script.id.toString().includes(searchTerm);
+    const searchLower = searchTerm.toLowerCase();
+    const matchesSearch = 
+      (script.barCode && script.barCode.toLowerCase().includes(searchLower)) ||
+      (script.paper?.paperName && script.paper?.paperName.toLowerCase().includes(searchLower)) ||
+      (script.id && script.id.toString().includes(searchLower));
     const matchesFilter = filterStatus === 'all' || script.status === filterStatus;
     return matchesSearch && matchesFilter;
   });
 
   const handleStartMarking = (script) => {
-    // Navigate to marking page with script details
-    navigate('/marking', { 
-      state: { 
-        scriptId: script.scriptId,
+    // Navigate to marking page with script details in both state and query params
+    const queryParams = new URLSearchParams({
+      scriptId: script.id,
+      paperId: script.paperId || '',
+      barCode: script.barCode || '',
+      allocationId: script.allocationId,
+      examinerId: user?.id || '',
+      cleanPdfUrl: script.cleanPdfUrl || ''
+    }).toString();
+
+    navigate(`/marking?${queryParams}`, {
+      state: {
+        scriptId: script.id,
         paperId: script.paperId,
         allocationId: script.allocationId,
         examinerId: user?.id,
-        studentName: script.name,
-        rollNo: script.rollNo,
-        subject: script.subject,
+        barCode: script.barCode,
         cleanPdfUrl: script.cleanPdfUrl
-      } 
+      }
     });
   };
 
@@ -142,10 +149,8 @@ const Scripts = () => {
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Script ID</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Roll No</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Student Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Subject</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">BarCode</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Paper</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Status</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Score</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Actions</th>
@@ -153,22 +158,19 @@ const Scripts = () => {
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {filteredScripts.map((script) => (
-                  <tr key={script.scriptId} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{script.scriptId}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{script.rollNo}</td>
-                    <td className="px-6 py-4 text-sm text-gray-900">{script.name}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{script.subject}</td>
+                  <tr key={script.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{script.barCode || 'N/A'}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{script.paper?.paperName || 'N/A'}</td>
                     <td className="px-6 py-4 text-sm">
                       <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 w-fit ${
-                          script.status === 'Completed'
+                        className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 w-fit ${script.status === 'completed'
                             ? 'bg-green-100 text-green-800'
                             : script.status === 'In Progress'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : 'bg-red-100 text-red-800'
+                          }`}
                       >
-                        {script.status === 'Completed' ? <CheckCircle size={14} /> : <Clock size={14} />}
+                        {script.status === 'completed' ? <CheckCircle size={14} /> : <Clock size={14} />}
                         {script.status}
                       </span>
                     </td>

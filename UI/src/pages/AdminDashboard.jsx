@@ -100,9 +100,9 @@ export default function AdminDashboard() {
       lightColor: 'bg-green-50'
     },
     {
-      id: 'projects',
-      title: 'Projects',
-      description: 'Organize marking projects',
+      id: 'sessions',
+      title: 'Sessions & Projects',
+      description: 'Organize exam sessions and marking projects',
       icon: <ClipboardList size={24} />,
       color: 'bg-red-500',
       lightColor: 'bg-red-50'
