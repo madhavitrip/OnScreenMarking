@@ -64,6 +64,7 @@ namespace API.Models.DTOs
         public int TotalQuestions { get; set; }
         public string? Description { get; set; }
         public string? CatchNo { get; set; }
+        public string? QuestionPaperPdfUrl { get; set; }
         public bool IsActive { get; set; }
     }
 

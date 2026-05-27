@@ -43,6 +43,7 @@ export default function PapersManagement() {
     catchNo: "",
     projectId: projectId || "",
     isActive: true,
+    questionPaperPdfUrl: "",
   });
   
   // Examiner Allocation State
@@ -56,6 +57,7 @@ export default function PapersManagement() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     fetchInitialData();
@@ -269,6 +271,7 @@ export default function PapersManagement() {
       catchNo: paper.catchNo || "",
       projectId: paper.projectId,
       isActive: paper.isActive,
+      questionPaperPdfUrl: paper.questionPaperPdfUrl || "",
     });
     
     // Fetch subjects for this paper's project's university
@@ -303,6 +306,7 @@ export default function PapersManagement() {
       catchNo: "",
       projectId: projectId || "",
       isActive: true,
+      questionPaperPdfUrl: "",
     });
     setSelectedSubjects([]);
     setEditingId(null);
@@ -483,15 +487,74 @@ export default function PapersManagement() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Description</label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-xl outline-none"
-                  rows="3"
-                />
-              </div>
+              {(() => {
+                const handlePdfUpload = async (e) => {
+                  const file = e.target.files[0];
+                  if (!file) return;
+
+                  setUploading(true);
+                  setError("");
+                  const token = localStorage.getItem('token');
+                  const formDataObj = new FormData();
+                  formDataObj.append("file", file);
+
+                  try {
+                    const response = await fetch(`${import.meta.env.VITE_API_URL}/upload`, {
+                      method: "POST",
+                      headers: {
+                        Authorization: `Bearer ${token}`
+                      },
+                      body: formDataObj
+                    });
+
+                    if (!response.ok) {
+                      throw new Error("Failed to upload PDF");
+                    }
+
+                    const res = await response.json();
+                    setFormData(prev => ({ ...prev, questionPaperPdfUrl: res.url }));
+                    setSuccess("Question paper PDF uploaded successfully!");
+                    setTimeout(() => setSuccess(""), 3000);
+                  } catch (err) {
+                    setError("Failed to upload question paper PDF: " + err.message);
+                  } finally {
+                    setUploading(false);
+                  }
+                };
+
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-2">Description</label>
+                      <textarea
+                        value={formData.description}
+                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        className="w-full bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-xl outline-none"
+                        rows="3"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-2">Question Paper PDF</label>
+                      <div className="flex flex-col gap-2">
+                        <input
+                          type="file"
+                          accept="application/pdf"
+                          onChange={handlePdfUpload}
+                          className="w-full text-sm text-gray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                          disabled={uploading}
+                        />
+                        {uploading && <p className="text-xs text-blue-600 animate-pulse">Uploading PDF...</p>}
+                        {formData.questionPaperPdfUrl && (
+                          <p className="text-xs text-green-600 flex items-center gap-1">
+                            <CheckCircle2 size={12} />
+                            Attached: <a href={`${import.meta.env.VITE_API_URL.replace('/api', '')}${formData.questionPaperPdfUrl}`} target="_blank" rel="noopener noreferrer" className="underline font-bold text-blue-600">View PDF</a>
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
 
               <div className="flex items-center gap-4">
                 <button

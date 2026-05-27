@@ -55,6 +55,8 @@ namespace API.Controllers
                     MaxMarks = p.MaxMarks,
                     TotalQuestions = p.TotalQuestions,
                     Description = p.Description,
+                    CatchNo = p.CatchNo,
+                    QuestionPaperPdfUrl = p.QuestionPaperPdfUrl,
                     IsActive = p.IsActive,
                     SubjectIds = p.SubjectPapers
                 .Select(sp => sp.SubjectId)
@@ -98,6 +100,8 @@ namespace API.Controllers
                     MaxMarks = paper.MaxMarks,
                     TotalQuestions = paper.TotalQuestions,
                     Description = paper.Description,
+                    CatchNo = paper.CatchNo,
+                    QuestionPaperPdfUrl = paper.QuestionPaperPdfUrl,
                     IsActive = paper.IsActive,
                     SubjectIds = paper.SubjectPapers
                 .Select(sp => sp.SubjectId)
@@ -171,6 +175,7 @@ namespace API.Controllers
                     TotalQuestions = paperDto.TotalQuestions,
                     Description = paperDto.Description,
                     CatchNo = paperDto.CatchNo,
+                    QuestionPaperPdfUrl = paperDto.QuestionPaperPdfUrl,
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
@@ -222,6 +227,7 @@ namespace API.Controllers
                 paper.TotalQuestions = paperDto.TotalQuestions;
                 paper.Description = paperDto.Description;
                 paper.CatchNo = paperDto.CatchNo;
+                paper.QuestionPaperPdfUrl = paperDto.QuestionPaperPdfUrl;
                 paper.IsActive = paperDto.IsActive;
                 paper.UpdatedAt = DateTime.UtcNow;
 

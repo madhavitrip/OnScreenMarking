@@ -1,32 +1,65 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
+import { useAuth } from './AuthContext';
 
 const BreadcrumbContext = createContext();
 
-// Map routes to breadcrumb labels
+// Map routes to breadcrumb labels dynamically
 const routeLabels = {
+  // Admin paths
   '/admin/dashboard': { label: 'Dashboard', icon: 'LayoutDashboard' },
   '/admin/universities': { label: 'Universities', icon: 'Building2' },
   '/admin/departments': { label: 'Departments', icon: 'Briefcase' },
   '/admin/subjects': { label: 'Subjects', icon: 'BookOpen' },
   '/admin/sessions': { label: 'Sessions & Projects', icon: 'Calendar' },
+  '/admin/projects': { label: 'Sessions & Projects', icon: 'Calendar' },
   '/admin/papers': { label: 'Papers', icon: 'FileText' },
   '/admin/subject-config': { label: 'Subject Configuration', icon: 'Layers' },
   '/admin/users': { label: 'Users', icon: 'Users' },
+  '/admin/role-management': { label: 'Role Management', icon: 'Users' },
+  '/admin/attendance': { label: 'Attendance', icon: 'Users' },
+  '/admin/allocate-scripts': { label: 'Script Allocation', icon: 'Layers' },
+
+  // Coordinator paths
   '/coordinator/dashboard': { label: 'Dashboard', icon: 'LayoutDashboard' },
+  '/departments': { label: 'Departments', icon: 'Briefcase' },
+  '/subjects': { label: 'Subjects', icon: 'BookOpen' },
+  '/sessions': { label: 'Sessions & Projects', icon: 'Calendar' },
+  '/projects': { label: 'Sessions & Projects', icon: 'Calendar' },
+  '/papers': { label: 'Papers', icon: 'FileText' },
+  '/allocate-scripts': { label: 'Script Allocation', icon: 'Layers' },
+  '/subject-config': { label: 'Subject Configuration', icon: 'Layers' },
+
+  // Examiner paths
+  '/': { label: 'Dashboard', icon: 'LayoutDashboard' },
+  '/scripts': { label: 'My Allocated Scripts', icon: 'FileText' },
+  '/marking': { label: 'Script Marking', icon: 'Layers' },
+  '/reports': { label: 'Reports', icon: 'Briefcase' },
+  '/settings': { label: 'Settings', icon: 'Briefcase' }
 };
 
 export function BreadcrumbProvider({ children }) {
-  const [breadcrumbs, setBreadcrumbs] = useState([
-    { label: 'Dashboard', path: '/admin/dashboard', icon: 'LayoutDashboard' }
-  ]);
-  const [navigationHistory, setNavigationHistory] = useState(['/admin/dashboard']);
+  const { userType } = useAuth();
   const location = useLocation();
+
+  const getDashboardPath = () => {
+    if (userType === 'admin') return '/admin/dashboard';
+    if (userType === 'coordinator') return '/coordinator/dashboard';
+    return '/'; // Examiner / Default
+  };
+
+  const dashboardPath = getDashboardPath();
+
+  const [breadcrumbs, setBreadcrumbs] = useState([
+    { label: 'Dashboard', path: dashboardPath, icon: 'LayoutDashboard' }
+  ]);
+  const [navigationHistory, setNavigationHistory] = useState([dashboardPath]);
 
   // Track navigation history and build breadcrumbs
   useEffect(() => {
     const path = location.pathname;
     const queryParams = new URLSearchParams(location.search);
+    const activeDashboard = getDashboardPath();
     
     // Build breadcrumbs based on navigation history
     const newBreadcrumbs = [];
@@ -34,21 +67,30 @@ export function BreadcrumbProvider({ children }) {
     // Always start with dashboard
     newBreadcrumbs.push({
       label: 'Dashboard',
-      path: '/admin/dashboard',
+      path: activeDashboard,
       icon: 'LayoutDashboard'
     });
 
-    // Add Sessions & Projects if we're navigating from there
-    if (navigationHistory.includes('/admin/sessions') && path !== '/admin/sessions') {
+    // Add Sessions & Projects if we're navigating from there or on a config page
+    const sessionPath = userType === 'admin' ? '/admin/sessions' : '/sessions';
+    const isProjectOrSessionPath = (p) => {
+      return p === '/admin/sessions' || p === '/admin/projects' || p === '/sessions' || p === '/projects';
+    };
+    
+    const hasVisitedSession = navigationHistory.some(isProjectOrSessionPath);
+    const isCurrentlySession = isProjectOrSessionPath(path);
+    const isConfig = path.includes('subject-config');
+
+    if ((hasVisitedSession || isConfig) && !isCurrentlySession) {
       newBreadcrumbs.push({
         label: 'Sessions & Projects',
-        path: '/admin/sessions',
+        path: sessionPath,
         icon: 'Calendar'
       });
     }
 
     // Add current route if it's not dashboard
-    if (path !== '/admin/dashboard' && path !== '/coordinator/dashboard') {
+    if (path !== '/admin/dashboard' && path !== '/coordinator/dashboard' && path !== '/') {
       const routeInfo = routeLabels[path];
       if (routeInfo) {
         newBreadcrumbs.push({
@@ -70,11 +112,11 @@ export function BreadcrumbProvider({ children }) {
       }
       return prev;
     });
-  }, [location]);
+  }, [location, userType]);
 
   const setBreadcrumb = (items) => {
-    // Always start with dashboard
-    const dashboardItem = { label: 'Dashboard', path: '/admin/dashboard', icon: 'LayoutDashboard' };
+    const activeDashboard = getDashboardPath();
+    const dashboardItem = { label: 'Dashboard', path: activeDashboard, icon: 'LayoutDashboard' };
     setBreadcrumbs([dashboardItem, ...items]);
   };
 
@@ -83,10 +125,11 @@ export function BreadcrumbProvider({ children }) {
   };
 
   const clearBreadcrumbs = () => {
+    const activeDashboard = getDashboardPath();
     setBreadcrumbs([
-      { label: 'Dashboard', path: '/admin/dashboard', icon: 'LayoutDashboard' }
+      { label: 'Dashboard', path: activeDashboard, icon: 'LayoutDashboard' }
     ]);
-    setNavigationHistory(['/admin/dashboard']);
+    setNavigationHistory([activeDashboard]);
   };
 
   const resetBreadcrumbs = () => {

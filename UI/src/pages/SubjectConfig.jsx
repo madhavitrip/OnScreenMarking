@@ -64,14 +64,18 @@ export default function SubjectConfig() {
   useEffect(() => {
     if (projectId) {
       // Set breadcrumb with full path
+      const sessionPath = userType === 'admin' ? '/admin/sessions' : '/sessions';
+      const configPath = userType === 'admin' 
+        ? `/admin/subject-config?projectId=${encryptedProjectId}` 
+        : `/subject-config?projectId=${encryptedProjectId}`;
       setBreadcrumb([
-        { label: 'Sessions & Projects', path: '/admin/sessions', icon: 'Calendar' },
-        { label: 'Subject Configuration', path: `/admin/subject-config?projectId=${encryptedProjectId}`, icon: 'Layers' }
+        { label: 'Sessions & Projects', path: sessionPath, icon: 'Calendar' },
+        { label: 'Subject Configuration', path: configPath, icon: 'Layers' }
       ]);
       fetchProjectData();
       fetchSubjects();
     }
-  }, [projectId, encryptedProjectId]);
+  }, [projectId, encryptedProjectId, userType]);
 
   useEffect(() => {
     if (selectedPaper) {
