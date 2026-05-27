@@ -48,6 +48,7 @@ export default function UsersManagement() {
   const canvasRef = useRef(null);
 
   const landmarkerRef = useRef(null);
+  const detectorRef = useRef(null);
   const activeLoopRef = useRef(false);
   const eyesClosedRef = useRef(false);
   const blinkCountRef = useRef(0);
@@ -74,6 +75,9 @@ export default function UsersManagement() {
   const [inviteDeptId, setInviteDeptId] = useState("");
   const [inviteUniId, setInviteUniId] = useState(activeUniversityId || "");
   const [inviteLoading, setInviteLoading] = useState(false);
+  const [generatedLink, setGeneratedLink] = useState("");
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [emailStatus, setEmailStatus] = useState(null);
   
   // Profile Image Zoom Modal State
   const [zoomUser, setZoomUser] = useState(null);
@@ -168,6 +172,8 @@ export default function UsersManagement() {
     e.preventDefault();
     setError("");
     setSuccess("");
+    setGeneratedLink("");
+    setEmailStatus(null);
 
     const finalUniId = activeUniversityId || inviteUniId;
     if (!inviteEmail) {
@@ -192,7 +198,19 @@ export default function UsersManagement() {
       if (res.success) {
         setInviteEmail("");
         setInviteDeptId("");
-        setSuccess("Invitation email has been sent successfully!");
+        
+        const link = res.invitation?.invitationLink || res.invitation?.InvitationLink;
+        if (link) {
+          setGeneratedLink(link);
+        }
+
+        if (res.emailSent === false) {
+          setEmailStatus({ sent: false, error: res.emailError || "SMTP Configuration Issue" });
+          setError("Invitation generated, but the invitation email failed to send. Please copy and share the link below manually.");
+        } else {
+          setEmailStatus({ sent: true, error: null });
+          setSuccess("Invitation email has been sent successfully!");
+        }
         fetchUsers();
       }
     } catch (err) {
@@ -249,28 +267,44 @@ export default function UsersManagement() {
       setVideoStream(stream);
       setShowCamera(true);
 
-      if (!landmarkerRef.current) {
+      if (!landmarkerRef.current || !detectorRef.current) {
         setIsLandmarkerLoaded(false);
         try {
-          const { FaceLandmarker, FilesetResolver } = await import(
+          const { FaceLandmarker, ObjectDetector, FilesetResolver } = await import(
             "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.8"
           );
           const vision = await FilesetResolver.forVisionTasks(
             "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.8/wasm"
           );
-          const landmarker = await FaceLandmarker.createFromOptions(vision, {
-            baseOptions: {
-              modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
-              delegate: "GPU"
-            },
-            runningMode: "VIDEO",
-            outputFaceBlendshapes: true,
-            numFaces: 2 // Detect up to 2 faces for safety warning
-          });
-          landmarkerRef.current = landmarker;
+
+          if (!landmarkerRef.current) {
+            const landmarker = await FaceLandmarker.createFromOptions(vision, {
+              baseOptions: {
+                modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
+                delegate: "GPU"
+              },
+              runningMode: "VIDEO",
+              outputFaceBlendshapes: true,
+              numFaces: 2 // Detect up to 2 faces for safety warning
+            });
+            landmarkerRef.current = landmarker;
+          }
+
+          if (!detectorRef.current) {
+            const detector = await ObjectDetector.createFromOptions(vision, {
+              baseOptions: {
+                modelAssetPath: "https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/int8/1/efficientdet_lite0.tflite",
+                delegate: "GPU"
+              },
+              runningMode: "VIDEO",
+              scoreThreshold: 0.3
+            });
+            detectorRef.current = detector;
+          }
+
           setIsLandmarkerLoaded(true);
         } catch (mErr) {
-          console.error("Failed to load FaceLandmarker, auto-capture disabled:", mErr);
+          console.error("Failed to load MediaPipe tasks, auto-capture disabled:", mErr);
           setIsLandmarkerLoaded(false);
         }
       } else {
@@ -290,12 +324,22 @@ export default function UsersManagement() {
         const results = landmarkerRef.current.detectForVideo(video, performance.now());
         const facesCount = results.faceLandmarks ? results.faceLandmarks.length : 0;
 
-        if (facesCount > 1) {
+        let peopleCount = 0;
+        if (detectorRef.current) {
+          const detectResults = detectorRef.current.detectForVideo(video, performance.now());
+          if (detectResults.detections) {
+            peopleCount = detectResults.detections.filter((d) =>
+              d.categories.some((c) => c.categoryName === "person" && c.score > 0.4)
+            ).length;
+          }
+        }
+
+        if (facesCount > 1 || peopleCount > 1) {
           if (!hasMultipleFacesRef.current) {
             hasMultipleFacesRef.current = true;
             setHasMultipleFaces(true);
           }
-          setLastActionText("Multiple Faces!");
+          setLastActionText(facesCount > 1 ? "Multiple Faces!" : "Multiple People!");
           eyesClosedRef.current = false;
         } else {
           if (hasMultipleFacesRef.current) {
@@ -1052,6 +1096,59 @@ export default function UsersManagement() {
                   )}
                 </button>
               </form>
+
+              {generatedLink && (
+                <div className="mt-8 border-t border-slate-100 pt-6 animate-slide-up">
+                  <div className={`p-4 rounded-xl border flex flex-col gap-3 ${
+                    emailStatus?.sent 
+                      ? "bg-emerald-50/50 border-emerald-100" 
+                      : "bg-amber-50/50 border-amber-100"
+                  }`}>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h4 className={`text-sm font-bold ${
+                          emailStatus?.sent ? "text-emerald-800" : "text-amber-800"
+                        }`}>
+                          {emailStatus?.sent ? "✓ Invitation Generated & Dispatched" : "⚠ Invitation Generated (Email Failed)"}
+                        </h4>
+                        <p className={`text-xs mt-1 ${
+                          emailStatus?.sent ? "text-emerald-600" : "text-amber-600"
+                        }`}>
+                          {emailStatus?.sent 
+                            ? "An email was successfully sent, but you can also copy the direct link below as a backup:" 
+                            : `SMTP Delivery failed (${emailStatus?.error || "Credentials issue"}). Please copy the link below to share it manually via chat, WhatsApp, or another channel:`
+                          }
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 mt-1">
+                      <input
+                        type="text"
+                        readOnly
+                        value={generatedLink}
+                        className="flex-1 bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-800 font-mono select-all outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(generatedLink);
+                          setCopiedLink(true);
+                          setTimeout(() => setCopiedLink(false), 2000);
+                        }}
+                        className={`p-2 rounded-lg border flex items-center justify-center gap-1.5 transition text-xs font-semibold ${
+                          copiedLink 
+                            ? "bg-emerald-600 border-emerald-600 text-white" 
+                            : "bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700"
+                        }`}
+                      >
+                        {copiedLink ? <Check size={14} /> : <Copy size={14} />}
+                        <span>{copiedLink ? "Copied" : "Copy"}</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

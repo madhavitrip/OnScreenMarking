@@ -45,6 +45,7 @@ const Register = () => {
   const canvasRef = useRef(null);
 
   const landmarkerRef = useRef(null);
+  const detectorRef = useRef(null);
   const activeLoopRef = useRef(false);
   const eyesClosedRef = useRef(false);
   const blinkCountRef = useRef(0);
@@ -137,28 +138,44 @@ const Register = () => {
       setVideoStream(stream);
       setShowCamera(true);
 
-      if (!landmarkerRef.current) {
+      if (!landmarkerRef.current || !detectorRef.current) {
         setIsLandmarkerLoaded(false);
         try {
-          const { FaceLandmarker, FilesetResolver } = await import(
+          const { FaceLandmarker, ObjectDetector, FilesetResolver } = await import(
             "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.8"
           );
           const vision = await FilesetResolver.forVisionTasks(
             "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.8/wasm"
           );
-          const landmarker = await FaceLandmarker.createFromOptions(vision, {
-            baseOptions: {
-              modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
-              delegate: "GPU"
-            },
-            runningMode: "VIDEO",
-            outputFaceBlendshapes: true,
-            numFaces: 2 // Detect up to 2 faces for safety warning
-          });
-          landmarkerRef.current = landmarker;
+
+          if (!landmarkerRef.current) {
+            const landmarker = await FaceLandmarker.createFromOptions(vision, {
+              baseOptions: {
+                modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
+                delegate: "GPU"
+              },
+              runningMode: "VIDEO",
+              outputFaceBlendshapes: true,
+              numFaces: 2 // Detect up to 2 faces for safety warning
+            });
+            landmarkerRef.current = landmarker;
+          }
+
+          if (!detectorRef.current) {
+            const detector = await ObjectDetector.createFromOptions(vision, {
+              baseOptions: {
+                modelAssetPath: "https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/int8/1/efficientdet_lite0.tflite",
+                delegate: "GPU"
+              },
+              runningMode: "VIDEO",
+              scoreThreshold: 0.3
+            });
+            detectorRef.current = detector;
+          }
+
           setIsLandmarkerLoaded(true);
         } catch (mErr) {
-          console.error("Failed to load FaceLandmarker, auto-capture disabled:", mErr);
+          console.error("Failed to load MediaPipe tasks, auto-capture disabled:", mErr);
           setIsLandmarkerLoaded(false);
         }
       } else {
@@ -180,12 +197,22 @@ const Register = () => {
         const results = landmarkerRef.current.detectForVideo(video, performance.now());
         const facesCount = results.faceLandmarks ? results.faceLandmarks.length : 0;
 
-        if (facesCount > 1) {
+        let peopleCount = 0;
+        if (detectorRef.current) {
+          const detectResults = detectorRef.current.detectForVideo(video, performance.now());
+          if (detectResults.detections) {
+            peopleCount = detectResults.detections.filter((d) =>
+              d.categories.some((c) => c.categoryName === "person" && c.score > 0.4)
+            ).length;
+          }
+        }
+
+        if (facesCount > 1 || peopleCount > 1) {
           if (!hasMultipleFacesRef.current) {
             hasMultipleFacesRef.current = true;
             setHasMultipleFaces(true);
           }
-          setLastActionText("Multiple Faces!");
+          setLastActionText(facesCount > 1 ? "Multiple Faces!" : "Multiple People!");
           eyesClosedRef.current = false;
         } else {
           if (hasMultipleFacesRef.current) {

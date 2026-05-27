@@ -26,11 +26,11 @@ namespace API.Services
             {
                 var eventLog = new EventLog
                 {
-                    Event = message,
-                    Category = category,
+                    Event = message ?? string.Empty,
+                    Category = category ?? string.Empty,
                     EventTriggeredBy = triggeredBy,
-                    OldValue = oldValue,
-                    NewValue = newValue,
+                    OldValue = oldValue ?? string.Empty,
+                    NewValue = newValue ?? string.Empty,
                     LoggedAt = TimeZoneInfo.ConvertTime(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("India Standard Time"))
                 };
 
