@@ -29,11 +29,12 @@ export default function SessionProjectManagement() {
 
   useEffect(() => {
     // Set breadcrumb for this page
+    const sessionPath = userType === 'admin' ? '/admin/sessions' : '/sessions';
     setBreadcrumb([
-      { label: 'Sessions & Projects', path: '/admin/sessions', icon: 'Calendar' }
+      { label: 'Sessions & Projects', path: sessionPath, icon: 'Calendar' }
     ]);
     fetchSessions();
-  }, []);
+  }, [userType]);
 
   useEffect(() => {
     if (selectedSessionId) {
@@ -365,14 +366,14 @@ export default function SessionProjectManagement() {
                               href={`/admin/subject-config?projectId=${encryptId(project.projectId)}`}
                               className="text-purple-600 hover:text-purple-700 font-semibold mr-4"
                             >
-                              Configure
+                              Configure Paper
                             </a>
-                            <a
+                            {/* <a
                               href={`/admin/papers?projectId=${encryptId(project.projectId)}&universityId=${activeUniversityId}`}
                               className="text-green-600 hover:text-green-700 font-semibold"
                             >
                               Papers
-                            </a>
+                            </a> */}
                           </td>
                         </tr>
                       ))}

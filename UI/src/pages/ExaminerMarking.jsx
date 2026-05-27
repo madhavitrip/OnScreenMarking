@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   ChevronDown,
@@ -52,6 +52,39 @@ const ExaminerMarking = () => {
   const [loading, setLoading] = useState(true);
   const [markingId, setMarkingId] = useState(null);
   const [saveStatus, setSaveStatus] = useState(null); 
+  const [showQpModal, setShowQpModal] = useState(false);
+  const [stream, setStream] = useState(null);
+  const videoRef = useRef(null);
+
+  useEffect(() => {
+    if (loading) return;
+
+    const startWebcam = async () => {
+      try {
+        const mediaStream = await navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 240 } });
+        setStream(mediaStream);
+        if (videoRef.current) {
+          videoRef.current.srcObject = mediaStream;
+        }
+      } catch (err) {
+        console.warn("Camera access denied or failed:", err);
+      }
+    };
+
+    startWebcam();
+
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [loading]);
+
+  useEffect(() => {
+    if (stream && videoRef.current && !videoRef.current.srcObject) {
+      videoRef.current.srcObject = stream;
+    }
+  }, [stream, videoRef.current]); 
   useEffect(() => {
     if (!paperId) {
       setError('No paper selected. Please select a script from the Scripts page.');
@@ -543,19 +576,29 @@ const ExaminerMarking = () => {
         {/* RIGHT: MARKING PANEL */}
         <aside className="col-span-3 flex flex-col gap-4 overflow-hidden">
           {/* CONTROL CENTER */}
-          <div className="grid grid-cols-2 gap-2">
-            <button 
-              onClick={handleSaveMarks}
-              className="flex items-center justify-center gap-2 bg-white border border-blue-200 text-blue-600 hover:bg-blue-50 font-semibold py-2 rounded-lg shadow-sm transition-colors text-xs uppercase"
-            >
-              <Save size={16} /> Save
-            </button>
-            <button 
-              onClick={() => {if(window.confirm("Reset all marks?")) window.location.reload();}}
-              className="flex items-center justify-center gap-2 bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 font-semibold py-2 rounded-lg shadow-sm transition-colors text-xs uppercase"
-            >
-              <RotateCcw size={16} /> Reset
-            </button>
+          <div className="flex flex-col gap-2">
+            <div className="grid grid-cols-2 gap-2">
+              <button 
+                onClick={handleSaveMarks}
+                className="flex items-center justify-center gap-2 bg-white border border-blue-200 text-blue-600 hover:bg-blue-50 font-semibold py-2 rounded-lg shadow-sm transition-colors text-xs uppercase"
+              >
+                <Save size={16} /> Save
+              </button>
+              <button 
+                onClick={() => {if(window.confirm("Reset all marks?")) window.location.reload();}}
+                className="flex items-center justify-center gap-2 bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 font-semibold py-2 rounded-lg shadow-sm transition-colors text-xs uppercase"
+              >
+                <RotateCcw size={16} /> Reset
+              </button>
+            </div>
+            {paperInfo?.questionPaperPdfUrl && (
+              <button 
+                onClick={() => setShowQpModal(true)}
+                className="flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold py-2 px-4 rounded-lg shadow-md hover:from-blue-700 hover:to-indigo-700 transition-all text-xs uppercase cursor-pointer"
+              >
+                <FileText size={16} /> View Question Paper
+              </button>
+            )}
           </div>
 
           {/* QUESTION PALETTE */}
@@ -712,6 +755,49 @@ const ExaminerMarking = () => {
         <div className="fixed bottom-6 right-6 bg-red-600 text-white px-6 py-4 rounded-lg shadow-lg font-semibold flex items-center gap-3 animate-in slide-in-from-bottom duration-300">
           <AlertCircle size={20} />
           <p>{error}</p>
+        </div>
+      )}
+      {/* LIVE CAMERA CAPTURE PIP */}
+      <div className="fixed bottom-6 left-6 z-40 bg-gray-900 border-2 border-red-500 rounded-2xl overflow-hidden shadow-2xl w-44 h-32 flex flex-col group hover:scale-105 transition-all">
+        <video 
+          ref={videoRef} 
+          autoPlay 
+          playsInline 
+          muted 
+          className="w-full h-full object-cover bg-gray-800"
+        />
+        <div className="absolute top-2 left-2 bg-red-600/90 text-white text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
+          <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></div>
+          LIVE CAPTURE
+        </div>
+      </div>
+
+      {/* QUESTION PAPER MODAL */}
+      {showQpModal && paperInfo?.questionPaperPdfUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-300">
+          <div className="bg-white rounded-2xl w-full max-w-4xl h-[85vh] overflow-hidden shadow-2xl flex flex-col">
+            <div className="p-4 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                  <FileText className="text-blue-600" />
+                  Question Paper: {paperInfo.paperName} ({paperInfo.paperCode})
+                </h3>
+              </div>
+              <button 
+                onClick={() => setShowQpModal(false)}
+                className="p-2 hover:bg-gray-200 rounded-full transition-colors cursor-pointer"
+              >
+                <X size={20} className="text-gray-500" />
+              </button>
+            </div>
+            <div className="flex-1 bg-gray-100">
+              <iframe 
+                src={`${import.meta.env.VITE_API_URL.replace('/api', '')}${paperInfo.questionPaperPdfUrl}`}
+                className="w-full h-full border-0"
+                title="Question Paper"
+              />
+            </div>
+          </div>
         </div>
       )}
     </div>
