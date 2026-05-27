@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using API.Data;
 using API.Models;
 using API.Models.DTOs;
+using API.Services;
 
 namespace API.Controllers
 {
@@ -13,10 +14,12 @@ namespace API.Controllers
     public class UsersController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly IEmailService _emailService;
 
-        public UsersController(ApplicationDbContext context)
+        public UsersController(ApplicationDbContext context, IEmailService emailService)
         {
             _context = context;
+            _emailService = emailService;
         }
 
         [HttpGet]
@@ -223,10 +226,27 @@ namespace API.Controllers
                 // Build a simulated invitation link
                 var invitationLink = $"http://localhost:5173/accept-invitation?token={token}";
 
+                bool emailSent = true;
+                string emailError = null;
+
+                // Send the actual invitation email
+                try
+                {
+                    await _emailService.SendInvitationEmailAsync(invitation.Email, invitationLink);
+                }
+                catch (Exception ex)
+                {
+                    emailSent = false;
+                    emailError = ex.Message;
+                    Console.WriteLine($"Failed to send invitation email: {ex.Message}");
+                }
+
                 return Ok(new
                 {
                     success = true,
-                    message = "Invitation generated successfully.",
+                    message = emailSent ? "Invitation generated and email sent successfully." : "Invitation generated, but email failed to send.",
+                    emailSent = emailSent,
+                    emailError = emailError,
                     invitation = new
                     {
                         invitation.Id,
