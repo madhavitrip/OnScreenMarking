@@ -40,7 +40,21 @@ namespace API.Controllers
                     .FirstOrDefaultAsync(m => m.AllocationId == request.AllocationId);
 
                 if (existingMarking != null)
-                    return BadRequest(new { success = false, message = "Marking already exists for this allocation" });
+                {
+                    var existingMarkingDto = new MarkingDto
+                    {
+                        Id = existingMarking.Id,
+                        ScriptId = existingMarking.ScriptId,
+                        ExaminerId = existingMarking.ExaminerId,
+                        AllocationId = existingMarking.AllocationId,
+                        TotalMarks = existingMarking.TotalMarks,
+                        Percentage = existingMarking.Percentage,
+                        Remarks = existingMarking.Remarks,
+                        Status = existingMarking.Status,
+                        StartedAt = existingMarking.StartedAt
+                    };
+                    return Ok(existingMarkingDto);
+                }
 
                 var marking = new Marking
                 {
@@ -49,9 +63,10 @@ namespace API.Controllers
                     AllocationId = request.AllocationId,
                     TotalMarks = request.TotalMarks,
                     Percentage = (request.TotalMarks) * 100,
-                    Remarks = request.Remarks,
+                    Remarks = request.Remarks ?? "",
                     Status = "draft",
-                    StartedAt = DateTime.UtcNow
+                    StartedAt = DateTime.UtcNow,
+                    EvaluatedPdfUrl = "" // Avoid Column 'EvaluatedPdfUrl' cannot be null error
                 };
 
                 _context.Markings.Add(marking);
@@ -370,6 +385,94 @@ namespace API.Controllers
                 if (marking.Status == "submitted")
                     return BadRequest(new { success = false, message = "Cannot update submitted marking" });
 
+                var questionIds = questionMarks.Select(qm => qm.QuestionId).ToList();
+                var questions = await _context.Questions
+                    .Include(q => q.Section)
+                    .Where(q => questionIds.Contains(q.QuestionId))
+                    .ToListAsync();
+
+                // 1. Question-wise validation
+                foreach (var qm in questionMarks)
+                {
+                    if (qm.IsSkipped) continue;
+
+                    var question = questions.FirstOrDefault(q => q.QuestionId == qm.QuestionId);
+                    if (question == null)
+                        return BadRequest(new { success = false, message = $"Question with ID {qm.QuestionId} not found" });
+
+                    if (qm.MarksAwarded < 0 || qm.MarksAwarded > question.Marks)
+                    {
+                        return BadRequest(new { 
+                            success = false, 
+                            message = $"Marks awarded for Question {question.QuestionNo} ({qm.MarksAwarded}) must be between 0 and maximum allowed ({question.Marks})" 
+                        });
+                    }
+                }
+
+                // 2. Section-wise validation
+                var marksBySection = new Dictionary<int, decimal>();
+                foreach (var qm in questionMarks)
+                {
+                    if (qm.IsSkipped) continue;
+
+                    var question = questions.FirstOrDefault(q => q.QuestionId == qm.QuestionId);
+                    if (question != null)
+                    {
+                        if (!marksBySection.ContainsKey(question.SectionId))
+                        {
+                            marksBySection[question.SectionId] = 0;
+                        }
+                        marksBySection[question.SectionId] += qm.MarksAwarded;
+                    }
+                }
+
+                foreach (var entry in marksBySection)
+                {
+                    var firstQuestionInSection = questions.First(q => q.SectionId == entry.Key);
+                    var section = firstQuestionInSection.Section;
+                    if (section != null && entry.Value > section.TotalMarks)
+                    {
+                        return BadRequest(new { 
+                            success = false, 
+                            message = $"Total marks in Section '{section.Name}' ({entry.Value}) cannot exceed the maximum section marks ({section.TotalMarks})" 
+                        });
+                    }
+                }
+
+                // 3. Max attempted questions validation per section
+                var attemptedCountBySection = new Dictionary<int, int>();
+                foreach (var qm in questionMarks)
+                {
+                    if (qm.IsSkipped) continue;
+
+                    var question = questions.FirstOrDefault(q => q.QuestionId == qm.QuestionId);
+                    if (question != null)
+                    {
+                        var isAttempted = qm.IsAttempted || qm.MarksAwarded > 0;
+                        if (isAttempted)
+                        {
+                            if (!attemptedCountBySection.ContainsKey(question.SectionId))
+                            {
+                                attemptedCountBySection[question.SectionId] = 0;
+                            }
+                            attemptedCountBySection[question.SectionId]++;
+                        }
+                    }
+                }
+
+                foreach (var entry in attemptedCountBySection)
+                {
+                    var firstQuestionInSection = questions.First(q => q.SectionId == entry.Key);
+                    var section = firstQuestionInSection.Section;
+                    if (section != null && section.MaxQuestionsToAttempt > 0 && entry.Value > section.MaxQuestionsToAttempt)
+                    {
+                        return BadRequest(new { 
+                            success = false, 
+                            message = $"You have attempted {entry.Value} questions in Section '{section.Name}', which exceeds the maximum allowed attempts of {section.MaxQuestionsToAttempt}." 
+                        });
+                    }
+                }
+
                 // Remove existing question marks
                 _context.QuestionMarks.RemoveRange(marking.QuestionMarks);
 
@@ -377,7 +480,7 @@ namespace API.Controllers
                 decimal totalMarks = 0;
                 foreach (var qm in questionMarks)
                 {
-                    var question = await _context.Questions.FirstOrDefaultAsync(q => q.QuestionId == qm.QuestionId);
+                    var question = questions.FirstOrDefault(q => q.QuestionId == qm.QuestionId);
                     if (question == null)
                         continue;
 

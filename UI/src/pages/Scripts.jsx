@@ -40,7 +40,7 @@ const Scripts = () => {
         score: allocation.script?.score || null,
         examiner: user.name,
         date: new Date(allocation.assignedAt).toLocaleDateString(),
-        allocationId: allocation.id,
+        allocationId: allocation.allocationId,
         marking: allocation.script?.marking,
         cleanPdfUrl: allocation.script?.cleanPdfUrl || null
       }));
@@ -64,8 +64,19 @@ const Scripts = () => {
   });
 
   const handleStartMarking = (script) => {
-    // Navigate to marking page with script details
-    navigate('/marking', { 
+    // Navigate to marking page with script details in both state and query params
+    const queryParams = new URLSearchParams({
+      scriptId: script.scriptId,
+      paperId: script.paperId,
+      allocationId: script.allocationId,
+      examinerId: user?.id || '',
+      studentName: script.name || '',
+      rollNo: script.rollNo || '',
+      subject: script.subject || '',
+      cleanPdfUrl: script.cleanPdfUrl || ''
+    }).toString();
+
+    navigate(`/marking?${queryParams}`, { 
       state: { 
         scriptId: script.scriptId,
         paperId: script.paperId,
