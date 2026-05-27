@@ -44,6 +44,16 @@ const Register = () => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
 
+  const landmarkerRef = useRef(null);
+  const activeLoopRef = useRef(false);
+  const eyesClosedRef = useRef(false);
+  const blinkCountRef = useRef(0);
+  const hasMultipleFacesRef = useRef(false);
+  const [blinkCount, setBlinkCount] = useState(0);
+  const [isLandmarkerLoaded, setIsLandmarkerLoaded] = useState(false);
+  const [lastActionText, setLastActionText] = useState("Align Face");
+  const [hasMultipleFaces, setHasMultipleFaces] = useState(false);
+
   // Load universities on mount
   useEffect(() => {
     const fetchUniversities = async () => {
@@ -81,20 +91,19 @@ const Register = () => {
     fetchDepartments();
   }, [formData.universityId]);
 
-  // Webcam helpers
-  const startCamera = async () => {
-    try {
-      setError("");
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      setVideoStream(stream);
-      setShowCamera(true);
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
-    } catch (err) {
-      setError(
-        "Unable to access camera. Please allow camera permissions or upload an image.",
-      );
+  const stopCamera = () => {
+    activeLoopRef.current = false;
+    blinkCountRef.current = 0;
+    setBlinkCount(0);
+    eyesClosedRef.current = false;
+    setLastActionText("Align Face");
+    hasMultipleFacesRef.current = false;
+    setHasMultipleFaces(false);
+
+    if (videoStream) {
+      videoStream.getTracks().forEach((track) => track.stop());
+      setVideoStream(null);
+      setShowCamera(false);
     }
   };
 
@@ -109,18 +118,149 @@ const Register = () => {
         canvasRef.current.height,
       );
       const imageData = canvasRef.current.toDataURL("image/jpeg");
-      setFormData({ ...formData, profileImage: imageData });
+      setFormData(prev => ({ ...prev, profileImage: imageData }));
       stopCamera();
     }
   };
 
-  const stopCamera = () => {
-    if (videoStream) {
-      videoStream.getTracks().forEach((track) => track.stop());
-      setVideoStream(null);
-      setShowCamera(false);
+  const startCamera = async () => {
+    try {
+      setError("");
+      setBlinkCount(0);
+      blinkCountRef.current = 0;
+      eyesClosedRef.current = false;
+      setLastActionText("Align Face");
+      hasMultipleFacesRef.current = false;
+      setHasMultipleFaces(false);
+
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      setVideoStream(stream);
+      setShowCamera(true);
+
+      if (!landmarkerRef.current) {
+        setIsLandmarkerLoaded(false);
+        try {
+          const { FaceLandmarker, FilesetResolver } = await import(
+            "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.8"
+          );
+          const vision = await FilesetResolver.forVisionTasks(
+            "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.8/wasm"
+          );
+          const landmarker = await FaceLandmarker.createFromOptions(vision, {
+            baseOptions: {
+              modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
+              delegate: "GPU"
+            },
+            runningMode: "VIDEO",
+            outputFaceBlendshapes: true,
+            numFaces: 2 // Detect up to 2 faces for safety warning
+          });
+          landmarkerRef.current = landmarker;
+          setIsLandmarkerLoaded(true);
+        } catch (mErr) {
+          console.error("Failed to load FaceLandmarker, auto-capture disabled:", mErr);
+          setIsLandmarkerLoaded(false);
+        }
+      } else {
+        setIsLandmarkerLoaded(true);
+      }
+    } catch (err) {
+      setError(
+        "Unable to access camera. Please allow camera permissions or upload an image.",
+      );
     }
   };
+
+  const detectLoop = async () => {
+    if (!activeLoopRef.current || !landmarkerRef.current || !videoRef.current) return;
+
+    try {
+      const video = videoRef.current;
+      if (video.readyState >= 2) {
+        const results = landmarkerRef.current.detectForVideo(video, performance.now());
+        const facesCount = results.faceLandmarks ? results.faceLandmarks.length : 0;
+
+        if (facesCount > 1) {
+          if (!hasMultipleFacesRef.current) {
+            hasMultipleFacesRef.current = true;
+            setHasMultipleFaces(true);
+          }
+          setLastActionText("Multiple Faces!");
+          eyesClosedRef.current = false;
+        } else {
+          if (hasMultipleFacesRef.current) {
+            hasMultipleFacesRef.current = false;
+            setHasMultipleFaces(false);
+          }
+
+          if (facesCount === 0) {
+            setLastActionText("No Face Detected");
+            eyesClosedRef.current = false;
+          } else {
+            // Exactly 1 face, track blinks
+            if (results.faceBlendshapes && results.faceBlendshapes.length > 0) {
+              const blendshapes = results.faceBlendshapes[0].categories;
+              const eyeBlinkLeft = blendshapes.find((b) => b.categoryName === "eyeBlinkLeft")?.score || 0;
+              const eyeBlinkRight = blendshapes.find((b) => b.categoryName === "eyeBlinkRight")?.score || 0;
+
+              if (eyeBlinkLeft > 0.4 && eyeBlinkRight > 0.4) {
+                if (!eyesClosedRef.current) {
+                  eyesClosedRef.current = true;
+                  setLastActionText("Blink!");
+                }
+              } else if (eyeBlinkLeft < 0.2 && eyeBlinkRight < 0.2) {
+                if (eyesClosedRef.current) {
+                  eyesClosedRef.current = false;
+                  blinkCountRef.current += 1;
+                  setBlinkCount(blinkCountRef.current);
+                  setLastActionText(`Blink ${blinkCountRef.current} detected!`);
+
+                  if (blinkCountRef.current >= 2) {
+                    setLastActionText("Capturing...");
+                    setTimeout(() => {
+                      if (activeLoopRef.current && !hasMultipleFacesRef.current) {
+                        capturePhoto();
+                      }
+                    }, 400);
+                    return;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Error in face landmark detection loop:", err);
+    }
+
+    if (activeLoopRef.current) {
+      requestAnimationFrame(detectLoop);
+    }
+  };
+
+  // Bind video stream and start detection loop when camera is active and video element is mounted
+  useEffect(() => {
+    if (showCamera && videoStream && videoRef.current) {
+      videoRef.current.srcObject = videoStream;
+      if (isLandmarkerLoaded && landmarkerRef.current) {
+        activeLoopRef.current = true;
+        requestAnimationFrame(detectLoop);
+      }
+    }
+    return () => {
+      activeLoopRef.current = false;
+    };
+  }, [showCamera, videoStream, isLandmarkerLoaded]);
+
+  // Clean up camera stream on unmount
+  useEffect(() => {
+    return () => {
+      if (videoStream) {
+        videoStream.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, [videoStream]);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -485,12 +625,48 @@ const Register = () => {
                     width="640"
                     height="480"
                   />
+                  {/* Smart Auto-Capture Status Overlay */}
+                  <div className="absolute top-3 left-3 right-3 bg-slate-900/85 backdrop-blur-md text-white py-2 px-3 rounded-lg flex items-center justify-between text-xs border border-white/10 shadow-lg select-none z-10">
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${isLandmarkerLoaded ? (hasMultipleFaces ? 'bg-red-500 animate-pulse' : 'bg-green-500 animate-pulse') : 'bg-amber-500 animate-pulse'}`} />
+                      <span className="font-semibold text-gray-100">
+                        {isLandmarkerLoaded 
+                          ? (hasMultipleFaces ? 'Multiple people detected!' : `Blink 2 times to auto-capture (${blinkCount}/2)`) 
+                          : 'Loading smart auto-capture...'}
+                      </span>
+                    </div>
+                    {isLandmarkerLoaded && (
+                      <span className={`font-bold px-2 py-0.5 rounded border ${
+                        hasMultipleFaces 
+                          ? "bg-red-500/20 text-red-300 border-red-500/30"
+                          : lastActionText === "Blink!" 
+                          ? "bg-amber-500/20 text-amber-300 border-amber-500/30 animate-ping" 
+                          : lastActionText.startsWith("Blink") 
+                          ? "bg-green-500/20 text-green-300 border-green-500/30" 
+                          : "bg-blue-500/20 text-blue-300 border-blue-500/30"
+                      }`}>
+                        {hasMultipleFaces ? "Warning" : lastActionText}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Multi-Face Block Overlay */}
+                  {hasMultipleFaces && (
+                    <div className="absolute inset-0 bg-red-950/85 backdrop-blur-md flex flex-col items-center justify-center p-4 text-center select-none animate-fade-in z-20">
+                      <span className="text-3xl mb-2">⚠️</span>
+                      <h4 className="font-extrabold text-red-200 text-sm">Multiple People Detected!</h4>
+                      <p className="text-xs text-red-300 mt-1 max-w-[240px]">
+                        Please ensure only one person is in the camera frame to proceed with verification.
+                      </p>
+                    </div>
+                  )}
                 </div>
                 <div className="flex gap-4">
                   <button
                     type="button"
                     onClick={capturePhoto}
-                    className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-xl font-semibold transition shadow-md flex items-center justify-center gap-2"
+                    disabled={hasMultipleFaces}
+                    className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white py-2.5 rounded-xl font-semibold transition shadow-md flex items-center justify-center gap-2"
                   >
                     Capture verification photo
                   </button>
