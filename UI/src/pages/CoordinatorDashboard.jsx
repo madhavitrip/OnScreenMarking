@@ -11,7 +11,12 @@ import {
   LayoutDashboard,
   Activity,
   AlertCircle,
-  Zap
+  Zap,
+  ArrowUpRight,
+  Layers,
+  Users,
+  CheckCircle,
+  FileSpreadsheet
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import apiCall from '../services/api';
@@ -23,10 +28,14 @@ export default function CoordinatorDashboard() {
     departments: 0,
     subjects: 0,
     projects: 0,
-    activePapers: 0
+    totalScripts: 0,
+    assignedScripts: 0,
+    completedScripts: 0
   });
+  const [activeProjects, setActiveProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [unassignedCount, setUnassignedCount] = useState(0);
 
   useEffect(() => {
     fetchUniversityData();
@@ -37,19 +46,52 @@ export default function CoordinatorDashboard() {
       setLoading(true);
       setError(null);
       
-      // Get coordinator's university
+      // 1. Get coordinator's university
       const uniData = await apiCall('/universities/current/my-university');
       setUniversity(uniData);
       
-      // Fetch stats for this university
-      const deptData = await apiCall(`/departments?universityId=${uniData.universityId}`);
+      // 2. Fetch departments and subjects stats
+      const deptData = await apiCall(`/department?universityId=${uniData.universityId}`);
       
+      // 3. Fetch all scripts in the system to compute live marking statistics
+      let pendingCount = 0;
+      let assignedCount = 0;
+      let completedCount = 0;
+      let totalScriptsCount = 0;
+      
+      try {
+        const scripts = await apiCall('/scripts?limit=5000');
+        // Filter scripts belonging to papers in this university's projects
+        const universityProjectIds = uniData.projects?.map(p => p.projectId) || [];
+        
+        // Fetch all papers for university projects to filter scripts
+        const papersData = await apiCall(`/papers?universityId=${uniData.universityId}`);
+        const universityPaperIds = papersData.map(p => p.paperId);
+        
+        const universityScripts = scripts.filter(s => universityPaperIds.includes(s.paperId));
+        totalScriptsCount = universityScripts.length;
+        pendingCount = universityScripts.filter(s => s.status === 'pending').length;
+        assignedCount = universityScripts.filter(s => s.status === 'allocated' || s.status === 'marking').length;
+        completedCount = universityScripts.filter(s => s.status === 'completed').length;
+        
+        setUnassignedCount(pendingCount);
+      } catch (scriptErr) {
+        console.error('Failed to fetch pending scripts:', scriptErr);
+      }
+
       setStats({
         departments: deptData.length,
-        subjects: deptData.reduce((sum, dept) => sum + (dept.subjects?.length || 0), 0),
+        subjects: deptData.reduce((sum, dept) => sum + (dept.departmentSubjects?.length || 0), 0),
         projects: uniData.projects?.length || 0,
-        activePapers: 0
+        totalScripts: totalScriptsCount,
+        assignedScripts: assignedCount,
+        completedScripts: completedCount
       });
+
+      // Map projects data
+      if (uniData.projects) {
+        setActiveProjects(uniData.projects);
+      }
     } catch (err) {
       console.error('Failed to fetch university data:', err);
       setError(err.message || 'Failed to load university data');
@@ -58,77 +100,27 @@ export default function CoordinatorDashboard() {
     }
   };
 
-  const coordinatorMenuItems = [
-    {
-      id: 'departments',
-      title: 'Departments',
-      description: 'Manage academic departments',
-      icon: <Building2 size={24} />,
-      path: '/departments',
-      color: 'bg-purple-500',
-      lightColor: 'bg-purple-50'
-    },
-    {
-      id: 'subjects',
-      title: 'Subjects',
-      description: 'Define course subjects and criteria',
-      icon: <BookOpen size={24} />,
-      path: '/subjects',
-      color: 'bg-green-500',
-      lightColor: 'bg-green-50'
-    },
-    {
-      id: 'sessions',
-      title: 'Sessions & Projects',
-      description: 'Manage examination sessions and their marking projects',
-      icon: <Calendar size={24} />,
-      path: '/sessions',
-      color: 'bg-yellow-500',
-      lightColor: 'bg-yellow-50'
-    },
-    {
-      id: 'papers',
-      title: 'Papers',
-      description: 'Configure exam papers and sections',
-      icon: <FileText size={24} />,
-      path: '/papers',
-      color: 'bg-indigo-500',
-      lightColor: 'bg-indigo-50'
-    },
-    {
-      id: 'allocate',
-      title: 'Script Allocation',
-      description: 'Allocate scripts to examiners by expertise',
-      icon: <Zap size={24} />,
-      path: '/allocate-scripts',
-      color: 'bg-blue-500',
-      lightColor: 'bg-blue-50'
-    }
-  ];
-
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading university data...</p>
-        </div>
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-3">
+        <div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-600 border-t-transparent"></div>
+        <p className="text-slate-500 font-bold text-xs uppercase tracking-wider animate-pulse">Synchronizing Cockpit...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="bg-white rounded-lg p-8 shadow-lg max-w-md w-full">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+        <div className="bg-white rounded-2xl p-8 shadow-xl max-w-md w-full border border-red-100">
           <div className="flex items-center gap-3 mb-4 text-red-600">
-            <AlertCircle size={24} />
-            <h2 className="text-lg font-bold">Error Loading Dashboard</h2>
+            <AlertCircle size={28} />
+            <h2 className="text-lg font-bold">Cockpit Synch Failure</h2>
           </div>
-          <p className="text-gray-600 mb-4">{error}</p>
+          <p className="text-slate-600 text-sm mb-6">{error}</p>
           <button 
             onClick={fetchUniversityData}
-            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold py-2.5 rounded-xl hover:shadow-lg transition-all"
           >
             Try Again
           </button>
@@ -138,138 +130,249 @@ export default function CoordinatorDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header Section */}
-        <div className="py-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 text-blue-600 font-semibold mb-1">
-              <LayoutDashboard size={20} />
-              <span className="uppercase tracking-wider text-xs">University Portal</span>
-            </div>
-            <h1 className="text-3xl font-bold text-gray-900">
-              {university?.universityName || 'University'} Dashboard
-            </h1>
-            <p className="text-gray-500 mt-1 text-sm">Manage your university's examination and marking operations.</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="bg-white px-4 py-2 rounded-lg shadow-sm border border-gray-100 flex items-center gap-3">
-              <div className="p-2 bg-green-100 text-green-600 rounded-full">
-                <Activity size={16} />
+    <div className="min-h-screen bg-slate-50/50 pb-12 w-full px-6 lg:px-10">
+      {/* Top Breadcrumb & Alert Bar */}
+      <div className="pt-6">
+        {unassignedCount > 0 && (
+          <div className="mb-6 bg-gradient-to-r from-amber-500/10 to-red-500/10 border border-amber-500/20 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm animate-pulse">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 bg-amber-500 text-white rounded-xl flex items-center justify-center shadow-md shrink-0">
+                <AlertCircle size={18} />
               </div>
               <div>
-                <p className="text-[10px] uppercase font-bold text-gray-400 leading-none">System Status</p>
-                <p className="text-sm font-semibold text-gray-900">Operational</p>
+                <h3 className="text-xs font-bold text-amber-900 uppercase tracking-wider">Attention Required</h3>
+                <p className="text-xs text-amber-800 mt-0.5">There are <span className="font-bold text-red-600">{unassignedCount}</span> scripts pending examiner allocation. Please assign them immediately.</p>
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* Quick Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-          <StatCard 
-            title="Departments" 
-            value={stats.departments} 
-            icon={<Building2 className="text-purple-600" />} 
-            trend="Active"
-            bgColor="bg-purple-50"
-          />
-          <StatCard 
-            title="Subjects" 
-            value={stats.subjects} 
-            icon={<BookOpen className="text-green-600" />} 
-            trend="Configured"
-            bgColor="bg-green-50"
-          />
-          <StatCard 
-            title="Live Projects" 
-            value={stats.projects} 
-            icon={<ClipboardList className="text-red-600" />} 
-            trend="In Progress"
-            bgColor="bg-red-50"
-          />
-          <StatCard 
-            title="System Performance" 
-            value="99.9%" 
-            icon={<TrendingUp className="text-orange-600" />} 
-            trend="High stability"
-            bgColor="bg-orange-50"
-          />
-        </div>
-
-        {/* Module Grid */}
-        <h2 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2">
-          Management Modules
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {coordinatorMenuItems.map((item) => (
-            <Link
-              key={item.id}
-              to={item.path}
-              className="group bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md hover:border-blue-200 transition-all duration-300 relative overflow-hidden"
+            <Link 
+              to="/allocate-scripts" 
+              className="bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-[10px] uppercase tracking-wider px-4 py-2 rounded-xl transition-all shadow-md shrink-0"
             >
-              <div className={`absolute top-0 right-0 w-24 h-24 ${item.lightColor} opacity-50 rounded-bl-full -mr-8 -mt-8 group-hover:scale-110 transition-transform`}></div>
-              
-              <div className="relative z-10">
-                <div className={`${item.color} text-white w-12 h-12 rounded-xl flex items-center justify-center mb-4 shadow-lg group-hover:rotate-6 transition-transform`}>
-                  {item.icon}
-                </div>
-                <h3 className="text-lg font-bold text-gray-900 mb-1 group-hover:text-blue-600 transition-colors">{item.title}</h3>
-                <p className="text-gray-500 text-xs leading-relaxed mb-4">{item.description}</p>
-                
-                <div className="flex items-center text-sm font-semibold text-blue-600 group-hover:gap-2 transition-all">
-                  <span>Manage</span>
-                  <ChevronRight size={16} />
-                </div>
-              </div>
+              Allocate Scripts
             </Link>
-          ))}
-        </div>
+          </div>
+        )}
+      </div>
 
-        {/* University Info Section */}
-        <div className="mt-12 bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
-          <h3 className="text-lg font-bold text-gray-900 mb-6">University Information</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div>
-              <p className="text-sm text-gray-500 uppercase font-semibold mb-2">University Name</p>
-              <p className="text-xl font-bold text-gray-900">{university?.universityName}</p>
+      {/* Main Glass Header */}
+      <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <div>
+          <div className="flex items-center gap-2 text-blue-600 font-semibold mb-1">
+            <LayoutDashboard size={14} />
+            <span className="uppercase tracking-widest text-[9px] font-extrabold">Board Cockpit</span>
+          </div>
+          <h1 className="text-xl font-bold text-slate-900 tracking-tight">
+            {university?.universityName} Portal
+          </h1>
+          <p className="text-slate-500 text-xs mt-0.5">University Examinations & Evaluation Control Room</p>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="bg-slate-50 px-4 py-2 rounded-2xl border border-slate-150 flex items-center gap-3">
+            <div className="p-2 bg-emerald-100 text-emerald-600 rounded-xl">
+              <Activity size={14} />
             </div>
             <div>
-              <p className="text-sm text-gray-500 uppercase font-semibold mb-2">Total Departments</p>
-              <p className="text-xl font-bold text-gray-900">{stats.departments}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-500 uppercase font-semibold mb-2">Active Status</p>
-              <p className="text-xl font-bold text-green-600">
-                {university?.isActive ? 'Active' : 'Inactive'}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-500 uppercase font-semibold mb-2">Total Subjects</p>
-              <p className="text-xl font-bold text-gray-900">{stats.subjects}</p>
+              <p className="text-[9px] uppercase font-bold text-slate-400 leading-none mb-0.5">Cockpit Link</p>
+              <p className="text-xs font-bold text-slate-950">Active / Encrypted</p>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Main Dashboard Layout */}
+      <div className="grid grid-cols-12 gap-6 items-start">
+        
+        {/* LEFT COLUMN - MAIN ANALYTICS AND DETAILS (75% Width) */}
+        <div className="col-span-12 lg:col-span-9 space-y-6">
+          
+          {/* Real-time Evaluations Performance Cockpit Card */}
+          <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800">Marking Status & Metric Board</h2>
+                <p className="text-[11px] text-slate-500">Real-time script evaluations status for university projects</p>
+              </div>
+              <span className="bg-blue-50 text-blue-700 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider border border-blue-100">
+                Evaluation Statistics
+              </span>
+            </div>
+
+            {/* Micro Metrics Rows */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-100 flex flex-col justify-between">
+                <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Configured Depts</span>
+                <span className="text-base font-bold text-slate-900 mt-1">{stats.departments}</span>
+              </div>
+              <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-100 flex flex-col justify-between">
+                <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Total Subjects</span>
+                <span className="text-base font-bold text-slate-900 mt-1">{stats.subjects}</span>
+              </div>
+              <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-100 flex flex-col justify-between">
+                <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Total Exam Scripts</span>
+                <span className="text-base font-bold text-slate-900 mt-1">{stats.totalScripts}</span>
+              </div>
+              <div className="bg-gradient-to-br from-blue-600 to-indigo-600 p-3 rounded-xl text-white flex flex-col justify-between shadow-md shadow-blue-100">
+                <span className="text-[9px] uppercase font-bold text-blue-100 tracking-wider">Completed Marking</span>
+                <span className="text-base font-bold mt-1">
+                  {stats.completedScripts} <span className="text-[10px] font-normal text-blue-200">/ {stats.totalScripts}</span>
+                </span>
+              </div>
+            </div>
+
+            {/* Unified Evaluation Progress Slider */}
+            <div className="mt-4 border-t border-slate-100 pt-4">
+              <div className="flex justify-between items-center mb-1.5">
+                <span className="text-[11px] font-bold text-slate-700">Marking Evaluation Progress Ratio</span>
+                <span className="text-[11px] font-bold text-blue-600">
+                  {stats.totalScripts > 0 ? Math.round((stats.completedScripts / stats.totalScripts) * 100) : 0}% Complete
+                </span>
+              </div>
+              <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden border border-slate-200">
+                <div
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 h-full rounded-full transition-all duration-500"
+                  style={{ width: `${stats.totalScripts > 0 ? (stats.completedScripts / stats.totalScripts) * 100 : 0}%` }}
+                ></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Active Examination Projects & Progress */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800">Active Evaluation Projects</h2>
+                <p className="text-[11px] text-slate-500">Live projects associated with this university session</p>
+              </div>
+              <Link to="/sessions" className="text-[11px] font-bold text-blue-600 hover:underline flex items-center gap-1">
+                Manage Projects <ArrowUpRight size={12} />
+              </Link>
+            </div>
+            
+            {activeProjects.length === 0 ? (
+              <div className="py-12 text-center text-slate-400">
+                <ClipboardList size={32} className="mx-auto mb-1.5 opacity-20" />
+                <p className="text-[10px] font-bold uppercase tracking-wider">No projects launched yet</p>
+                <Link to="/sessions" className="text-[10px] text-blue-600 underline font-bold mt-0.5 inline-block">Create first project</Link>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead className="bg-slate-50/50 border-b border-slate-100">
+                    <tr>
+                      <th className="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Project details</th>
+                      <th className="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Status</th>
+                      <th className="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Date Created</th>
+                      <th className="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {activeProjects.map((project) => (
+                      <tr key={project.projectId} className="hover:bg-slate-50/30 transition-colors">
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center font-bold text-xs">
+                              {project.projectName.substring(0, 2).toUpperCase()}
+                            </div>
+                            <div>
+                              <p className="font-bold text-xs text-slate-900 leading-none">{project.projectName}</p>
+                              <p className="text-[9px] text-slate-400 uppercase font-bold mt-1 tracking-wider">ID: PROJECT-{project.projectId}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-5 py-4">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700">
+                            {project.isActive ? "Active" : "Closed"}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4 text-[11px] text-slate-500 font-medium">
+                          {new Date(project.createdAt).toLocaleDateString()}
+                        </td>
+                        <td className="px-5 py-4 text-right">
+                          <div className="flex justify-end gap-1.5">
+                            <Link 
+                              to={`/papers?projectId=${project.projectId}&universityId=${university?.universityId}`}
+                              className="px-2.5 py-1 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg font-bold text-[9px] uppercase tracking-wider transition-all"
+                            >
+                              Configure Papers
+                            </Link>
+                            <Link 
+                              to={`/allocate-scripts?projectId=${project.projectId}`}
+                              className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg font-bold text-[9px] uppercase tracking-wider transition-all"
+                            >
+                              Allocate
+                            </Link>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* RIGHT COLUMN - SLICK SIDE BAR (25% Width) */}
+        <div className="col-span-12 lg:col-span-3 space-y-6">
+          
+          {/* Quick Action Navigation Dock */}
+          <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
+            <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Cockpit Access Menu</h3>
+            <div className="flex flex-col gap-1.5">
+              <SidebarLink to="/departments" label="Academic Departments" desc="Manage departments" icon={<Building2 size={14} />} color="text-purple-600 bg-purple-50" />
+              <SidebarLink to="/subjects" label="Subject Criteria" desc="Define subjects" icon={<BookOpen size={14} />} color="text-green-600 bg-green-50" />
+              <SidebarLink to="/sessions" label="Examinations Sessions" desc="Exam projects" icon={<Calendar size={14} />} color="text-amber-600 bg-amber-50" />
+              <SidebarLink to="/papers" label="Question Papers" desc="Setup sections" icon={<FileText size={14} />} color="text-indigo-600 bg-indigo-50" />
+              <SidebarLink to="/allocate-scripts" label="Script Allocator" desc="Assign examiners" icon={<Zap size={14} />} color="text-blue-600 bg-blue-50 animate-pulse" />
+            </div>
+          </div>
+
+          {/* Compact Metadata Details Card */}
+          <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
+            <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">University Profile</h3>
+            <div className="space-y-3">
+              <div className="border-b border-slate-50 pb-2">
+                <span className="text-[9px] text-slate-400 uppercase font-bold tracking-wider leading-none">University Name</span>
+                <p className="text-xs font-bold text-slate-900 mt-0.5">{university?.universityName}</p>
+              </div>
+              <div className="border-b border-slate-50 pb-2">
+                <span className="text-[9px] text-slate-400 uppercase font-bold tracking-wider leading-none">System Status</span>
+                <p className="text-[10px] font-bold text-emerald-600 flex items-center gap-1 mt-0.5">
+                  <span className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse"></span>
+                  Active / Serving
+                </p>
+              </div>
+              <div>
+                <span className="text-[9px] text-slate-400 uppercase font-bold tracking-wider leading-none">Active Configs</span>
+                <p className="text-[10px] font-semibold text-slate-700 mt-0.5">
+                  {stats.departments} Departments | {stats.subjects} Subjects
+                </p>
+              </div>
+            </div>
+          </div>
+          
         </div>
       </div>
     </div>
   );
 }
 
-function StatCard({ title, value, icon, trend, bgColor }) {
+const SidebarLink = ({ to, label, desc, icon, color }) => {
   return (
-    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:translate-y-[-2px] transition-all">
-      <div className="flex justify-between items-start mb-4">
-        <div className={`p-3 ${bgColor} rounded-xl`}>
+    <Link
+      to={to}
+      className="group flex items-center justify-between p-2.5 rounded-xl border border-slate-100 hover:border-blue-300 hover:bg-blue-50/20 transition-all duration-300"
+    >
+      <div className="flex items-center gap-2.5 min-w-0">
+        <div className={`p-2 rounded-lg ${color} shrink-0 group-hover:scale-105 transition-transform`}>
           {icon}
         </div>
-        <span className="text-blue-500 text-xs font-bold flex items-center">
-          {trend}
-        </span>
+        <div className="min-w-0">
+          <h4 className="text-[11px] font-bold text-slate-900 group-hover:text-blue-600 transition-colors truncate">{label}</h4>
+          <p className="text-[9px] text-slate-400 mt-0.5 truncate">{desc}</p>
+        </div>
       </div>
-      <div>
-        <p className="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-1">{title}</p>
-        <p className="text-3xl font-bold text-gray-900">{value}</p>
-      </div>
-    </div>
+      <ChevronRight size={12} className="text-slate-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all flex-shrink-0" />
+    </Link>
   );
-}
+};
