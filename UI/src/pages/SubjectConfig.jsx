@@ -30,6 +30,8 @@ export default function SubjectConfig() {
   const [searchParams] = useSearchParams();
   const encryptedProjectId = searchParams.get('projectId');
   const projectId = encryptedProjectId ? decryptId(encryptedProjectId) : null;
+  const urlSubjectId = searchParams.get('subjectId') ? parseInt(decryptId(searchParams.get('subjectId')), 10) : null;
+  const urlPaperId = searchParams.get('paperId') ? parseInt(decryptId(searchParams.get('paperId')), 10) : null;
   const { userType } = useAuth();
   const { setBreadcrumb } = useBreadcrumb();
 
@@ -64,18 +66,34 @@ export default function SubjectConfig() {
   useEffect(() => {
     if (projectId) {
       // Set breadcrumb with full path
-      const sessionPath = userType === 'admin' ? '/admin/sessions' : '/sessions';
-      const configPath = userType === 'admin' 
+      const fromParam = searchParams.get('from');
+      const isFromPapers = fromParam === 'papers';
+
+      const parentPath = isFromPapers
+        ? (userType === 'admin' ? '/admin/papers' : '/papers')
+        : (userType === 'admin' ? '/admin/sessions' : '/sessions');
+
+      const parentLabel = isFromPapers ? 'Paper Management' : 'Sessions & Projects';
+      const parentIcon = isFromPapers ? 'FileText' : 'Calendar';
+
+      let configPath = userType === 'admin' 
         ? `/admin/subject-config?projectId=${encryptedProjectId}` 
         : `/subject-config?projectId=${encryptedProjectId}`;
+      
+      const subjectIdParam = searchParams.get('subjectId');
+      const paperIdParam = searchParams.get('paperId');
+      if (subjectIdParam) configPath += `&subjectId=${subjectIdParam}`;
+      if (paperIdParam) configPath += `&paperId=${paperIdParam}`;
+      if (fromParam) configPath += `&from=${fromParam}`;
+
       setBreadcrumb([
-        { label: 'Sessions & Projects', path: sessionPath, icon: 'Calendar' },
+        { label: parentLabel, path: parentPath, icon: parentIcon },
         { label: 'Subject Configuration', path: configPath, icon: 'Layers' }
       ]);
       fetchProjectData();
       fetchSubjects();
     }
-  }, [projectId, encryptedProjectId, userType]);
+  }, [projectId, encryptedProjectId, userType, searchParams]);
 
   useEffect(() => {
     if (selectedPaper) {
@@ -85,7 +103,11 @@ export default function SubjectConfig() {
       fetchPapers();
       setCurrentStep(2);
     } else {
-      setCurrentStep(1);
+      if (urlPaperId && urlSubjectId) {
+        // Wait for async selections to load and don't reset to step 1
+      } else {
+        setCurrentStep(1);
+      }
     }
   }, [selectedSubject, selectedPaper]);
 
@@ -117,6 +139,14 @@ export default function SubjectConfig() {
       );
       
       setSubjects(subjectsWithCounts);
+
+      // Auto-select subject if urlSubjectId is provided
+      if (urlSubjectId && subjectsWithCounts.length > 0) {
+        const matchingSubject = subjectsWithCounts.find(s => s.subjectId == urlSubjectId);
+        if (matchingSubject) {
+          setSelectedSubject(matchingSubject);
+        }
+      }
     } catch (err) {
       setError('Failed to fetch subjects');
       console.error(err);
@@ -130,6 +160,14 @@ export default function SubjectConfig() {
       setLoading(true);
       const data = await subjectService.getSubjectPapers(selectedSubject.subjectId);
       setPapers(data);
+
+      // Auto-select paper if urlPaperId is provided
+      if (urlPaperId && data.length > 0) {
+        const matchingPaper = data.find(p => p.paperId == urlPaperId);
+        if (matchingPaper) {
+          setSelectedPaper(matchingPaper);
+        }
+      }
     } catch (err) {
       setError('Failed to fetch papers');
       console.error(err);
@@ -535,7 +573,7 @@ export default function SubjectConfig() {
                   </button>
                   <div>
                     <h2 className="text-xl font-bold text-gray-900 leading-tight">Section Management</h2>
-                    <p className="text-gray-500 text-xs font-medium">{selectedSubject.subjectName} <ChevronRight className="inline w-3 h-3 mx-1" /> {selectedPaper.paperName}</p>
+                    <p className="text-gray-500 text-xs font-medium">{selectedSubject?.subjectName} <ChevronRight className="inline w-3 h-3 mx-1" /> {selectedPaper?.paperName}</p>
                   </div>
                 </div>
 
@@ -545,7 +583,7 @@ export default function SubjectConfig() {
                       <Award className="w-5 h-5 text-blue-500" />
                       <div>
                         <p className="text-[10px] text-blue-600 uppercase font-bold tracking-tight">Max</p>
-                        <p className="text-sm font-bold text-gray-900">{selectedPaper.maxMarks}</p>
+                        <p className="text-sm font-bold text-gray-900">{selectedPaper?.maxMarks}</p>
                       </div>
                     </div>
                     <div className="bg-emerald-50 p-3 rounded-2xl border border-emerald-100 flex items-center gap-3">
@@ -559,7 +597,7 @@ export default function SubjectConfig() {
                       <Clock className="w-5 h-5 text-red-500" />
                       <div>
                         <p className="text-[10px] text-red-600 uppercase font-bold tracking-tight">Left</p>
-                        <p className="text-sm font-bold text-gray-900">{selectedPaper.maxMarks - calculateTotalSectionMarks()}</p>
+                        <p className="text-sm font-bold text-gray-900">{(selectedPaper?.maxMarks || 0) - calculateTotalSectionMarks()}</p>
                       </div>
                     </div>
                   </div>

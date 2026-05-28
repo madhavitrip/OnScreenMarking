@@ -12,6 +12,7 @@ import {
   Loader,
   Zap
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import apiCall from '../services/api';
 import paperService from '../services/paperService';
 import allocationService from '../services/allocationService';
@@ -23,6 +24,9 @@ export default function ScriptAllocation() {
   const encryptedProjectId = searchParams.get('projectId');
   const projectId = encryptedProjectId ? decryptId(encryptedProjectId) : null;
   const sessionId = searchParams.get('sessionId');
+  const { userType, universityId: userUniversityId } = useAuth();
+  const universityIdFromUrl = searchParams.get('universityId');
+  const activeUniversityId = userType === 'coordinator' ? userUniversityId : universityIdFromUrl;
 
   const [papers, setPapers] = useState([]);
   const [selectedPaper, setSelectedPaper] = useState(null);
@@ -43,7 +47,7 @@ export default function ScriptAllocation() {
 
   useEffect(() => {
     fetchInitialData();
-  }, [projectId, sessionId]);
+  }, [projectId, sessionId, activeUniversityId]);
 
   const fetchInitialData = async () => {
     setLoading(true);
@@ -53,7 +57,7 @@ export default function ScriptAllocation() {
       if (projectId) {
         papersData = await paperService.getPapersByProject(projectId);
       } else {
-        papersData = await paperService.getAllPapers();
+        papersData = await paperService.getAllPapers(activeUniversityId);
       }
       setPapers(papersData || []);
     } catch (err) {

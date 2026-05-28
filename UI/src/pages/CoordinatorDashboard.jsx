@@ -185,6 +185,57 @@ export default function CoordinatorDashboard() {
         {/* LEFT COLUMN - MAIN ANALYTICS AND DETAILS (75% Width) */}
         <div className="col-span-12 lg:col-span-9 space-y-6">
           
+          {/* Step-by-Step OSM Configuration Guide */}
+          <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
+                  OSM Onboarding Checklist
+                </h2>
+                <p className="text-[11px] text-slate-500">A step-by-step setup checklist for University Coordinators to enable paper evaluation</p>
+              </div>
+              <span className="bg-emerald-50 text-emerald-700 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider border border-emerald-100 animate-pulse">
+                Self-Guiding Flow
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3.5 mt-2">
+              <SetupStep
+                step={1}
+                title="Board Departments"
+                desc="Define academic branches first"
+                count={`${stats.departments} Configured`}
+                path="/departments"
+                isCompleted={stats.departments > 0}
+              />
+              <SetupStep
+                step={2}
+                title="Syllabus Subjects"
+                desc="Add subjects to departments"
+                count={`${stats.subjects} Subjects`}
+                path="/subjects"
+                isCompleted={stats.subjects > 0}
+              />
+              <SetupStep
+                step={3}
+                title="Create Projects"
+                desc="Launch active evaluation seasons"
+                count={`${activeProjects.length} Active`}
+                path="/sessions"
+                isCompleted={activeProjects.length > 0}
+              />
+              <SetupStep
+                step={4}
+                title="Papers & Marking"
+                desc="Add papers, structure sections & assign examiners"
+                count={`${stats.totalScripts > 0 ? "Configured" : "Start Setup"}`}
+                path="/papers"
+                isCompleted={stats.totalScripts > 0}
+              />
+            </div>
+          </div>
+
           {/* Real-time Evaluations Performance Cockpit Card */}
           <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
             <div className="flex justify-between items-center mb-4">
@@ -280,20 +331,22 @@ export default function CoordinatorDashboard() {
                           </div>
                         </td>
                         <td className="px-5 py-4">
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700">
-                            {project.isActive ? "Active" : "Closed"}
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
+                            project.isActive ? "bg-emerald-50 text-emerald-700" : "bg-slate-50 text-slate-600"
+                          }`}>
+                            {project.isActive ? "Active" : "Archived"}
                           </span>
                         </td>
-                        <td className="px-5 py-4 text-[11px] text-slate-500 font-medium">
+                        <td className="px-5 py-4 text-[10px] font-bold text-slate-500">
                           {new Date(project.createdAt).toLocaleDateString()}
                         </td>
                         <td className="px-5 py-4 text-right">
-                          <div className="flex justify-end gap-1.5">
+                          <div className="flex items-center justify-end gap-1.5">
                             <Link 
-                              to={`/papers?projectId=${project.projectId}&universityId=${university?.universityId}`}
-                              className="px-2.5 py-1 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg font-bold text-[9px] uppercase tracking-wider transition-all"
+                              to={`/sessions?edit=true&id=${project.projectId}`}
+                              className="px-2.5 py-1 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-lg font-bold text-[9px] uppercase tracking-wider transition-all"
                             >
-                              Configure Papers
+                              Config
                             </Link>
                             <Link 
                               to={`/allocate-scripts?projectId=${project.projectId}`}
@@ -373,6 +426,46 @@ const SidebarLink = ({ to, label, desc, icon, color }) => {
         </div>
       </div>
       <ChevronRight size={12} className="text-slate-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all flex-shrink-0" />
+    </Link>
+  );
+};
+
+const SetupStep = ({ step, title, desc, count, path, isCompleted }) => {
+  return (
+    <Link
+      to={path}
+      className={`group p-3.5 rounded-xl border flex flex-col justify-between hover:-translate-y-0.5 transition-all duration-300 ${
+        isCompleted
+          ? 'bg-emerald-50/20 border-emerald-100/60 hover:border-emerald-300 hover:bg-emerald-50/40'
+          : 'bg-slate-50/50 border-slate-100 hover:border-blue-300 hover:bg-blue-50/10'
+      }`}
+    >
+      <div>
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <span className={`w-5 h-5 rounded-md flex items-center justify-center font-bold text-[10px] ${
+            isCompleted
+              ? 'bg-emerald-100 text-emerald-700'
+              : 'bg-blue-50 text-blue-600'
+          }`}>
+            {step}
+          </span>
+          <span className={`text-[8px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded-full ${
+            isCompleted
+              ? 'bg-emerald-100/60 text-emerald-800'
+              : 'bg-slate-100 text-slate-500'
+          }`}>
+            {isCompleted ? 'Completed' : 'Pending'}
+          </span>
+        </div>
+        <h4 className="text-[11px] font-bold text-slate-900 group-hover:text-blue-600 transition-colors leading-tight">{title}</h4>
+        <p className="text-[9px] text-slate-400 mt-1 leading-tight">{desc}</p>
+      </div>
+      <div className="mt-3 pt-2.5 border-t border-slate-100/60 flex items-center justify-between">
+        <span className={`text-[9px] font-extrabold ${isCompleted ? 'text-emerald-700' : 'text-blue-600'}`}>
+          {count}
+        </span>
+        <ChevronRight size={10} className="text-slate-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all" />
+      </div>
     </Link>
   );
 };

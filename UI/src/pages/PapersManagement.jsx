@@ -12,10 +12,12 @@ import {
   ChevronLeft,
   Filter,
   Users,
-  BookOpen
+  BookOpen,
+  Layers
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { decryptId } from "../utils/encryption";
+import { useBreadcrumb } from "../context/BreadcrumbContext";
+import { decryptId, encryptId } from "../utils/encryption";
 import subjectService from "../services/subjectService";
 import projectService from "../services/projectService";
 import paperService from "../services/paperService";
@@ -27,7 +29,15 @@ export default function PapersManagement() {
   const subjectId = searchParams.get("subjectId");
   const universityId = searchParams.get("universityId");
   const { userType, universityId: userUniversityId } = useAuth();
+  const { setBreadcrumb } = useBreadcrumb();
   const activeUniversityId = userType === "coordinator" ? userUniversityId : universityId;
+
+  useEffect(() => {
+    const papersPath = userType === 'admin' ? '/admin/papers' : '/papers';
+    setBreadcrumb([
+      { label: 'Paper Management', path: papersPath, icon: 'FileText' }
+    ]);
+  }, [userType]);
 
   const [papers, setPapers] = useState([]);
   const [subjects, setSubjects] = useState([]);
@@ -615,11 +625,11 @@ export default function PapersManagement() {
                           <div>
                             <p className="text-xs text-gray-500 font-semibold mb-1">Subjects:</p>
                             <div className="flex flex-wrap gap-1">
-                              {paper.subjectPapers && paper.subjectPapers.length > 0 ? (
-                                paper.subjectPapers.map((sp) => (
-                                  <span key={sp.id} className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-1 rounded-lg">
+                              {paper.subjectIds && paper.subjectIds.length > 0 ? (
+                                paper.subjectNames.map((sp, idx) => (
+                                  <span key={idx} className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-1 rounded-lg">
                                     <BookOpen size={12} />
-                                    {sp.subject?.subjectName}
+                                    {sp}
                                   </span>
                                 ))
                               ) : (
@@ -654,6 +664,15 @@ export default function PapersManagement() {
                       </td>
                       <td className="px-6 py-5 text-right">
                         <div className="flex items-center justify-end gap-2">
+                          <Link
+                            to={userType === 'admin' 
+                              ? `/admin/subject-config?projectId=${encryptId(paper.projectId)}&subjectId=${encryptId(paper.subjectIds?.[0] || 0)}&paperId=${encryptId(paper.paperId)}&from=papers`
+                              : `/subject-config?projectId=${encryptId(paper.projectId)}&subjectId=${encryptId(paper.subjectIds?.[0] || 0)}&paperId=${encryptId(paper.paperId)}&from=papers`}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 font-bold text-xs transition-colors"
+                          >
+                            <Layers size={14} />
+                            Configure Sections
+                          </Link>
                           <button
                             onClick={() => openAllocationModal(paper)}
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 font-bold text-xs transition-colors"

@@ -13,7 +13,7 @@ const routeLabels = {
   '/admin/subjects': { label: 'Subjects', icon: 'BookOpen' },
   '/admin/sessions': { label: 'Sessions & Projects', icon: 'Calendar' },
   '/admin/projects': { label: 'Sessions & Projects', icon: 'Calendar' },
-  '/admin/papers': { label: 'Papers', icon: 'FileText' },
+  '/admin/papers': { label: 'Paper Management', icon: 'FileText' },
   '/admin/subject-config': { label: 'Subject Configuration', icon: 'Layers' },
   '/admin/users': { label: 'Users', icon: 'Users' },
   '/admin/role-management': { label: 'Role Management', icon: 'Users' },
@@ -26,7 +26,7 @@ const routeLabels = {
   '/subjects': { label: 'Subjects', icon: 'BookOpen' },
   '/sessions': { label: 'Sessions & Projects', icon: 'Calendar' },
   '/projects': { label: 'Sessions & Projects', icon: 'Calendar' },
-  '/papers': { label: 'Papers', icon: 'FileText' },
+  '/papers': { label: 'Paper Management', icon: 'FileText' },
   '/allocate-scripts': { label: 'Script Allocation', icon: 'Layers' },
   '/subject-config': { label: 'Subject Configuration', icon: 'Layers' },
 
