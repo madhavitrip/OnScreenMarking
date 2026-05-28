@@ -19,6 +19,84 @@ import sectionService from "../services/sectionService";
 import markingService from "../services/markingService";
 import { useAuth } from "../context/AuthContext";
 
+// Helper to extract landmarks from an image URL or base64
+const extractImageLandmarks = async (imageSrc, landmarker) => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        resolve(null);
+        return;
+      }
+      ctx.drawImage(img, 0, 0);
+      try {
+        const results = landmarker.detect(canvas);
+        if (results.faceLandmarks && results.faceLandmarks.length > 0) {
+          resolve(results.faceLandmarks[0]);
+        } else {
+          resolve(null);
+        }
+      } catch (e) {
+        console.error("Landmarker static detect error:", e);
+        resolve(null);
+      }
+    };
+    img.onerror = () => resolve(null);
+    img.src = imageSrc;
+  });
+};
+
+// Helper to compare two sets of facial landmarks by calculating average Euclidean distance
+const compareFaces = (face1, face2) => {
+  if (!face1 || !face2 || face1.length === 0 || face2.length === 0) return 1.0;
+  
+  // Normalize face1 (registered)
+  let minX1 = 1, maxX1 = 0, minY1 = 1, maxY1 = 0;
+  for (const lm of face1) {
+    if (lm.x < minX1) minX1 = lm.x;
+    if (lm.x > maxX1) maxX1 = lm.x;
+    if (lm.y < minY1) minY1 = lm.y;
+    if (lm.y > maxY1) maxY1 = lm.y;
+  }
+  const w1 = maxX1 - minX1 || 1;
+  const h1 = maxY1 - minY1 || 1;
+  const cx1 = (minX1 + maxX1) / 2;
+  const cy1 = (minY1 + maxY1) / 2;
+
+  // Normalize face2 (live frame)
+  let minX2 = 1, maxX2 = 0, minY2 = 1, maxY2 = 0;
+  for (const lm of face2) {
+    if (lm.x < minX2) minX2 = lm.x;
+    if (lm.x > maxX2) maxX2 = lm.x;
+    if (lm.y < minY2) minY2 = lm.y;
+    if (lm.y > maxY2) maxY2 = lm.y;
+  }
+  const w2 = maxX2 - minX2 || 1;
+  const h2 = maxY2 - minY2 || 1;
+  const cx2 = (minX2 + maxX2) / 2;
+  const cy2 = (minY2 + maxY2) / 2;
+
+  // Compute mean distance between normalized coordinates
+  let sumDist = 0;
+  const len = Math.min(face1.length, face2.length);
+  for (let i = 0; i < len; i++) {
+    const nX1 = (face1[i].x - cx1) / w1;
+    const nY1 = (face1[i].y - cy1) / h1;
+    const nX2 = (face2[i].x - cx2) / w2;
+    const nY2 = (face2[i].y - cy2) / h2;
+
+    const dx = nX1 - nX2;
+    const dy = nY1 - nY2;
+    sumDist += Math.sqrt(dx * dx + dy * dy);
+  }
+  return sumDist / len;
+};
+
 const ExaminerMarking = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -43,6 +121,10 @@ const ExaminerMarking = () => {
   const [questionMarks, setQuestionMarks] = useState({});
   const [totalObtained, setTotalObtained] = useState(0);
   const [remarks, setRemarks] = useState("");
+  const [proctorWarning, setProctorWarning] = useState("");
+  const landmarkerRef = useRef(null);
+  const [isLandmarkerLoaded, setIsLandmarkerLoaded] = useState(false);
+  const registeredLandmarksRef = useRef(null);
   const [sectionAttemptCounts, setSectionAttemptCounts] = useState({}); // Track attempted questions per section
   const [submitted, setSubmitted] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -85,6 +167,111 @@ const ExaminerMarking = () => {
       videoRef.current.srcObject = stream;
     }
   }, [stream, videoRef.current]); 
+
+  // Dynamic continuous proctoring facial matching
+  useEffect(() => {
+    if (loading || !stream) return;
+
+    let intervalId = null;
+    let localLandmarker = null;
+
+    const setupProctoring = async () => {
+      try {
+        const { FaceLandmarker, FilesetResolver } = await import(
+          "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.8"
+        );
+        const vision = await FilesetResolver.forVisionTasks(
+          "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.8/wasm"
+        );
+
+        localLandmarker = await FaceLandmarker.createFromOptions(vision, {
+          baseOptions: {
+            modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
+            delegate: "GPU"
+          },
+          runningMode: "IMAGE",
+          numFaces: 2
+        });
+
+        landmarkerRef.current = localLandmarker;
+        setIsLandmarkerLoaded(true);
+
+        const profileImageBase64 = localStorage.getItem("profileImage");
+        if (profileImageBase64) {
+          const landmarks = await extractImageLandmarks(profileImageBase64, localLandmarker);
+          if (landmarks) {
+            registeredLandmarksRef.current = landmarks;
+            console.log("OSM Proctoring: Registered profile landmarks cached successfully!");
+          }
+        }
+
+        const runVerificationCheck = () => {
+          if (!videoRef.current || !landmarkerRef.current) return;
+          const video = videoRef.current;
+          if (video.readyState < 2) return;
+
+          try {
+            const tempCanvas = document.createElement("canvas");
+            tempCanvas.width = 160;
+            tempCanvas.height = 120;
+            const ctx = tempCanvas.getContext("2d");
+            if (!ctx) return;
+
+            // Draw current mirrored video frame to canvas
+            ctx.translate(tempCanvas.width, 0);
+            ctx.scale(-1, 1);
+            ctx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+            const results = landmarkerRef.current.detect(tempCanvas);
+            const facesCount = results.faceLandmarks ? results.faceLandmarks.length : 0;
+
+            if (facesCount === 0) {
+              setProctorWarning("No Face");
+            } else if (facesCount > 1) {
+              setProctorWarning("Multiple Faces");
+            } else {
+              const currentLandmarks = results.faceLandmarks[0];
+              if (registeredLandmarksRef.current) {
+                const distance = compareFaces(registeredLandmarksRef.current, currentLandmarks);
+                console.log(`OSM Proctoring: Verification match score: ${distance.toFixed(4)}`);
+                
+                if (distance > 0.065) {
+                  setProctorWarning("Mismatch");
+                } else {
+                  setProctorWarning("");
+                }
+              } else {
+                // If profile photo is missing, default to just validating face presence
+                setProctorWarning("");
+              }
+            }
+          } catch (err) {
+            console.error("OSM Proctoring Check Error:", err);
+          }
+        };
+
+        // Trigger initial fast check after 4 seconds
+        setTimeout(runVerificationCheck, 4000);
+
+        // Run matching every 60 seconds (1 minute)
+        intervalId = setInterval(runVerificationCheck, 60000);
+      } catch (err) {
+        console.error("OSM Proctoring Setup failed:", err);
+      }
+    };
+
+    setupProctoring();
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+      if (localLandmarker) {
+        try {
+          localLandmarker.close();
+        } catch (e) {}
+      }
+    };
+  }, [loading, stream]); 
   useEffect(() => {
     if (!paperId) {
       setError('No paper selected. Please select a script from the Scripts page.');
@@ -559,6 +746,25 @@ const ExaminerMarking = () => {
         </div>
       </header>
 
+      {/* PROCTOR WARNING BANNER */}
+      {proctorWarning && (
+        <div className="bg-red-600 text-white text-xs font-bold py-2.5 px-6 flex items-center justify-between border-b border-red-700 animate-pulse select-none z-50 shrink-0">
+          <div className="flex items-center gap-2">
+            <AlertCircle size={16} />
+            <span>
+              <strong>PROCTOR ALERT:</strong> {
+                proctorWarning === "No Face"
+                  ? "No face detected in the live camera feed. Please ensure your face is fully visible and looking at the screen."
+                  : proctorWarning === "Multiple Faces"
+                  ? "Multiple people detected in frame. Proctoring rules permit only the assigned examiner to mark papers."
+                  : "Identity verification mismatch. The person in front of the camera does not match the registered profile picture."
+              }
+            </span>
+          </div>
+          <span className="text-[10px] bg-red-700/80 px-2 py-0.5 rounded border border-red-500/20 uppercase font-extrabold tracking-wider">Action Required</span>
+        </div>
+      )}
+
       {/* MAIN LAYOUT */}
       <main className="flex-1 p-4 grid grid-cols-12 gap-4 overflow-hidden">
         {/* LEFT: ANNOTATOR AREA */}
@@ -758,18 +964,40 @@ const ExaminerMarking = () => {
         </div>
       )}
       {/* LIVE CAMERA CAPTURE PIP */}
-      <div className="fixed bottom-6 left-6 z-40 bg-gray-900 border-2 border-red-500 rounded-2xl overflow-hidden shadow-2xl w-44 h-32 flex flex-col group hover:scale-105 transition-all">
+      <div className={`fixed bottom-6 left-6 z-40 bg-gray-900 border-2 ${proctorWarning ? 'border-red-600 animate-pulse scale-105 shadow-red-500/40' : 'border-blue-500 shadow-blue-500/10'} rounded-2xl overflow-hidden shadow-2xl w-44 h-32 flex flex-col group hover:scale-105 transition-all`}>
         <video 
           ref={videoRef} 
           autoPlay 
           playsInline 
           muted 
           className="w-full h-full object-cover bg-gray-800"
+          style={{ transform: 'scaleX(-1)' }}
         />
-        <div className="absolute top-2 left-2 bg-red-600/90 text-white text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
+        <div className={`absolute top-2 left-2 ${proctorWarning ? 'bg-red-600/90' : 'bg-blue-600/90'} text-white text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm`}>
           <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></div>
-          LIVE CAPTURE
+          {proctorWarning ? "PROCTOR ALERT" : "PROCTOR ACTIVE"}
         </div>
+        
+        {/* Semi-transparent Backdrop Warning on PIP Window */}
+        {proctorWarning && (
+          <div className="absolute inset-0 bg-red-950/90 backdrop-blur-[2px] flex flex-col items-center justify-center p-2 text-center select-none animate-fade-in z-20">
+            <span className="text-lg">⚠️</span>
+            <h4 className="font-extrabold text-red-200 text-[10px] leading-tight mt-1 uppercase tracking-wider">
+              {proctorWarning === "No Face" 
+                ? "No Face" 
+                : proctorWarning === "Multiple Faces"
+                ? "Multiple People!"
+                : "Mismatch!"}
+            </h4>
+            <p className="text-[8px] text-red-300 mt-0.5 leading-tight">
+              {proctorWarning === "No Face"
+                ? "Please look at camera feed."
+                : proctorWarning === "Multiple Faces"
+                ? "Only one person permitted."
+                : "Identity does not match."}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* QUESTION PAPER MODAL */}

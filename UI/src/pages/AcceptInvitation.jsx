@@ -3,6 +3,66 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Camera, X, CheckCircle, Mail, Lock, User, Phone, MapPin, Building, BookOpen, AlertCircle, Loader } from 'lucide-react';
 import authService from '../services/authService';
 
+// Helper to calculate average brightness of canvas image data (0-255)
+const calculateBrightness = (canvas) => {
+  if (!canvas) return 120;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return 120;
+  try {
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imgData.data;
+    let colorSum = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      const avg = 0.299 * r + 0.587 * g + 0.114 * b;
+      colorSum += avg;
+    }
+    return colorSum / (canvas.width * canvas.height);
+  } catch (e) {
+    return 120;
+  }
+};
+
+// Helper to calculate sharpness (0-15+) using horizontal/vertical difference
+const calculateSharpness = (canvas) => {
+  if (!canvas) return 10;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return 10;
+  try {
+    const width = canvas.width;
+    const height = canvas.height;
+    const imgData = ctx.getImageData(0, 0, width, height);
+    const data = imgData.data;
+
+    let totalGradient = 0;
+    let count = 0;
+
+    for (let y = 1; y < height - 1; y += 2) {
+      for (let x = 1; x < width - 1; x += 2) {
+        const i = (y * width + x) * 4;
+        const currentGray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+        
+        const iRight = (y * width + (x + 1)) * 4;
+        const rightGray = 0.299 * data[iRight] + 0.587 * data[iRight + 1] + 0.114 * data[iRight + 2];
+        
+        const iBottom = (((y + 1) * width) + x) * 4;
+        const bottomGray = 0.299 * data[iBottom] + 0.587 * data[iBottom + 1] + 0.114 * data[iBottom + 2];
+
+        const dx = rightGray - currentGray;
+        const dy = bottomGray - currentGray;
+
+        totalGradient += Math.sqrt(dx * dx + dy * dy);
+        count++;
+      }
+    }
+    return count > 0 ? (totalGradient / count) : 10;
+  } catch (e) {
+    return 10;
+  }
+};
+
 const AcceptInvitation = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -39,6 +99,20 @@ const AcceptInvitation = () => {
   const [lastActionText, setLastActionText] = useState("Align Face");
   const [hasMultipleFaces, setHasMultipleFaces] = useState(false);
 
+  const [faceValidation, setFaceValidation] = useState({
+    hasFace: false,
+    isCentered: false,
+    isProperDistance: false,
+    isFacingForward: false,
+    isGoodLighting: false,
+    isSharp: false,
+  });
+
+  const offscreenCanvasRef = useRef(null);
+  const frameCountRef = useRef(0);
+  const lastPixelValidationRef = useRef({ isGoodLighting: false, isSharp: false });
+  const stableFramesRef = useRef(0);
+
   // Fetch invitation details on mount
   useEffect(() => {
     const fetchDetails = async () => {
@@ -70,6 +144,15 @@ const AcceptInvitation = () => {
     setLastActionText("Align Face");
     hasMultipleFacesRef.current = false;
     setHasMultipleFaces(false);
+    stableFramesRef.current = 0;
+    setFaceValidation({
+      hasFace: false,
+      isCentered: false,
+      isProperDistance: false,
+      isFacingForward: false,
+      isGoodLighting: false,
+      isSharp: false,
+    });
 
     if (videoStream) {
       videoStream.getTracks().forEach((track) => track.stop());
@@ -78,10 +161,38 @@ const AcceptInvitation = () => {
     }
   };
 
-  const capturePhoto = () => {
+  const capturePhoto = (force = false) => {
+    if (!force) {
+      // If landmark/quality validation has loaded and has errors, do not allow manual capture
+      const allChecksPassed = faceValidation.isCentered && 
+                              faceValidation.isProperDistance && 
+                              faceValidation.isFacingForward && 
+                              faceValidation.isGoodLighting && 
+                              faceValidation.isSharp;
+                              
+      if (isLandmarkerLoaded && !allChecksPassed && !hasMultipleFacesRef.current) {
+        let errorMsg = "Cannot capture photo: ";
+        if (!faceValidation.hasFace) errorMsg += "No face detected.";
+        else if (!faceValidation.isCentered) errorMsg += "Face is not centered.";
+        else if (!faceValidation.isProperDistance) errorMsg += "Distance is not proper.";
+        else if (!faceValidation.isFacingForward) errorMsg += "Please look straight and hold level.";
+        else if (!faceValidation.isGoodLighting) errorMsg += "Poor lighting conditions.";
+        else if (!faceValidation.isSharp) errorMsg += "Image is blurry. Hold still.";
+        
+        setError(errorMsg);
+        return;
+      }
+    }
+
     if (videoRef.current && canvasRef.current) {
       const context = canvasRef.current.getContext('2d');
+      // Mirror the image drawn on the canvas so it matches the mirrored preview
+      context.translate(canvasRef.current.width, 0);
+      context.scale(-1, 1);
       context.drawImage(videoRef.current, 0, 0, canvasRef.current.width, canvasRef.current.height);
+      // Reset transformation matrix
+      context.setTransform(1, 0, 0, 1, 0, 0);
+
       const imageData = canvasRef.current.toDataURL('image/jpeg');
       setFormData(prev => ({ ...prev, profileImage: imageData }));
       stopCamera();
@@ -97,6 +208,23 @@ const AcceptInvitation = () => {
       setLastActionText("Align Face");
       hasMultipleFacesRef.current = false;
       setHasMultipleFaces(false);
+      stableFramesRef.current = 0;
+      setFaceValidation({
+        hasFace: false,
+        isCentered: false,
+        isProperDistance: false,
+        isFacingForward: false,
+        isGoodLighting: false,
+        isSharp: false,
+      });
+
+      // Initialize offscreen canvas for fast pixel data checks
+      if (!offscreenCanvasRef.current) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 160;
+        canvas.height = 120;
+        offscreenCanvasRef.current = canvas;
+      }
 
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       setVideoStream(stream);
@@ -176,45 +304,126 @@ const AcceptInvitation = () => {
           }
           setLastActionText(facesCount > 1 ? "Multiple Faces!" : "Multiple People!");
           eyesClosedRef.current = false;
+          setFaceValidation({
+            hasFace: true,
+            isCentered: false,
+            isProperDistance: false,
+            isFacingForward: false,
+            isGoodLighting: false,
+            isSharp: false,
+          });
+        } else if (facesCount === 0) {
+          if (hasMultipleFacesRef.current) {
+            hasMultipleFacesRef.current = false;
+            setHasMultipleFaces(false);
+          }
+          setLastActionText("No Face Detected");
+          eyesClosedRef.current = false;
+          setFaceValidation({
+            hasFace: false,
+            isCentered: false,
+            isProperDistance: false,
+            isFacingForward: false,
+            isGoodLighting: false,
+            isSharp: false,
+          });
         } else {
           if (hasMultipleFacesRef.current) {
             hasMultipleFacesRef.current = false;
             setHasMultipleFaces(false);
           }
 
-          if (facesCount === 0) {
-            setLastActionText("No Face Detected");
-            eyesClosedRef.current = false;
+          const landmarks = results.faceLandmarks[0];
+
+          // 1. Calculate Face Bounding Box
+          let minX = 1, maxX = 0, minY = 1, maxY = 0;
+          for (const lm of landmarks) {
+            if (lm.x < minX) minX = lm.x;
+            if (lm.x > maxX) maxX = lm.x;
+            if (lm.y < minY) minY = lm.y;
+            if (lm.y > maxY) maxY = lm.y;
+          }
+
+          // 2. Centering Check (face center within middle boundaries)
+          const centerX = (minX + maxX) / 2;
+          const centerY = (minY + maxY) / 2;
+          const isCentered = Math.abs(centerX - 0.5) < 0.15 && Math.abs(centerY - 0.5) < 0.20;
+
+          // 3. Distance Check (width of face is 22% to 60% of frame)
+          const faceWidth = maxX - minX;
+          const isProperDistance = faceWidth >= 0.22 && faceWidth <= 0.60;
+
+          // 4. Facing Forward (yaw, pitch, roll) Checks
+          const nose = landmarks[4];
+          const yawRatio = (nose.x - minX) / (maxX - minX);
+          const pitchRatio = (nose.y - minY) / (maxY - minY);
+          const isYawFacing = yawRatio >= 0.38 && yawRatio <= 0.62;
+          const isPitchFacing = pitchRatio >= 0.40 && pitchRatio <= 0.65;
+
+          const eyeLeft = landmarks[33];
+          const eyeRight = landmarks[263];
+          const rollAngle = Math.atan2(eyeRight.y - eyeLeft.y, eyeRight.x - eyeLeft.x) * (180 / Math.PI);
+          const isRollFacing = Math.abs(rollAngle) <= 15;
+
+          const isFacingForward = isYawFacing && isPitchFacing && isRollFacing;
+
+          // 5. Throttled lighting and sharpness checks to protect performance
+          frameCountRef.current += 1;
+          let isGoodLighting = lastPixelValidationRef.current.isGoodLighting;
+          let isSharp = lastPixelValidationRef.current.isSharp;
+
+          if (frameCountRef.current % 10 === 0 && offscreenCanvasRef.current) {
+            const canvas = offscreenCanvasRef.current;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+              
+              const brightness = calculateBrightness(canvas);
+              const sharpness = calculateSharpness(canvas);
+
+              isGoodLighting = brightness >= 60 && brightness <= 220;
+              isSharp = sharpness >= 4.5;
+
+              lastPixelValidationRef.current = { isGoodLighting, isSharp };
+            }
+          }
+
+          setFaceValidation({
+            hasFace: true,
+            isCentered,
+            isProperDistance,
+            isFacingForward,
+            isGoodLighting,
+            isSharp,
+          });
+
+          const allChecksPassed = isCentered && isProperDistance && isFacingForward && isGoodLighting && isSharp;
+
+          if (allChecksPassed) {
+            stableFramesRef.current += 1;
+            const remainingSeconds = Math.max(0, (45 - stableFramesRef.current) / 60);
+            if (stableFramesRef.current < 45) {
+              setLastActionText(`Hold still... ${remainingSeconds.toFixed(1)}s`);
+            } else {
+              setLastActionText("Capturing...");
+              activeLoopRef.current = false;
+              capturePhoto(true);
+              return;
+            }
           } else {
-            // Exactly 1 face, track blinks
-            if (results.faceBlendshapes && results.faceBlendshapes.length > 0) {
-              const blendshapes = results.faceBlendshapes[0].categories;
-              const eyeBlinkLeft = blendshapes.find((b) => b.categoryName === "eyeBlinkLeft")?.score || 0;
-              const eyeBlinkRight = blendshapes.find((b) => b.categoryName === "eyeBlinkRight")?.score || 0;
-
-              if (eyeBlinkLeft > 0.4 && eyeBlinkRight > 0.4) {
-                if (!eyesClosedRef.current) {
-                  eyesClosedRef.current = true;
-                  setLastActionText("Blink!");
-                }
-              } else if (eyeBlinkLeft < 0.2 && eyeBlinkRight < 0.2) {
-                if (eyesClosedRef.current) {
-                  eyesClosedRef.current = false;
-                  blinkCountRef.current += 1;
-                  setBlinkCount(blinkCountRef.current);
-                  setLastActionText(`Blink ${blinkCountRef.current} detected!`);
-
-                  if (blinkCountRef.current >= 2) {
-                    setLastActionText("Capturing...");
-                    setTimeout(() => {
-                      if (activeLoopRef.current && !hasMultipleFacesRef.current) {
-                        capturePhoto();
-                      }
-                    }, 400);
-                    return;
-                  }
-                }
-              }
+            stableFramesRef.current = 0;
+            if (!isCentered) {
+              setLastActionText("Center Face");
+            } else if (!isProperDistance) {
+              setLastActionText(faceWidth < 0.22 ? "Move Closer" : "Move Back");
+            } else if (!isFacingForward) {
+              setLastActionText(Math.abs(rollAngle) > 15 ? "Keep Head Straight" : "Look Straight");
+            } else if (!isGoodLighting) {
+              setLastActionText("Check Lighting");
+            } else if (!isSharp) {
+              setLastActionText("Hold Still");
+            } else {
+              setLastActionText("Align Face");
             }
           }
         }
@@ -496,64 +705,156 @@ const AcceptInvitation = () => {
 
             {showCamera ? (
               <div className="space-y-4">
-                <div className="relative rounded-xl overflow-hidden bg-black shadow-inner border border-gray-300" style={{ maxHeight: '300px' }}>
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    playsInline
-                    className="w-full h-full object-cover"
-                    style={{ minHeight: '240px' }}
-                  />
-                  <canvas ref={canvasRef} style={{ display: 'none' }} width="640" height="480" />
-                  {/* Smart Auto-Capture Status Overlay */}
-                  <div className="absolute top-3 left-3 right-3 bg-slate-900/85 backdrop-blur-md text-white py-2 px-3 rounded-lg flex items-center justify-between text-xs border border-white/10 shadow-lg select-none z-10">
-                    <div className="flex items-center gap-2">
-                      <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${isLandmarkerLoaded ? (hasMultipleFaces ? 'bg-red-500 animate-pulse' : 'bg-green-500 animate-pulse') : 'bg-amber-500 animate-pulse'}`} />
-                      <span className="font-semibold text-gray-100">
-                        {isLandmarkerLoaded 
-                          ? (hasMultipleFaces ? 'Multiple people detected!' : `Blink 2 times to auto-capture (${blinkCount}/2)`) 
-                          : 'Loading smart auto-capture...'}
-                      </span>
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                  {/* Camera view screen */}
+                  <div className="md:col-span-3 relative rounded-xl overflow-hidden bg-black shadow-inner border border-gray-300 flex items-center justify-center" style={{ minHeight: '260px' }}>
+                    <video
+                      ref={videoRef}
+                      autoPlay
+                      playsInline
+                      className="w-full h-full object-cover"
+                      style={{ minHeight: '260px', transform: 'scaleX(-1)' }}
+                    />
+                    <canvas ref={canvasRef} style={{ display: 'none' }} width="640" height="480" />
+                    
+                    {/* Smart Auto-Capture Status Overlay */}
+                    <div className="absolute top-3 left-3 right-3 bg-slate-900/90 backdrop-blur-md text-white py-2 px-3 rounded-lg flex items-center justify-between text-xs border border-white/10 shadow-lg select-none z-10">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                          isLandmarkerLoaded 
+                            ? (hasMultipleFaces 
+                                ? 'bg-red-500 animate-pulse' 
+                                : (faceValidation.isCentered && faceValidation.isProperDistance && faceValidation.isFacingForward && faceValidation.isGoodLighting && faceValidation.isSharp 
+                                   ? 'bg-green-500 animate-pulse' 
+                                   : 'bg-yellow-500 animate-pulse')) 
+                            : 'bg-amber-500 animate-pulse'
+                        }`} />
+                        <span className="font-semibold text-gray-100">
+                          {isLandmarkerLoaded 
+                            ? (hasMultipleFaces ? 'Multiple people detected!' : `Blink twice to auto-capture (${blinkCount}/2)`) 
+                            : 'Loading smart auto-capture...'}
+                        </span>
+                      </div>
+                      {isLandmarkerLoaded && (
+                        <span className={`font-bold px-2 py-0.5 rounded border text-[10px] ${
+                          hasMultipleFaces 
+                            ? "bg-red-500/20 text-red-300 border-red-500/30"
+                            : lastActionText === "Blink!" 
+                            ? "bg-amber-500/20 text-amber-300 border-amber-500/30 animate-ping" 
+                            : lastActionText.startsWith("Blink") 
+                            ? "bg-green-500/20 text-green-300 border-green-500/30" 
+                            : "bg-blue-500/20 text-blue-300 border-blue-500/30"
+                        }`}>
+                          {hasMultipleFaces ? "Warning" : lastActionText}
+                        </span>
+                      )}
                     </div>
-                    {isLandmarkerLoaded && (
-                      <span className={`font-bold px-2 py-0.5 rounded border ${
-                        hasMultipleFaces 
-                          ? "bg-red-500/20 text-red-300 border-red-500/30"
-                          : lastActionText === "Blink!" 
-                          ? "bg-amber-500/20 text-amber-300 border-amber-500/30 animate-ping" 
-                          : lastActionText.startsWith("Blink") 
-                          ? "bg-green-500/20 text-green-300 border-green-500/30" 
-                          : "bg-blue-500/20 text-blue-300 border-blue-500/30"
-                      }`}>
-                        {hasMultipleFaces ? "Warning" : lastActionText}
-                      </span>
+
+                    {/* Multi-Face Block Overlay */}
+                    {hasMultipleFaces && (
+                      <div className="absolute inset-0 bg-red-950/85 backdrop-blur-md flex flex-col items-center justify-center p-4 text-center select-none animate-fade-in z-20">
+                        <span className="text-3xl mb-2">⚠️</span>
+                        <h4 className="font-extrabold text-red-200 text-sm">Multiple People Detected!</h4>
+                        <p className="text-xs text-red-300 mt-1 max-w-[200px]">
+                          Please ensure only one person is in the camera frame to proceed.
+                        </p>
+                      </div>
                     )}
                   </div>
 
-                  {/* Multi-Face Block Overlay */}
-                  {hasMultipleFaces && (
-                    <div className="absolute inset-0 bg-red-950/85 backdrop-blur-md flex flex-col items-center justify-center p-4 text-center select-none animate-fade-in z-20">
-                      <span className="text-3xl mb-2">⚠️</span>
-                      <h4 className="font-extrabold text-red-200 text-sm">Multiple People Detected!</h4>
-                      <p className="text-xs text-red-300 mt-1 max-w-[240px]">
-                        Please ensure only one person is in the camera frame to proceed with verification.
-                      </p>
+                  {/* Quality Checklist Panel */}
+                  <div className="md:col-span-2 bg-white border border-gray-200 rounded-xl p-4 flex flex-col justify-between shadow-sm">
+                    <div>
+                      <h5 className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-3 flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 bg-blue-600 rounded-full" />
+                        Quality Checklist
+                      </h5>
+                      
+                      <div className="space-y-2.5">
+                        <div className="flex items-center justify-between text-xs py-1 border-b border-gray-50">
+                          <span className="text-gray-600">Face Detected</span>
+                          <span className={`font-bold px-2 py-0.5 rounded text-[10px] ${
+                            faceValidation.hasFace 
+                              ? "bg-green-50 text-green-700" 
+                              : "bg-red-50 text-red-700"
+                          }`}>
+                            {faceValidation.hasFace ? "Yes" : "No"}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs py-1 border-b border-gray-50">
+                          <span className="text-gray-600">Centered Alignment</span>
+                          <span className={`font-bold px-2 py-0.5 rounded text-[10px] ${
+                            !faceValidation.hasFace ? "bg-gray-100 text-gray-400" :
+                            faceValidation.isCentered 
+                              ? "bg-green-50 text-green-700" 
+                              : "bg-yellow-50 text-yellow-700"
+                          }`}>
+                            {!faceValidation.hasFace ? "Waiting" : faceValidation.isCentered ? "Good" : "Adjust"}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs py-1 border-b border-gray-50">
+                          <span className="text-gray-600">Proper Distance</span>
+                          <span className={`font-bold px-2 py-0.5 rounded text-[10px] ${
+                            !faceValidation.hasFace ? "bg-gray-100 text-gray-400" :
+                            faceValidation.isProperDistance 
+                              ? "bg-green-50 text-green-700" 
+                              : "bg-yellow-50 text-yellow-700"
+                          }`}>
+                            {!faceValidation.hasFace ? "Waiting" : faceValidation.isProperDistance ? "Good" : "Adjust"}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs py-1 border-b border-gray-50">
+                          <span className="text-gray-600">Facing Straight</span>
+                          <span className={`font-bold px-2 py-0.5 rounded text-[10px] ${
+                            !faceValidation.hasFace ? "bg-gray-100 text-gray-400" :
+                            faceValidation.isFacingForward 
+                              ? "bg-green-50 text-green-700" 
+                              : "bg-yellow-50 text-yellow-700"
+                          }`}>
+                            {!faceValidation.hasFace ? "Waiting" : faceValidation.isFacingForward ? "Good" : "Adjust"}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs py-1 border-b border-gray-50">
+                          <span className="text-gray-600">Good Lighting</span>
+                          <span className={`font-bold px-2 py-0.5 rounded text-[10px] ${
+                            !faceValidation.hasFace ? "bg-gray-100 text-gray-400" :
+                            faceValidation.isGoodLighting 
+                              ? "bg-green-50 text-green-700" 
+                              : "bg-red-50 text-red-700"
+                          }`}>
+                            {!faceValidation.hasFace ? "Waiting" : faceValidation.isGoodLighting ? "Good" : "Check Light"}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs py-1 border-b border-gray-50">
+                          <span className="text-gray-600">Sharp & Clear</span>
+                          <span className={`font-bold px-2 py-0.5 rounded text-[10px] ${
+                            !faceValidation.hasFace ? "bg-gray-100 text-gray-400" :
+                            faceValidation.isSharp 
+                              ? "bg-green-50 text-green-700" 
+                              : "bg-red-50 text-red-700"
+                          }`}>
+                            {!faceValidation.hasFace ? "Waiting" : faceValidation.isSharp ? "Sharp" : "Blurry"}
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                  )}
+
+                    <div className="text-[10px] text-gray-400 leading-tight mt-3 bg-gray-50 p-2 rounded">
+                      💡 Ensure you are in a well-lit room, facing forward, and hold still for auto-capture.
+                    </div>
+                  </div>
                 </div>
+
                 <div className="flex gap-4">
                   <button
                     type="button"
-                    onClick={capturePhoto}
-                    disabled={hasMultipleFaces}
-                    className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white py-2.5 rounded-xl font-semibold transition shadow-md flex items-center justify-center gap-2"
-                  >
-                    Capture verification photo
-                  </button>
-                  <button
-                    type="button"
                     onClick={stopCamera}
-                    className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2.5 rounded-xl font-semibold transition"
+                    className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 py-2.5 rounded-xl font-semibold transition flex items-center justify-center gap-2"
                   >
                     Cancel Camera
                   </button>
@@ -591,7 +892,7 @@ const AcceptInvitation = () => {
               <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-xl p-8 bg-white hover:bg-gray-50 transition cursor-pointer">
                 <Camera className="text-gray-400 mb-3" size={36} />
                 <p className="text-sm text-gray-600 font-semibold mb-2">Capture or upload verification picture</p>
-                <p className="text-xs text-gray-400 mb-4">Required for account validation</p>
+                <p className="text-xs text-gray-400 mb-4">Required for coordinator validation</p>
                 
                 <div className="flex gap-3">
                   <button
@@ -603,7 +904,7 @@ const AcceptInvitation = () => {
                     Use Webcam
                   </button>
                   <label className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-5 py-2 rounded-lg text-sm font-semibold border border-gray-300 transition cursor-pointer flex items-center">
-                    Upload File
+                     Upload File
                     <input
                       type="file"
                       accept="image/*"
