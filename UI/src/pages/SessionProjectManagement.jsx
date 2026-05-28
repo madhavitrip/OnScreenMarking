@@ -363,7 +363,9 @@ export default function SessionProjectManagement() {
                               Edit
                             </button>
                             <a
-                              href={`/admin/subject-config?projectId=${encryptId(project.projectId)}`}
+                              href={userType === 'admin' 
+                                ? `/admin/subject-config?projectId=${encryptId(project.projectId)}`
+                                : `/subject-config?projectId=${encryptId(project.projectId)}`}
                               className="text-purple-600 hover:text-purple-700 font-semibold mr-4"
                             >
                               Configure Paper

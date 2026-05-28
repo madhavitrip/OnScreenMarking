@@ -15,10 +15,10 @@ import {
   BookOpen
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import apiCall from "../services/api";
 import { decryptId } from "../utils/encryption";
 import subjectService from "../services/subjectService";
 import projectService from "../services/projectService";
+import paperService from "../services/paperService";
 
 export default function PapersManagement() {
   const [searchParams] = useSearchParams();
@@ -26,6 +26,8 @@ export default function PapersManagement() {
   const projectId = encryptedProjectId ? decryptId(encryptedProjectId) : null;
   const subjectId = searchParams.get("subjectId");
   const universityId = searchParams.get("universityId");
+  const { userType, universityId: userUniversityId } = useAuth();
+  const activeUniversityId = userType === "coordinator" ? userUniversityId : universityId;
 
   const [papers, setPapers] = useState([]);
   const [subjects, setSubjects] = useState([]);
@@ -61,21 +63,17 @@ export default function PapersManagement() {
 
   useEffect(() => {
     fetchInitialData();
-  }, [subjectId, projectId, universityId]);
+  }, [subjectId, projectId, activeUniversityId]);
 
   const fetchInitialData = async () => {
     setLoading(true);
     try {
-      const projs = await projectService.getProjects(universityId);
-      setProjects(projs);
+      const projs = await projectService.getProjects(activeUniversityId);
+      setProjects(projs || []);
 
-      const subjectUrl = universityId 
-        ? `/subject/University?universityId=${universityId}`
-        : null;
-      
-      if (subjectUrl) {
-        const subs = await apiCall(subjectUrl);
-        const mappedSubs = subs.map(s => ({ ...s, subjectName: s.subName || s.subjectName || '' }));
+      if (activeUniversityId) {
+        const subs = await subjectService.getSubjectByUniversity(activeUniversityId);
+        const mappedSubs = (subs || []).map(s => ({ ...s, subjectName: s.subName || s.subjectName || '' }));
         setSubjects(mappedSubs);
       } else {
         setSubjects([]);
@@ -91,15 +89,16 @@ export default function PapersManagement() {
 
   const fetchPapers = async () => {
     try {
-      let url = `/papers`;
-      const params = [];
-      if (subjectId) params.push(`subjectId=${subjectId}`);
-      if (projectId) params.push(`projectId=${projectId}`);
-      if (universityId) params.push(`universityId=${universityId}`);
-      if (params.length > 0) url += "?" + params.join("&");
+      let data;
+      if (projectId) {
+        data = await paperService.getPapersByProject(projectId);
+      } else if (subjectId) {
+        data = await paperService.getPapersBySubject(subjectId);
+      } else {
+        data = await paperService.getAllPapers(activeUniversityId);
+      }
 
-      const data = await apiCall(url);
-      const mappedData = data.map(paper => ({
+      const mappedData = (data || []).map(paper => ({
         ...paper,
         subjectPapers: paper.subjectPapers?.map(sp => ({
           ...sp,
@@ -117,10 +116,10 @@ export default function PapersManagement() {
 
   useEffect(() => {
     const loadProjectSubjects = async () => {
-      if (universityId) {
+      if (activeUniversityId) {
         try {
-          const subs = await subjectService.getSubjectByUniversity(universityId);
-          const mappedSubs = subs.map(s => ({ ...s, subjectName: s.subName || s.subjectName || '' }));
+          const subs = await subjectService.getSubjectByUniversity(activeUniversityId);
+          const mappedSubs = (subs || []).map(s => ({ ...s, subjectName: s.subName || s.subjectName || '' }));
           setSubjects(mappedSubs);
         } catch (err) {
           console.error("Failed to fetch subjects for university:", err);
@@ -128,7 +127,7 @@ export default function PapersManagement() {
       }
     };
     loadProjectSubjects();
-  }, [universityId]);
+  }, [activeUniversityId]);
 
   useEffect(() => {
     if (searchParams.get("add") === "true") {
@@ -235,8 +234,6 @@ export default function PapersManagement() {
 
     try {
       const method = editingId ? "PUT" : "POST";
-      const url = editingId ? `/papers/${editingId}` : `/papers`;
-
       const payload = {
         ...formData,
         subjectIds: selectedSubjects.map(id => parseInt(id, 10)),
@@ -246,10 +243,7 @@ export default function PapersManagement() {
         totalQuestions: parseInt(formData.totalQuestions, 10),
       };
 
-      const result = await apiCall(url, {
-        method,
-        body: JSON.stringify(payload)
-      });
+      const result = await paperService.updatePaper(editingId)
 
       handleCancel();
       fetchPapers();

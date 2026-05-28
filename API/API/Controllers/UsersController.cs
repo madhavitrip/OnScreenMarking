@@ -216,6 +216,7 @@ namespace API.Controllers
                     Token = token,
                     UniversityId = request.UniversityId,
                     DepartmentId = request.DepartmentId,
+                    UserType = string.IsNullOrWhiteSpace(request.UserType) ? "examiner" : request.UserType.Trim().ToLower(),
                     ExpiresAt = DateTime.UtcNow.AddDays(7),
                     IsUsed = false
                 };
@@ -254,6 +255,7 @@ namespace API.Controllers
                         invitation.Token,
                         invitation.UniversityId,
                         invitation.DepartmentId,
+                        invitation.UserType,
                         invitation.ExpiresAt,
                         InvitationLink = invitationLink
                     }

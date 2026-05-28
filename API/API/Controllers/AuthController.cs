@@ -216,7 +216,8 @@ namespace API.Controllers
                     UniversityId = invitation.UniversityId,
                     UniversityName = invitation.University?.UniversityName ?? "Unknown University",
                     DepartmentId = invitation.DepartmentId,
-                    DepartmentName = invitation.Department?.Name ?? "General"
+                    DepartmentName = invitation.Department?.Name ?? "General",
+                    UserType = invitation.UserType
                 });
             }
             catch (Exception ex)
@@ -273,7 +274,7 @@ namespace API.Controllers
                     Name = request.Name,
                     Email = invitation.Email,
                     PasswordHash = HashPassword(request.Password),
-                    UserType = "examiner",
+                    UserType = string.IsNullOrWhiteSpace(invitation.UserType) ? "examiner" : invitation.UserType,
                     UniversityId = invitation.UniversityId,
                     DepartmentId = invitation.DepartmentId,
                     Phone = request.Phone,

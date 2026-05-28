@@ -15,6 +15,7 @@ import {
 import apiCall from '../services/api';
 import paperService from '../services/paperService';
 import allocationService from '../services/allocationService';
+import sectionService from '../services/sectionService';
 import { decryptId } from '../utils/encryption';
 
 export default function ScriptAllocation() {
@@ -64,10 +65,23 @@ export default function ScriptAllocation() {
   };
 
   const handlePaperSelect = async (paper) => {
+    setError('');
+    setSuccess('');
     setSelectedPaper(paper);
     setPaperInfo(paper);
     setLoading(true);
     try {
+      // First verify if paper sections are configured
+      const sectionsData = await sectionService.getAllSections(paper.paperId);
+      if (!sectionsData || sectionsData.length === 0) {
+        setError(`Warning: Paper "${paper.paperName}" does not have sections or questions configured yet. You must complete the Subject & Paper configuration under "Sessions & Projects" first, otherwise scripts cannot be allocated.`);
+        setSelectedPaper(null);
+        setPaperInfo(null);
+        setScripts([]);
+        setExaminers([]);
+        return;
+      }
+
       // Fetch scripts for this paper
       const scriptsData = await apiCall(`/scripts?paperId=${paper.paperId}`);
       setScripts(scriptsData || []);

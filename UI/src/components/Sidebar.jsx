@@ -34,10 +34,7 @@ const Sidebar = () => {
     { icon: <Home size={20} />, label: 'Dashboard', path: '/' },
     { icon: <FileText size={20} />, label: 'Scripts', path: '/scripts' },
     { icon: <PenTool size={20} />, label: 'Marking', path: '/marking' },
-    { icon: <Layers size={20} />, label: 'Subject Config', path: '/subject-config' },
     { icon: <BarChart3 size={20} />, label: 'Reports', path: '/reports' },
-    { icon: <Users size={20} />, label: 'Examiners', path: '/examiners' },
-    { icon: <BookOpen size={20} />, label: 'Subjects', path: '/subjects' },
     { icon: <Settings size={20} />, label: 'Settings', path: '/settings' },
   ];
 

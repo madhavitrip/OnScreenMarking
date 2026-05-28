@@ -18,9 +18,9 @@ export default function SubjectManagement() {
   const [editingId, setEditingId] = useState(null);
   const [selectedDepartments, setSelectedDepartments] = useState([]);
   const [formData, setFormData] = useState({
-    subjectName: '',
-    subjectCode: '',
-    isActive: true
+    subName: '',
+    subCode: '',
+    status: true
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -96,9 +96,9 @@ export default function SubjectManagement() {
       if (editingId) {
         // Update subject details
         const updatePayload = {
-          subjectName: formData.subjectName,
-          subjectCode: formData.subjectCode,
-          isActive: formData.isActive,
+          subName: formData.subName,
+          subCode: formData.subCode,
+          status: formData.status,
           departmentId: selectedDepartments[0] // Send first department for compatibility
         };
         await subjectService.updateSubject(editingId, updatePayload);
@@ -133,9 +133,9 @@ export default function SubjectManagement() {
       } else {
         // Create subject with first department
         const createPayload = {
-          subjectName: formData.subjectName,
-          subjectCode: formData.subjectCode,
-          isActive: formData.isActive,
+          subName: formData.subName,
+          subCode: formData.subCode,
+          status: formData.status,
           departmentId: selectedDepartments[0]
         };
         const newSubject = await subjectService.createSubject(createPayload);
@@ -151,7 +151,7 @@ export default function SubjectManagement() {
         setSuccess('Subject created successfully');
       }
       
-      setFormData({ subjectName: '', subjectCode: '', isActive: true });
+      setFormData({ subName: '', subCode: '', status: true });
       setSelectedDepartments([]);
       setEditingId(null);
       setShowForm(false);
@@ -198,9 +198,9 @@ export default function SubjectManagement() {
     }
 
     setFormData({
-      subjectName: subject.subjectName,
-      subjectCode: subject.subjectCode || '',
-      isActive: subject.isActive
+      subName: subject.subName,
+      subCode: subject.subCode || '',
+      status: subject.status
     });
     setSelectedDepartments(depts.map(d => d.departmentId));
     setEditingId(subject.subjectId);
@@ -208,7 +208,7 @@ export default function SubjectManagement() {
   };
 
   const handleCancel = () => {
-    setFormData({ subjectName: '', subjectCode: '', isActive: true });
+    setFormData({ subName: '', subCode: '', status: true });
     setSelectedDepartments([]);
     setEditingId(null);
     setShowForm(false);
@@ -273,8 +273,8 @@ export default function SubjectManagement() {
                 </label>
                 <input
                   type="text"
-                  value={formData.subjectName}
-                  onChange={(e) => setFormData({ ...formData, subjectName: e.target.value })}
+                  value={formData.subName}
+                  onChange={(e) => setFormData({ ...formData, subName: e.target.value })}
                   className="w-full bg-white border border-gray-300 text-gray-900 px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                   placeholder="Enter subject name"
                   required
@@ -287,8 +287,8 @@ export default function SubjectManagement() {
                 </label>
                 <input
                   type="text"
-                  value={formData.subjectCode}
-                  onChange={(e) => setFormData({ ...formData, subjectCode: e.target.value })}
+                  value={formData.subCode}
+                  onChange={(e) => setFormData({ ...formData, subCode: e.target.value })}
                   className="w-full bg-white border border-gray-300 text-gray-900 px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                   placeholder="Enter subject code"
                 />
@@ -320,12 +320,12 @@ export default function SubjectManagement() {
               <div className="flex items-center gap-3">
                 <input
                   type="checkbox"
-                  id="isActive"
-                  checked={formData.isActive}
-                  onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                  id="status"
+                  checked={formData.status}
+                  onChange={(e) => setFormData({ ...formData, status: e.target.checked })}
                   className="w-4 h-4 rounded"
                 />
-                <label htmlFor="isActive" className="text-gray-700 font-semibold">Active</label>
+                <label htmlFor="status" className="text-gray-700 font-semibold">Active</label>
               </div>
 
               <div className="flex gap-3 pt-4">
@@ -380,8 +380,8 @@ export default function SubjectManagement() {
                 <tbody className="divide-y divide-gray-200">
                   {subjects.map((subject) => (
                     <tr key={subject.subjectId} className="hover:bg-gray-50 transition">
-                      <td className="px-6 py-4 text-gray-900 font-medium">{subject.subjectName}</td>
-                      <td className="px-6 py-4 text-gray-600">{subject.subjectCode || '-'}</td>
+                      <td className="px-6 py-4 text-gray-900 font-medium">{subject.subName}</td>
+                      <td className="px-6 py-4 text-gray-600">{subject.subCode || '-'}</td>
                       <td className="px-6 py-4 text-gray-600">
                         <button
                           onClick={() => setExpandedSubject(expandedSubject === subject.subjectId ? null : subject.subjectId)}
@@ -407,11 +407,11 @@ export default function SubjectManagement() {
                       </td>
                       <td className="px-6 py-4">
                         <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                          subject.isActive 
+                          subject.status 
                             ? 'bg-green-100 text-green-700' 
                             : 'bg-red-100 text-red-700'
                         }`}>
-                          {subject.isActive ? 'Active' : 'Inactive'}
+                          {subject.status ? 'Active' : 'Inactive'}
                         </span>
                       </td>
                       <td className="px-6 py-4">

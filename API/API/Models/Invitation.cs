@@ -22,6 +22,9 @@ namespace API.Models
         
         public int? DepartmentId { get; set; }
         public Department? Department { get; set; }
+
+        [Required]
+        public string UserType { get; set; } = "examiner"; // examiner, coordinator, admin
         
         public bool IsUsed { get; set; } = false;
         

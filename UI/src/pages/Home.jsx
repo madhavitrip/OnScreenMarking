@@ -154,7 +154,7 @@ const Home = () => {
       )}
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Total Assigned"
           value={stats.totalScripts}
@@ -182,14 +182,6 @@ const Home = () => {
           icon={<AlertCircle className="text-red-600" />}
           bgColor="bg-red-50"
           borderClass="border-l-4 border-red-500"
-        />
-        <StatCard
-          title="Average Score"
-          value={`${stats.averageScore}`}
-          subtitle="marks/script"
-          icon={<TrendingUp className="text-purple-600" />}
-          bgColor="bg-purple-50"
-          borderClass="border-l-4 border-purple-600"
         />
       </div>
 

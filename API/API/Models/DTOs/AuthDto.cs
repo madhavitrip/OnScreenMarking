@@ -85,6 +85,7 @@ namespace API.Models.DTOs
         public string UniversityName { get; set; }
         public int? DepartmentId { get; set; }
         public string DepartmentName { get; set; }
+        public string UserType { get; set; }
     }
 
     public class InviteRequest
@@ -92,5 +93,6 @@ namespace API.Models.DTOs
         public string Email { get; set; }
         public int UniversityId { get; set; }
         public int? DepartmentId { get; set; }
+        public string UserType { get; set; } = "examiner";
     }
 }
