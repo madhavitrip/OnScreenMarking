@@ -5,8 +5,20 @@ const getToken = () => localStorage.getItem('token');
 
 const handleResponse = async (response) => {
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || `HTTP error! status: ${response.status}`);
+    let errorMessage = `HTTP error! status: ${response.status}`;
+    try {
+      const errorObj = await response.json();
+      errorMessage = errorObj.message || errorMessage;
+    } catch (e) {
+      try {
+        const text = await response.text();
+        if (text) {
+          // If it's a short text message, use it
+          errorMessage = text.length < 200 ? text : `HTTP error! status: ${response.status}`;
+        }
+      } catch (textErr) {}
+    }
+    throw new Error(errorMessage);
   }
   return response.json();
 };

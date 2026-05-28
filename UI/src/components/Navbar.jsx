@@ -31,10 +31,7 @@ const Navbar = () => {
       ];
     } else if (userType === 'examiner') {
       return [
-        { label: 'Dashboard', path: '/' },
-        { label: 'Scripts', path: '/scripts' },
-        { label: 'Reports', path: '/reports' },
-        { label: 'Settings', path: '/settings' }
+        { label: 'Dashboard', path: '/' }
       ];
     }
     return [];
