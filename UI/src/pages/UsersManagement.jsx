@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, Link } from "react-router-dom";
 import {
   X,
   CheckCircle,
@@ -23,6 +23,7 @@ import userService from "../services/userService";
 import universityService from "../services/universityService";
 import departmentService from "../services/departmentService";
 import roleService from "../services/roleService";
+import UniversityConfigHeader from "../components/UniversityConfigHeader";
 
 export default function UsersManagement() {
   const [searchParams] = useSearchParams();
@@ -197,6 +198,9 @@ export default function UsersManagement() {
   return (
     <div className="min-h-screen bg-slate-50 p-4 lg:p-8">
       <div className="max-w-6xl mx-auto">
+        {/* University Sub-navigation Operations Hub */}
+        <UniversityConfigHeader />
+
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div>
@@ -321,19 +325,21 @@ export default function UsersManagement() {
                     <tbody className="divide-y divide-slate-100">
                       {filteredUsers.map((user) => (
                         <tr key={user.id} className="hover:bg-slate-50 transition-colors">
-                          <td className="px-6 py-4">
-                            {user.profileImage ? (
-                              <div className="relative group cursor-zoom-in w-10 h-10 rounded-full overflow-hidden border border-slate-200" onClick={() => setZoomUser(user)}>
-                                <img src={user.profileImage} alt={user.name} className="w-full h-full object-cover transition group-hover:scale-110" />
-                                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
-                                  <Eye className="text-white" size={14} />
+                           <td className="px-6 py-4">
+                            <Link to={`/profile?userId=${user.id}`} title="View Detailed Profile">
+                              {user.profileImage ? (
+                                <div className="relative group w-10 h-10 rounded-full overflow-hidden border border-slate-200">
+                                  <img src={user.profileImage} alt={user.name} className="w-full h-full object-cover transition group-hover:scale-110" />
+                                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
+                                    <Eye className="text-white" size={14} />
+                                  </div>
                                 </div>
-                              </div>
-                            ) : (
-                              <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center border border-slate-200">
-                                <Users size={16} className="text-slate-400" />
-                              </div>
-                            )}
+                              ) : (
+                                <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center border border-slate-200 hover:bg-slate-200 transition-colors">
+                                  <Users size={16} className="text-slate-400" />
+                                </div>
+                              )}
+                            </Link>
                           </td>
                           <td className="px-6 py-4 font-semibold text-slate-900">{user.name}</td>
                           <td className="px-6 py-4 text-slate-600">{user.email}</td>
@@ -407,19 +413,21 @@ export default function UsersManagement() {
                     <tbody className="divide-y divide-slate-100">
                       {pendingExaminers.map((user) => (
                         <tr key={user.id} className="hover:bg-slate-50 transition-colors">
-                          <td className="px-6 py-4">
-                            {user.profileImage ? (
-                              <div className="relative group cursor-zoom-in w-12 h-12 rounded-xl overflow-hidden border border-slate-200" onClick={() => setZoomUser(user)}>
-                                <img src={user.profileImage} alt={user.name} className="w-full h-full object-cover transition group-hover:scale-110" />
-                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
-                                  <Eye className="text-white" size={16} />
+                           <td className="px-6 py-4">
+                            <Link to={`/profile?userId=${user.id}`} title="View Detailed Profile">
+                              {user.profileImage ? (
+                                <div className="relative group w-12 h-12 rounded-xl overflow-hidden border border-slate-200">
+                                  <img src={user.profileImage} alt={user.name} className="w-full h-full object-cover transition group-hover:scale-110" />
+                                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
+                                    <Eye className="text-white" size={16} />
+                                  </div>
                                 </div>
-                              </div>
-                            ) : (
-                              <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center border border-slate-200">
-                                <Users size={20} className="text-slate-400" />
-                              </div>
-                            )}
+                              ) : (
+                                <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center border border-slate-200 hover:bg-slate-200 transition-colors">
+                                  <Users size={20} className="text-slate-400" />
+                                </div>
+                              )}
+                            </Link>
                           </td>
                           <td className="px-6 py-4 font-bold text-slate-900">{user.name}</td>
                           <td className="px-6 py-4 text-slate-600 text-sm font-medium">{user.email}</td>
@@ -533,10 +541,10 @@ export default function UsersManagement() {
                       onChange={(e) => setInviteUserType(e.target.value)}
                       className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-slate-900 outline-none transition appearance-none"
                     >
-                      <option value="examiner">Examiner (Evaluates Answer Scripts)</option>
-                      <option value="coordinator">University Coordinator (Manages Departments & Subjects)</option>
+                      <option value="examiner">Examiner</option>
+                      <option value="coordinator">University Coordinator</option>
                       {userType === "admin" && (
-                        <option value="admin">System Administrator (Global Governance)</option>
+                        <option value="admin">Administrator</option>
                       )}
                     </select>
                   </div>

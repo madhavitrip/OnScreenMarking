@@ -20,6 +20,9 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import apiCall from '../services/api';
+import { encryptId } from '../utils/encryption';
+import AddDepartmentModal from '../components/AddDepartmentModal';
+import AddSubjectModal from '../components/AddSubjectModal';
 
 export default function CoordinatorDashboard() {
   const { universityId } = useAuth();
@@ -36,6 +39,30 @@ export default function CoordinatorDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [unassignedCount, setUnassignedCount] = useState(0);
+  const [selectedProjectId, setSelectedProjectId] = useState(() => {
+    return localStorage.getItem('selectedProjectId') || '';
+  });
+
+  const handleProjectSelect = (id) => {
+    setSelectedProjectId(id);
+    if (id) {
+      localStorage.setItem('selectedProjectId', id);
+    } else {
+      localStorage.removeItem('selectedProjectId');
+    }
+  };
+
+  const [showDeptModal, setShowDeptModal] = useState(false);
+  const [showSubModal, setShowSubModal] = useState(false);
+  const [departmentsList, setDepartmentsList] = useState([]);
+
+  const handleDeptSuccess = (msg) => {
+    fetchUniversityData();
+  };
+
+  const handleSubSuccess = (msg) => {
+    fetchUniversityData();
+  };
 
   useEffect(() => {
     fetchUniversityData();
@@ -52,6 +79,7 @@ export default function CoordinatorDashboard() {
       
       // 2. Fetch departments and subjects stats
       const deptData = await apiCall(`/department?universityId=${uniData.universityId}`);
+      setDepartmentsList(deptData || []);
       
       // 3. Fetch all scripts in the system to compute live marking statistics
       let pendingCount = 0;
@@ -79,13 +107,22 @@ export default function CoordinatorDashboard() {
         console.error('Failed to fetch pending scripts:', scriptErr);
       }
 
+      let usersCount = 0;
+      try {
+        const usersData = await apiCall(`/users?universityId=${uniData.universityId}`);
+        usersCount = usersData?.length || 0;
+      } catch (userErr) {
+        console.error('Failed to fetch university users count:', userErr);
+      }
+
       setStats({
         departments: deptData.length,
         subjects: deptData.reduce((sum, dept) => sum + (dept.departmentSubjects?.length || 0), 0),
         projects: uniData.projects?.length || 0,
         totalScripts: totalScriptsCount,
         assignedScripts: assignedCount,
-        completedScripts: completedCount
+        completedScripts: completedCount,
+        users: usersCount
       });
 
       // Map projects data
@@ -208,6 +245,8 @@ export default function CoordinatorDashboard() {
                 count={`${stats.departments} Configured`}
                 path="/departments"
                 isCompleted={stats.departments > 0}
+                actionLabel="+ Add Dept"
+                onAction={() => setShowDeptModal(true)}
               />
               <SetupStep
                 step={2}
@@ -216,6 +255,8 @@ export default function CoordinatorDashboard() {
                 count={`${stats.subjects} Subjects`}
                 path="/subjects"
                 isCompleted={stats.subjects > 0}
+                actionLabel="+ Add Subject"
+                onAction={() => setShowSubModal(true)}
               />
               <SetupStep
                 step={3}
@@ -227,11 +268,11 @@ export default function CoordinatorDashboard() {
               />
               <SetupStep
                 step={4}
-                title="Papers & Marking"
-                desc="Add papers, structure sections & assign examiners"
-                count={`${stats.totalScripts > 0 ? "Configured" : "Start Setup"}`}
-                path="/papers"
-                isCompleted={stats.totalScripts > 0}
+                title="User Directory"
+                desc="Invite examiners & manage roles"
+                count={`${stats.users || 0} Members`}
+                path="/users"
+                isCompleted={stats.users > 0}
               />
             </div>
           </div>
@@ -369,14 +410,44 @@ export default function CoordinatorDashboard() {
         <div className="col-span-12 lg:col-span-3 space-y-6">
           
           {/* Quick Action Navigation Dock */}
+          {/* Quick Action Navigation Dock */}
           <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
-            <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Cockpit Access Menu</h3>
+            <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Active Evaluation Cockpit</h3>
+            
+            {/* Project Selection Dropdown */}
+            <div className="mb-4 bg-slate-50/50 p-2.5 rounded-xl border border-slate-100">
+              <label className="text-[9px] text-slate-400 uppercase font-bold tracking-wider mb-1 block">Active Project Scope</label>
+              <select
+                value={selectedProjectId}
+                onChange={(e) => handleProjectSelect(e.target.value)}
+                className="w-full text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-blue-500 outline-none transition-all cursor-pointer"
+              >
+                <option value="">-- No Project Selected --</option>
+                {activeProjects.map((p) => (
+                  <option key={p.projectId} value={p.projectId}>
+                    {p.projectName}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <div className="flex flex-col gap-1.5">
-              <SidebarLink to="/departments" label="Academic Departments" desc="Manage departments" icon={<Building2 size={14} />} color="text-purple-600 bg-purple-50" />
-              <SidebarLink to="/subjects" label="Subject Criteria" desc="Define subjects" icon={<BookOpen size={14} />} color="text-green-600 bg-green-50" />
-              <SidebarLink to="/sessions" label="Examinations Sessions" desc="Exam projects" icon={<Calendar size={14} />} color="text-amber-600 bg-amber-50" />
-              <SidebarLink to="/papers" label="Question Papers" desc="Setup sections" icon={<FileText size={14} />} color="text-indigo-600 bg-indigo-50" />
-              <SidebarLink to="/allocate-scripts" label="Script Allocator" desc="Assign examiners" icon={<Zap size={14} />} color="text-blue-600 bg-blue-50 animate-pulse" />
+              <SidebarLink 
+                to={selectedProjectId ? `/papers?projectId=${encryptId(selectedProjectId)}` : "#"} 
+                label="Question Papers" 
+                desc="Setup sections & marking criteria" 
+                icon={<FileText size={14} />} 
+                color="text-indigo-600 bg-indigo-50" 
+                disabled={!selectedProjectId}
+              />
+              <SidebarLink 
+                to={selectedProjectId ? `/allocate-scripts?projectId=${encryptId(selectedProjectId)}` : "#"} 
+                label="Script Allocator" 
+                desc="Assign scripts to examiners" 
+                icon={<Zap size={14} />} 
+                color="text-blue-600 bg-blue-50 animate-pulse" 
+                disabled={!selectedProjectId}
+              />
             </div>
           </div>
 
@@ -406,11 +477,50 @@ export default function CoordinatorDashboard() {
           
         </div>
       </div>
+
+      {/* Direct Add Department Modal */}
+      <AddDepartmentModal
+        isOpen={showDeptModal}
+        onClose={() => setShowDeptModal(false)}
+        onSuccess={handleDeptSuccess}
+        activeUniversityId={university?.universityId}
+      />
+
+      {/* Direct Add Subject Modal */}
+      <AddSubjectModal
+        isOpen={showSubModal}
+        onClose={() => setShowSubModal(false)}
+        onSuccess={handleSubSuccess}
+        activeUniversityId={university?.universityId}
+        departments={departmentsList}
+      />
     </div>
   );
 }
 
-const SidebarLink = ({ to, label, desc, icon, color }) => {
+const SidebarLink = ({ to, label, desc, icon, color, disabled }) => {
+  if (disabled) {
+    return (
+      <div
+        className="group flex items-center justify-between p-2.5 rounded-xl border border-slate-100 bg-slate-50/50 opacity-60 cursor-not-allowed"
+        title="Requires Active Project Selection"
+      >
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="p-2 rounded-lg bg-slate-200 text-slate-400 shrink-0">
+            {icon}
+          </div>
+          <div className="min-w-0">
+            <h4 className="text-[11px] font-bold text-slate-400 truncate">{label}</h4>
+            <p className="text-[9px] text-slate-400 mt-0.5 truncate">{desc}</p>
+          </div>
+        </div>
+        <span className="text-[8px] font-extrabold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 flex items-center gap-0.5 shrink-0 uppercase tracking-wider">
+          🔒 Select Project
+        </span>
+      </div>
+    );
+  }
+
   return (
     <Link
       to={to}
@@ -430,15 +540,10 @@ const SidebarLink = ({ to, label, desc, icon, color }) => {
   );
 };
 
-const SetupStep = ({ step, title, desc, count, path, isCompleted }) => {
+const SetupStep = ({ step, title, desc, count, path, isCompleted, actionLabel, onAction }) => {
   return (
-    <Link
-      to={path}
-      className={`group p-3.5 rounded-xl border flex flex-col justify-between hover:-translate-y-0.5 transition-all duration-300 ${
-        isCompleted
-          ? 'bg-emerald-50/20 border-emerald-100/60 hover:border-emerald-300 hover:bg-emerald-50/40'
-          : 'bg-slate-50/50 border-slate-100 hover:border-blue-300 hover:bg-blue-50/10'
-      }`}
+    <div
+      className={`group p-3.5 rounded-xl border flex flex-col justify-between hover:shadow-md transition-all duration-300 relative bg-white border-slate-100/80`}
     >
       <div>
         <div className="flex items-center justify-between gap-2 mb-2">
@@ -451,8 +556,8 @@ const SetupStep = ({ step, title, desc, count, path, isCompleted }) => {
           </span>
           <span className={`text-[8px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded-full ${
             isCompleted
-              ? 'bg-emerald-100/60 text-emerald-800'
-              : 'bg-slate-100 text-slate-500'
+              ? 'bg-emerald-50 text-emerald-700 border border-emerald-100/60'
+              : 'bg-amber-50 text-amber-700 border border-amber-100/60'
           }`}>
             {isCompleted ? 'Completed' : 'Pending'}
           </span>
@@ -460,12 +565,30 @@ const SetupStep = ({ step, title, desc, count, path, isCompleted }) => {
         <h4 className="text-[11px] font-bold text-slate-900 group-hover:text-blue-600 transition-colors leading-tight">{title}</h4>
         <p className="text-[9px] text-slate-400 mt-1 leading-tight">{desc}</p>
       </div>
-      <div className="mt-3 pt-2.5 border-t border-slate-100/60 flex items-center justify-between">
-        <span className={`text-[9px] font-extrabold ${isCompleted ? 'text-emerald-700' : 'text-blue-600'}`}>
-          {count}
-        </span>
-        <ChevronRight size={10} className="text-slate-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all" />
+
+      <div className="mt-3 pt-2.5 border-t border-slate-100/60 flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <span className={`text-[9px] font-extrabold ${isCompleted ? 'text-emerald-700' : 'text-blue-600'}`}>
+            {count}
+          </span>
+          <Link to={path} className="text-[9px] font-bold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-0.5 transition-colors">
+            View Page <ChevronRight size={10} />
+          </Link>
+        </div>
+
+        {actionLabel && onAction && (
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onAction();
+            }}
+            className="w-full text-center py-1 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 hover:shadow text-white font-extrabold text-[9px] uppercase tracking-wider transition-all cursor-pointer"
+          >
+            {actionLabel}
+          </button>
+        )}
       </div>
-    </Link>
+    </div>
   );
 };

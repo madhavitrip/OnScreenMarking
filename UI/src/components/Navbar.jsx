@@ -16,18 +16,13 @@ const Navbar = () => {
       return [
         { label: 'Dashboard', path: '/admin/dashboard' },
         { label: 'Universities', path: '/admin/universities' },
-        { label: 'Sessions & Projects', path: '/admin/sessions' },
         { label: 'Users', path: '/admin/users' },
         { label: 'Attendance', path: '/admin/attendance' }
       ];
     } else if (userType === 'coordinator') {
       return [
         { label: 'Dashboard', path: '/coordinator/dashboard' },
-        { label: 'Departments', path: '/departments' },
-        { label: 'Subjects', path: '/subjects' },
         { label: 'Sessions & Projects', path: '/sessions' },
-        { label: 'Papers', path: '/papers' },
-        { label: 'Allocations', path: '/allocate-scripts' }
       ];
     } else if (userType === 'examiner') {
       return [
@@ -73,14 +68,15 @@ const Navbar = () => {
           <Bell size={20} />
           <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
         </button>
-        <div className="flex items-center gap-3 border-l border-blue-400 pl-6">
-          <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center shadow-md">
+        <Link to="/profile" className="flex items-center gap-3 border-l border-blue-400 pl-6 hover:opacity-90 transition-opacity" title="View My Profile">
+          <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center shadow-md hover:scale-105 transition-transform">
             <User size={20} className="text-white" />
           </div>
-          <div className="hidden sm:block">
+          <div className="hidden sm:block text-left">
             <p className="text-sm font-medium text-white">{user?.name || 'User'}</p>
             <p className="text-xs text-blue-100 capitalize">{userType || 'examiner'}</p>
           </div>
+        </Link>
           <button 
             onClick={handleLogout}
             className="flex items-center gap-1 text-sm text-white hover:bg-blue-500 px-3 py-1 rounded transition-colors ml-2"
@@ -89,7 +85,6 @@ const Navbar = () => {
             <LogOut size={16} />
           </button>
         </div>
-      </div>
     </nav>
   );
 };

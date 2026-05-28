@@ -41,6 +41,7 @@ namespace API.Models.DTOs
         public bool IsActive { get; set; } = true;
         public bool IsApproved { get; set; } = false;
         public University University { get; set; }
+        public Department Department { get; set; }
     }
 
     public class ExaminerExpertiseDto
