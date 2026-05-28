@@ -92,14 +92,7 @@ export default function AdminDashboard() {
       path: '/admin/users',
       color: 'text-orange-600 bg-orange-50'
     },
-    {
-      id: 'allocate',
-      title: 'Global Allocation',
-      description: 'Assign examiner scripts',
-      icon: <Zap size={16} />,
-      path: '/admin/allocate-scripts',
-      color: 'text-blue-600 bg-blue-50 animate-pulse'
-    },
+   
     {
       id: 'attendance',
       title: 'Attendance Audit',

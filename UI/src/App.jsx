@@ -23,6 +23,7 @@ import Attendance from './pages/Attendance';
 import Register from './pages/Register';
 import AcceptInvitation from './pages/AcceptInvitation';
 import ScriptAllocation from './pages/ScriptAllocation';
+import Profile from './pages/Profile';
 
 function AppRoutes() {
   const { userType, loading } = useAuth();
@@ -139,6 +140,10 @@ function AppRoutes() {
             path="/allocate-scripts" 
             element={<ScriptAllocation />} 
           />
+          <Route 
+            path="/users" 
+            element={<UsersManagement />} 
+          />
         </Route>
       )}
 
@@ -164,6 +169,7 @@ function AppRoutes() {
           <Route path="/examiners" element={<Home />} />
           <Route path="/subjects" element={<Home />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/profile" element={<Profile />} />
         </Route>
       </Route>
 

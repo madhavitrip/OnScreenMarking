@@ -259,7 +259,7 @@ namespace API.Controllers
                 }
 
                 // Check if user already exists
-                if (_context.Users.Any(u => u.Email == invitation.Email))
+                if (_context.Users.Any(u => u.Email == invitation.Email && u.UniversityId == invitation.UniversityId))
                 {
                     return BadRequest(new AuthResponse
                     {
@@ -274,13 +274,14 @@ namespace API.Controllers
                     Name = request.Name,
                     Email = invitation.Email,
                     PasswordHash = HashPassword(request.Password),
-                    UserType = string.IsNullOrWhiteSpace(invitation.UserType) ? "examiner" : invitation.UserType,
+                    UserType = invitation.UserType,
                     UniversityId = invitation.UniversityId,
                     DepartmentId = invitation.DepartmentId,
                     Phone = request.Phone,
                     Address = request.Address,
                     ProfileImage = request.ProfileImage,
-                    IsActive = true // Accounts created via invitation are active immediately
+                    IsActive = true, // Accounts created via invitation are active immediately,
+                    IsApproved = true,
                 };
 
                 _context.Users.Add(user);
@@ -306,7 +307,8 @@ namespace API.Controllers
                         Phone = user.Phone,
                         Address = user.Address,
                         ProfileImage = user.ProfileImage,
-                        IsActive = user.IsActive
+                        IsActive = user.IsActive,
+                        IsApproved = user.IsApproved,
                     }
                 });
             }
