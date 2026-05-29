@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import userService from '../services/userService';
+import subjectService from '../services/subjectService';
 import { useBreadcrumb } from '../context/BreadcrumbContext';
 
 export default function Profile() {
@@ -29,6 +30,7 @@ export default function Profile() {
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [subjects, setSubjects] = useState([]);
 
   useEffect(() => {
     // Set breadcrumbs dynamically
@@ -57,6 +59,21 @@ export default function Profile() {
     };
     fetchProfile();
   }, [queryUserId, currentUser]);
+
+  useEffect(() => {
+    const fetchSubjects = async () => {
+      if (!profileData?.universityId) return;
+      try {
+        const data = await subjectService.getSubjectByUniversity(profileData.universityId);
+        setSubjects(data);
+      } catch (err) {
+        console.error("Failed to load subjects:", err);
+      }
+    };
+    if (profileData) {
+      fetchSubjects();
+    }
+  }, [profileData]);
 
   if (loading) {
     return (
@@ -219,13 +236,95 @@ export default function Profile() {
                 </p>
               </div>
 
-              <div>
-                <span className="text-[9px] text-slate-400 uppercase font-bold tracking-wider leading-none block mb-1">Affiliated Department</span>
-                <p className="text-xs font-bold text-slate-800 bg-slate-50/50 p-2.5 rounded-xl border border-slate-100 flex items-center gap-2">
-                  <BookOpen size={14} className="text-slate-400" />
-                  {profileData.department?.name || profileData.departmentName || 'Not Assigned'}
-                </p>
-              </div>
+              {profileData.fname && (
+                <div>
+                  <span className="text-[9px] text-slate-400 uppercase font-bold tracking-wider leading-none block mb-1">Official Legal Name</span>
+                  <p className="text-xs font-bold text-slate-800 bg-slate-50/50 p-2.5 rounded-xl border border-slate-100 flex items-center gap-2">
+                    <User size={14} className="text-slate-400" />
+                    {profileData.fname}
+                  </p>
+                </div>
+              )}
+
+              {profileData.empId && (
+                <div>
+                  <span className="text-[9px] text-slate-400 uppercase font-bold tracking-wider leading-none block mb-1">Employee ID</span>
+                  <p className="text-xs font-bold text-slate-800 bg-slate-50/50 p-2.5 rounded-xl border border-slate-100 flex items-center gap-2 font-mono">
+                    <Building size={14} className="text-slate-400" />
+                    {profileData.empId}
+                  </p>
+                </div>
+              )}
+
+              {profileData.collegeId && (
+                <div>
+                  <span className="text-[9px] text-slate-400 uppercase font-bold tracking-wider leading-none block mb-1">College Identification ID</span>
+                  <p className="text-xs font-bold text-slate-800 bg-slate-50/50 p-2.5 rounded-xl border border-slate-100 flex items-center gap-2 font-mono">
+                    <Building size={14} className="text-slate-400" />
+                    {profileData.collegeId}
+                  </p>
+                </div>
+              )}
+
+              {profileData.aadharNo && (
+                <div>
+                  <span className="text-[9px] text-slate-400 uppercase font-bold tracking-wider leading-none block mb-1">Aadhar Verification Number</span>
+                  <p className="text-xs font-bold text-slate-800 bg-slate-50/50 p-2.5 rounded-xl border border-slate-100 flex items-center gap-2 font-mono">
+                    <Shield size={14} className="text-slate-400" />
+                    {profileData.aadharNo.replace(/.(?=.{4})/g, "X")}
+                  </p>
+                </div>
+              )}
+
+              {profileData.panNo && (
+                <div>
+                  <span className="text-[9px] text-slate-400 uppercase font-bold tracking-wider leading-none block mb-1">PAN Taxation Number</span>
+                  <p className="text-xs font-bold text-slate-800 bg-slate-50/50 p-2.5 rounded-xl border border-slate-100 flex items-center gap-2 font-mono uppercase">
+                    <Shield size={14} className="text-slate-400" />
+                    {profileData.panNo.replace(/.(?=.{3})/g, "X")}
+                  </p>
+                </div>
+              )}
+
+              {profileData.experience && (
+                <div>
+                  <span className="text-[9px] text-slate-400 uppercase font-bold tracking-wider leading-none block mb-1">Teaching/Evaluation Experience</span>
+                  <p className="text-xs font-bold text-slate-800 bg-slate-50/50 p-2.5 rounded-xl border border-slate-100 flex items-center gap-2">
+                    <Layers size={14} className="text-slate-400" />
+                    {profileData.experience}
+                  </p>
+                </div>
+              )}
+
+              {profileData.subjectId1 && (
+                <div className="col-span-1 md:col-span-2">
+                  <span className="text-[9px] text-slate-400 uppercase font-bold tracking-wider leading-none block mb-1">Registered Subject Areas</span>
+                  <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-100 text-xs font-medium space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500 font-semibold">Primary Specialization:</span>
+                      <span className="font-bold text-slate-800">
+                        {subjects.find(s => s.subjectId === profileData.subjectId1)?.subName || `Subject #${profileData.subjectId1}`}
+                      </span>
+                    </div>
+                    {profileData.subjectId2 && (
+                      <div className="flex items-center justify-between border-t border-slate-100/50 pt-2">
+                        <span className="text-slate-500 font-semibold">Secondary Scope:</span>
+                        <span className="font-bold text-slate-800">
+                          {subjects.find(s => s.subjectId === profileData.subjectId2)?.subName || `Subject #${profileData.subjectId2}`}
+                        </span>
+                      </div>
+                    )}
+                    {profileData.subjectId3 && (
+                      <div className="flex items-center justify-between border-t border-slate-100/50 pt-2">
+                        <span className="text-slate-500 font-semibold">Tertiary Scope:</span>
+                        <span className="font-bold text-slate-800">
+                          {subjects.find(s => s.subjectId === profileData.subjectId3)?.subName || `Subject #${profileData.subjectId3}`}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
             </div>
           </div>

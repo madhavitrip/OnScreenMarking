@@ -19,6 +19,5 @@ namespace API.Models
 
         // Navigation properties
         public ICollection<DepartmentSubject> DepartmentSubjects { get; set; }
-        public ICollection<User> Users { get; set; } = new List<User>();
     }
 }

@@ -67,6 +67,39 @@ builder.Services.AddAuthentication(options => {
 
 var app = builder.Build();
 
+// Ensure UserType column exists in Invitations table (self-healing migration helper)
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    try
+    {
+        var columnExists = false;
+        using (var command = dbContext.Database.GetDbConnection().CreateCommand())
+        {
+            command.CommandText = "SHOW COLUMNS FROM `Invitations` LIKE 'UserType';";
+            dbContext.Database.OpenConnection();
+            using (var reader = command.ExecuteReader())
+            {
+                columnExists = reader.HasRows;
+            }
+        }
+
+        if (!columnExists)
+        {
+            dbContext.Database.ExecuteSqlRaw("ALTER TABLE `Invitations` ADD COLUMN `UserType` LONGTEXT NOT NULL;");
+            Console.WriteLine("Self-Healing Database: Successfully added UserType column to Invitations table.");
+        }
+        else
+        {
+            Console.WriteLine("Self-Healing Database: UserType column already exists in Invitations table. Skipping alter query.");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Self-Healing Database Warning: {ex.Message}");
+    }
+}
+
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {

@@ -248,11 +248,8 @@ const ExaminerMarking = () => {
             const ctx = tempCanvas.getContext("2d");
             if (!ctx) return;
 
-            // Draw current mirrored video frame to canvas
-            ctx.translate(tempCanvas.width, 0);
-            ctx.scale(-1, 1);
+            // Draw current video frame directly to canvas in standard orientation to match registered profile photo
             ctx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
-            ctx.setTransform(1, 0, 0, 1, 0, 0);
 
             const results = landmarkerRef.current.detect(tempCanvas);
             const facesCount = results.faceLandmarks ? results.faceLandmarks.length : 0;
@@ -269,9 +266,9 @@ const ExaminerMarking = () => {
               const currentLandmarks = results.faceLandmarks[0];
               if (registeredLandmarksRef.current) {
                 const distance = compareFaces(registeredLandmarksRef.current, currentLandmarks);
-                console.log(`OSM Proctoring: Face match distance: ${distance.toFixed(4)} (Threshold: 0.11)`);
+                console.log(`OSM Proctoring: Face match distance: ${distance.toFixed(4)} (Threshold: 0.15)`);
                 
-                if (distance > 0.11) {
+                if (distance > 0.15) {
                   currentCheckWarning = "Mismatch";
                 }
               } else {
@@ -286,11 +283,6 @@ const ExaminerMarking = () => {
               if (consecutiveMismatchesRef.current >= 3) {
                 setProctorWarning((prevWarning) => {
                   if (prevWarning !== currentCheckWarning) {
-                    if (currentCheckWarning === "Mismatch") {
-                      setTimeout(() => {
-                        alert("⚠️ Security Alert: Face Mismatch Detected!\n\nThe person currently in front of the camera does not match the examiner profile captured at the time of registration.\n\nPlease ensure the registered examiner is actively evaluating and facing the camera clearly.");
-                      }, 100);
-                    }
                     return currentCheckWarning;
                   }
                   return prevWarning;

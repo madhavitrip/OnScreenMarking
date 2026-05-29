@@ -13,6 +13,7 @@ namespace API.Models.DTOs
         public decimal? Percentage { get; set; }
         public string? Remarks { get; set; }
         public DateTime? SubmittedAt { get; set; }
+        public int? AllocationId { get; set; }
     }
 
     public class AssignScriptRequest

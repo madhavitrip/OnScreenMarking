@@ -21,14 +21,14 @@ import {
 import { useAuth } from "../context/AuthContext";
 import userService from "../services/userService";
 import universityService from "../services/universityService";
-import departmentService from "../services/departmentService";
+import subjectService from "../services/subjectService";
 import roleService from "../services/roleService";
 import AssignRoleModal from "../components/RoleManagement/AssignRoleModal";
 import UniversityConfigHeader from "../components/UniversityConfigHeader";
 
 export default function UsersManagement() {
   const [searchParams] = useSearchParams();
-  const { userType, universityId: userUniversityId } = useAuth();
+  const { userType, universityId: userUniversityId, hasPermission } = useAuth();
   const universityIdFromUrl = searchParams.get("universityId");
   const activeUniversityId =
     userType === "coordinator" ? userUniversityId : universityIdFromUrl;
@@ -67,7 +67,7 @@ export default function UsersManagement() {
   // Profile Image Zoom Modal State
   const [zoomUser, setZoomUser] = useState(null);
 
-  // Dynamic Role Assignment State
+  const [subjects, setSubjects] = useState([]);
   const [roles, setRoles] = useState([]);
   const [showAssignRoleModal, setShowAssignRoleModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -76,12 +76,37 @@ export default function UsersManagement() {
     fetchUsers();
     fetchUniversities();
     fetchRoles();
+    if (activeUniversityId) {
+      fetchSubjects(activeUniversityId);
+    }
   }, [activeUniversityId]);
+
+  const fetchSubjects = async (universityId) => {
+    try {
+      const data = await subjectService.getSubjectByUniversity(universityId);
+      setSubjects(data);
+    } catch (err) {
+      console.error("Failed to fetch subjects:", err);
+    }
+  };
 
   const fetchRoles = async () => {
     try {
       const res = await roleService.getAllRoles();
-      setRoles(res.data || []);
+      const loadedRoles = res.data || [];
+      setRoles(loadedRoles);
+      
+      // Auto-align default inviteUserType state with the first eligible role in the select dropdown
+      const activeRoles = loadedRoles.filter(r => r.isActive);
+      const firstEligible = activeRoles.find(role => {
+        if (role.roleName.toLowerCase() === 'admin' && userType !== 'admin') {
+          return false;
+        }
+        return true;
+      });
+      if (firstEligible) {
+        setInviteUserType(firstEligible.roleName.toLowerCase());
+      }
     } catch (err) {
       console.error("Failed to fetch roles:", err);
     }
@@ -177,7 +202,20 @@ export default function UsersManagement() {
       if (res.success) {
         setInviteEmail("");
         setInviteDeptId("");
-        setInviteUserType("examiner");
+        
+        // Reset role to the first eligible role to keep UI synced
+        const activeRoles = roles.filter(r => r.isActive);
+        const firstEligible = activeRoles.find(role => {
+          if (role.roleName.toLowerCase() === 'admin' && userType !== 'admin') {
+            return false;
+          }
+          return true;
+        });
+        if (firstEligible) {
+          setInviteUserType(firstEligible.roleName.toLowerCase());
+        } else {
+          setInviteUserType("examiner");
+        }
 
         const link = res.invitation?.invitationLink || res.invitation?.InvitationLink;
         if (link) {
@@ -280,18 +318,20 @@ export default function UsersManagement() {
             )}
           </button>
 
-          <button
-            onClick={() => {
-              setActiveTab("invite");
-            }}
-            className={`flex items-center gap-2 px-5 py-3 rounded-xl font-bold transition-all text-sm ${activeTab === "invite"
-                ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md"
-                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-              }`}
-          >
-            <UserPlus size={16} />
-            Invite User
-          </button>
+          {hasPermission('CREATE_USER') && (
+            <button
+              onClick={() => {
+                setActiveTab("invite");
+              }}
+              className={`flex items-center gap-2 px-5 py-3 rounded-xl font-bold transition-all text-sm ${activeTab === "invite"
+                  ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md"
+                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                }`}
+            >
+              <UserPlus size={16} />
+              Invite User
+            </button>
+          )}
         </div>
 
         {/* Tab Content 1: All Users */}
@@ -385,15 +425,17 @@ export default function UsersManagement() {
                             </span>
                           </td>
                           <td className="px-6 py-4 text-right">
-                            <button
-                              onClick={() => {
-                                setSelectedUser(user);
-                                setShowAssignRoleModal(true);
-                              }}
-                              className="px-3.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl text-xs font-bold border border-blue-100 transition shadow-sm"
-                            >
-                              Assign Role
-                            </button>
+                            {hasPermission('UPDATE_USER') && (
+                              <button
+                                onClick={() => {
+                                  setSelectedUser(user);
+                                  setShowAssignRoleModal(true);
+                                }}
+                                className="px-3.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl text-xs font-bold border border-blue-100 transition shadow-sm"
+                              >
+                                Assign Role
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -433,7 +475,7 @@ export default function UsersManagement() {
                         <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Photo</th>
                         <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Name</th>
                         <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Email Address</th>
-                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Department</th>
+                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Primary Subject</th>
                         <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Phone</th>
                         <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Actions</th>
                       </tr>
@@ -459,20 +501,22 @@ export default function UsersManagement() {
                           </td>
                           <td className="px-6 py-4 font-bold text-slate-900">{user.name}</td>
                           <td className="px-6 py-4 text-slate-600 text-sm font-medium">{user.email}</td>
-                          <td className="px-6 py-4 text-slate-600 text-sm">
-                            {user.department?.name || "-"}
+                          <td className="px-6 py-4 text-slate-600 text-sm font-semibold">
+                            {subjects.find(s => s.subjectId === user.subjectId1)?.subName || "General / Not Specified"}
                           </td>
                           <td className="px-6 py-4 text-slate-600 text-sm">
                             {user.phone || "-"}
                           </td>
                           <td className="px-6 py-4 text-right">
-                            <button
-                              onClick={() => handleApprove(user.id)}
-                              className="bg-green-600 hover:bg-green-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition shadow-sm inline-flex items-center gap-1.5"
-                            >
-                              <UserCheck size={14} />
-                              Approve User
-                            </button>
+                            {hasPermission('UPDATE_USER') && (
+                              <button
+                                onClick={() => handleApprove(user.id)}
+                                className="bg-green-600 hover:bg-green-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition shadow-sm inline-flex items-center gap-1.5"
+                              >
+                                <UserCheck size={14} />
+                                Approve User
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -485,7 +529,7 @@ export default function UsersManagement() {
         )}
 
         {/* Tab Content 3: Invite Examiner */}
-        {activeTab === "invite" && (
+        {activeTab === "invite" && hasPermission('CREATE_USER') && (
           <div className="max-w-2xl mx-auto animate-fade-in">
             <div className="bg-white rounded-2xl border border-slate-200 shadow-xl overflow-hidden p-6 md:p-8">
               <div className="text-center mb-6">
@@ -680,19 +724,84 @@ export default function UsersManagement() {
               <h4 className="text-lg font-bold text-slate-900">{zoomUser.name}</h4>
               <p className="text-slate-600 text-sm font-medium mt-1">{zoomUser.email}</p>
 
-              <div className="border-t border-slate-100 mt-4 pt-4 space-y-2.5">
+              <div className="border-t border-slate-100 mt-4 pt-4 space-y-3">
                 <div className="flex items-center gap-2 text-slate-600 text-xs font-semibold">
                   <Building size={14} className="text-slate-400" />
                   <span>{zoomUser.university?.universityName || "No University"}</span>
                 </div>
-                {zoomUser.department && (
-                  <div className="flex items-center gap-2 text-slate-600 text-xs font-semibold">
-                    <Building size={14} className="text-slate-400" />
-                    <span>Department of {zoomUser.department.name}</span>
+                {zoomUser.fname && (
+                  <div className="text-slate-700 text-xs font-medium">
+                    <span className="text-slate-400 font-bold block mb-0.5">Official Name</span>
+                    <span>{zoomUser.fname}</span>
                   </div>
                 )}
+                {(zoomUser.empId || zoomUser.collegeId) && (
+                  <div className="grid grid-cols-2 gap-3 text-slate-700 text-xs font-medium bg-slate-50 p-2 rounded-lg border border-slate-100">
+                    {zoomUser.empId && (
+                      <div>
+                        <span className="text-slate-400 block mb-0.5">Employee ID</span>
+                        <span className="font-bold">{zoomUser.empId}</span>
+                      </div>
+                    )}
+                    {zoomUser.collegeId && (
+                      <div>
+                        <span className="text-slate-400 block mb-0.5">College ID</span>
+                        <span className="font-bold">{zoomUser.collegeId}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {(zoomUser.aadharNo || zoomUser.panNo) && (
+                  <div className="grid grid-cols-2 gap-3 text-slate-700 text-xs font-medium bg-slate-50 p-2 rounded-lg border border-slate-100">
+                    {zoomUser.aadharNo && (
+                      <div>
+                        <span className="text-slate-400 block mb-0.5">Aadhar Number</span>
+                        <span className="font-mono">{zoomUser.aadharNo}</span>
+                      </div>
+                    )}
+                    {zoomUser.panNo && (
+                      <div>
+                        <span className="text-slate-400 block mb-0.5">PAN Number</span>
+                        <span className="font-mono uppercase">{zoomUser.panNo}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {zoomUser.experience && (
+                  <div className="text-slate-700 text-xs font-medium">
+                    <span className="text-slate-400 font-bold block mb-0.5">Evaluation Experience</span>
+                    <span>{zoomUser.experience}</span>
+                  </div>
+                )}
+                <div className="text-slate-700 text-xs font-medium bg-blue-50/50 p-2.5 rounded-lg border border-blue-100/50">
+                  <span className="text-blue-500 font-bold block mb-1">Subject Expertise</span>
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500">Primary:</span>
+                      <span className="font-semibold text-slate-800">
+                        {subjects.find(s => s.subjectId === zoomUser.subjectId1)?.subName || "Not Assigned"}
+                      </span>
+                    </div>
+                    {zoomUser.subjectId2 && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-500">Secondary:</span>
+                        <span className="font-semibold text-slate-800">
+                          {subjects.find(s => s.subjectId === zoomUser.subjectId2)?.subName}
+                        </span>
+                      </div>
+                    )}
+                    {zoomUser.subjectId3 && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-500">Tertiary:</span>
+                        <span className="font-semibold text-slate-800">
+                          {subjects.find(s => s.subjectId === zoomUser.subjectId3)?.subName}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
                 {zoomUser.phone && (
-                  <div className="flex items-center gap-2 text-slate-600 text-xs font-semibold">
+                  <div className="flex items-center gap-2 text-slate-600 text-xs font-semibold pt-1">
                     <Phone size={14} className="text-slate-400" />
                     <span>{zoomUser.phone}</span>
                   </div>

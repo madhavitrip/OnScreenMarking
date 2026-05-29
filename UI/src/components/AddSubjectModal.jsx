@@ -73,9 +73,9 @@ export default function AddSubjectModal({
       if (editingId) {
         // Update subject details
         const updatePayload = {
-          subName: subName.trim(),
-          subCode: subCode.trim(),
-          status,
+          subjectName: subName.trim(),
+          subjectCode: subCode.trim(),
+          isActive: status,
           departmentId: selectedDepartments[0]
         };
         await subjectService.updateSubject(editingId, updatePayload);
@@ -102,9 +102,9 @@ export default function AddSubjectModal({
       } else {
         // Create subject
         const createPayload = {
-          subName: subName.trim(),
-          subCode: subCode.trim(),
-          status,
+          subjectName: subName.trim(),
+          subjectCode: subCode.trim(),
+          isActive: status,
           departmentId: selectedDepartments[0]
         };
         const newSubject = await subjectService.createSubject(createPayload);
