@@ -66,7 +66,7 @@ const Home = () => {
       barCode: script.generatedBarcode || '',
       allocationId: script.allocationId || '',
       examinerId: user?.id || '',
-      cleanPdfUrl: script.answerSheetPdfUrl || ''
+      cleanPdfUrl: script.cleanPdfUrl || script.answerSheetPdfUrl || ''
     }).toString();
 
     navigate(`/marking?${queryParams}`, {
@@ -75,7 +75,7 @@ const Home = () => {
         paperId: script.paperId,
         barCode: script.generatedBarcode,
         allocationId: script.allocationId,
-        cleanPdfUrl: script.answerSheetPdfUrl
+        cleanPdfUrl: script.cleanPdfUrl || script.answerSheetPdfUrl || ''
       }
     });
   };

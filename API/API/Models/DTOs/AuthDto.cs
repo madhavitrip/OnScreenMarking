@@ -13,7 +13,15 @@ namespace API.Models.DTOs
         public string Password { get; set; }
         public string UserType { get; set; } // examiner, coordinator, admin
         public int? UniversityId { get; set; }
-        public int? DepartmentId { get; set; }
+        public int? SubjectId1 { get; set; }
+        public int? SubjectId2 { get; set; }
+        public int? SubjectId3 { get; set; }
+        public int? EmpId { get; set; }
+        public string? Fname { get; set; }
+        public string? AadharNo { get; set; }
+        public string? PanNo { get; set; }
+        public int? CollegeId { get; set; }
+        public string? Experience { get; set; }
         public string Phone { get; set; }
         public string Address { get; set; }
         public string ProfileImage { get; set; } // Base64 encoded image or image URL
@@ -34,14 +42,21 @@ namespace API.Models.DTOs
         public string Email { get; set; }
         public string UserType { get; set; }
         public int? UniversityId { get; set; }
-        public int? DepartmentId { get; set; }
+        public int? SubjectId1 { get; set; }
+        public int? SubjectId2 { get; set; }
+        public int? SubjectId3 { get; set; }
+        public int? EmpId { get; set; }
+        public string? Fname { get; set; }
+        public string? AadharNo { get; set; }
+        public string? PanNo { get; set; }
+        public int? CollegeId { get; set; }
+        public string? Experience { get; set; }
         public string Phone { get; set; }
         public string Address { get; set; }
         public string ProfileImage { get; set; }
         public bool IsActive { get; set; } = true;
         public bool IsApproved { get; set; } = false;
         public University University { get; set; }
-        public Department Department { get; set; }
     }
 
     public class ExaminerExpertiseDto
@@ -100,7 +115,15 @@ namespace API.Models.DTOs
     public class UpdateUserRequest
     {
         public string UserType { get; set; }
-        public int? DepartmentId { get; set; }
         public int? UniversityId { get; set; }
+        public int? SubjectId1 { get; set; }
+        public int? SubjectId2 { get; set; }
+        public int? SubjectId3 { get; set; }
+        public int? EmpId { get; set; }
+        public string? Fname { get; set; }
+        public string? AadharNo { get; set; }
+        public string? PanNo { get; set; }
+        public int? CollegeId { get; set; }
+        public string? Experience { get; set; }
     }
 }

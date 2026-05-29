@@ -3,8 +3,10 @@ import { Plus, Edit2, Trash2, ChevronDown, ChevronUp, X, CheckCircle } from 'luc
 import roleService from '../services/roleService';
 import PermissionSelector from '../components/RoleManagement/PermissionSelector';
 import RoleStatistics from '../components/RoleManagement/RoleStatistics';
+import { useAuth } from '../context/AuthContext';
 
 export default function RoleManagement() {
+  const { hasPermission } = useAuth();
   const [roles, setRoles] = useState([]);
   const [permissions, setPermissions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -175,12 +177,14 @@ export default function RoleManagement() {
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Role Management</h1>
             <p className="text-gray-600">Manage system roles</p>
           </div>
-          <button
-            onClick={handleAddRoleClick}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition flex items-center gap-2"
-          >
-            {showForm ? 'Cancel' : '+ Add Role'}
-          </button>
+          {hasPermission('CREATE_ROLE') && (
+            <button
+              onClick={handleAddRoleClick}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition flex items-center gap-2"
+            >
+              {showForm ? 'Cancel' : '+ Add Role'}
+            </button>
+          )}
         </div>
 
         {/* Notifications */}
@@ -411,26 +415,30 @@ export default function RoleManagement() {
 
                     {/* Actions */}
                     <div className="flex gap-2">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEditRoleClick(role);
-                        }}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition font-semibold"
-                      >
-                        <Edit2 size={16} />
-                        Edit
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteRole(role.roleId);
-                        }}
-                        className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition font-semibold"
-                      >
-                        <Trash2 size={16} />
-                        Delete
-                      </button>
+                      {hasPermission('UPDATE_ROLE') && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditRoleClick(role);
+                          }}
+                          className="flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition font-semibold"
+                        >
+                          <Edit2 size={16} />
+                          Edit
+                        </button>
+                      )}
+                      {hasPermission('DELETE_ROLE') && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteRole(role.roleId);
+                          }}
+                          className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition font-semibold"
+                        >
+                          <Trash2 size={16} />
+                          Delete
+                        </button>
+                      )}
                     </div>
                   </div>
                 )}

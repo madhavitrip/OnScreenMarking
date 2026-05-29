@@ -542,8 +542,8 @@ const AcceptInvitation = () => {
       if (data.user.universityId) {
         localStorage.setItem('universityId', data.user.universityId);
       }
-      if (data.user.departmentId) {
-        localStorage.setItem('departmentId', data.user.departmentId);
+      if (data.user.subjectId1) {
+        localStorage.setItem('subjectId1', data.user.subjectId1);
       }
 
       setSuccess(true);

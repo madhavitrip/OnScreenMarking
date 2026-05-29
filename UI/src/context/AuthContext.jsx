@@ -133,7 +133,7 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('userEmail');
     localStorage.removeItem('profileImage');
     localStorage.removeItem('universityId');
-    localStorage.removeItem('departmentId');
+    localStorage.removeItem('subjectId1');
     
     setUser(null);
     setPermissions([]);
@@ -145,8 +145,21 @@ export function AuthProvider({ children }) {
   };
 
   const hasPermission = (permissionName) => {
+    // Admin fallback
     if (user?.userType === 'admin') return true;
-    return permissions.includes(permissionName);
+
+    // Examiner fallback (grant default examiner permissions)
+    if (user?.userType === 'examiner') {
+      const examinerPerms = ["READ_SCRIPT", "READ_MARKING", "CREATE_MARKING", "UPDATE_MARKING", "VIEW_REPORTS", "READ_ALLOCATION"];
+      if (examinerPerms.includes(permissionName)) {
+        return true;
+      }
+    }
+
+    if (permissions && permissions.length > 0) {
+      return permissions.includes(permissionName);
+    }
+    return false;
   };
 
   const value = {
@@ -165,7 +178,7 @@ export function AuthProvider({ children }) {
     userEmail: user?.email,
     profileImage: user?.profileImage,
     universityId: user?.universityId,
-    departmentId: user?.departmentId
+    subjectId1: user?.subjectId1
   };
 
   return (

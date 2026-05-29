@@ -236,28 +236,33 @@ namespace API.Controllers
             {
                 var allocations = await _context.Allocations
                     .Where(a => a.ExaminerId == examinerId)
-                    .Select(a => a.ScriptId)
                     .ToListAsync();
 
+                var scriptIds = allocations.Select(a => a.ScriptId).ToList();
+
                 var scripts = await _context.Scripts
-                    .Where(s => allocations.Contains(s.Id))
+                    .Where(s => scriptIds.Contains(s.Id))
                     .Include(s => s.Paper)
                     .OrderByDescending(s => s.CreatedAt)
                     .ToListAsync();
 
-                var scriptDtos = scripts.Select(s => new ScriptDto
-                {
-                    Id = s.Id,
-                    GeneratedBarcode = s.GeneratedBarcode,
-                    InBuiltBarCode = s.InBuiltBarcode,
-                    PaperId = s.PaperId,
-                    CleanPdfUrl = s.CleanPdfUrl,
-                    Status = s.Status,
-                    IsReEvaluationRequested = s.IsReEvaluationRequested,
-                    TotalMarks = s.TotalMarks,
-                    Percentage = s.Percentage,
-                    Remarks = s.Remarks,
-                    SubmittedAt = s.SubmittedAt
+                var scriptDtos = scripts.Select(s => {
+                    var alloc = allocations.FirstOrDefault(a => a.ScriptId == s.Id);
+                    return new ScriptDto
+                    {
+                        Id = s.Id,
+                        GeneratedBarcode = s.GeneratedBarcode,
+                        InBuiltBarCode = s.InBuiltBarcode,
+                        PaperId = s.PaperId,
+                        CleanPdfUrl = s.CleanPdfUrl,
+                        Status = s.Status,
+                        IsReEvaluationRequested = s.IsReEvaluationRequested,
+                        TotalMarks = s.TotalMarks,
+                        Percentage = s.Percentage,
+                        Remarks = s.Remarks,
+                        SubmittedAt = s.SubmittedAt,
+                        AllocationId = alloc?.AllocationId
+                    };
                 }).ToList();
 
                 return Ok(scriptDtos);

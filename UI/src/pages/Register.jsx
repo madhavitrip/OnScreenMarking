@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import authService from "../services/authService";
 import universityService from "../services/universityService";
-import departmentService from "../services/departmentService";
+import subjectService from "../services/subjectService";
 
 // Helper to calculate average brightness of canvas image data (0-255)
 const calculateBrightness = (canvas) => {
@@ -85,7 +85,6 @@ const Register = () => {
   const [registered, setRegistered] = useState(false);
 
   const [universities, setUniversities] = useState([]);
-  const [departments, setDepartments] = useState([]);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -93,7 +92,15 @@ const Register = () => {
     password: "",
     userType: "examiner", // Always examiner
     universityId: "",
-    departmentId: "",
+    fname: "",
+    empId: "",
+    aadharNo: "",
+    panNo: "",
+    collegeId: "",
+    subjectId1: "",
+    subjectId2: "",
+    subjectId3: "",
+    experience: "",
     phone: "",
     address: "",
     profileImage: "",
@@ -145,25 +152,24 @@ const Register = () => {
     fetchUniversities();
   }, []);
 
-  // Load departments when university changes
+  // Load subjects when university changes
+  const [subjects, setSubjects] = useState([]);
   useEffect(() => {
-    const fetchDepartments = async () => {
-      console.log("hello");
+    const fetchSubjects = async () => {
       if (!formData.universityId) {
-        setDepartments([]);
+        setSubjects([]);
         return;
       }
       try {
-        console.log("hello here");
-        const data = await departmentService.getDepartmentsByUniversity(
+        const data = await subjectService.getSubjectByUniversity(
           formData.universityId,
         );
-        setDepartments(data);
+        setSubjects(data);
       } catch (err) {
-        console.error("Failed to fetch departments:", err);
+        console.error("Failed to fetch subjects:", err);
       }
     };
-    fetchDepartments();
+    fetchSubjects();
   }, [formData.universityId]);
 
   const stopCamera = () => {
@@ -583,6 +589,16 @@ const Register = () => {
       return;
     }
 
+    if (!formData.subjectId1) {
+      setError("Primary Subject Area is required.");
+      return;
+    }
+
+    if (formData.aadharNo && !/^[0-9]{12}$/.test(formData.aadharNo)) {
+      setError("Aadhar number must contain exactly 12 numeric digits.");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -592,9 +608,15 @@ const Register = () => {
         password: formData.password,
         userType: "examiner",
         universityId: parseInt(formData.universityId, 10),
-        departmentId: formData.departmentId
-          ? parseInt(formData.departmentId, 10)
-          : null,
+        fname: formData.fname || formData.name,
+        empId: formData.empId ? parseInt(formData.empId, 10) : null,
+        aadharNo: formData.aadharNo || "",
+        panNo: formData.panNo || "",
+        collegeId: formData.collegeId ? parseInt(formData.collegeId, 10) : null,
+        subjectId1: parseInt(formData.subjectId1, 10),
+        subjectId2: formData.subjectId2 ? parseInt(formData.subjectId2, 10) : null,
+        subjectId3: formData.subjectId3 ? parseInt(formData.subjectId3, 10) : null,
+        experience: formData.experience || "",
         phone: formData.phone,
         address: formData.address,
         profileImage: formData.profileImage,
@@ -677,6 +699,260 @@ const Register = () => {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* University Selection */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              University *
+            </label>
+            <div className="relative">
+              <Building
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                size={18}
+              />
+              <select
+                required
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 outline-none transition-all appearance-none"
+                value={formData.universityId}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    universityId: e.target.value,
+                    subjectId1: "",
+                    subjectId2: "",
+                    subjectId3: "",
+                  })
+                }
+                disabled={loading}
+              >
+                <option value="">Select University</option>
+                {universities.map((uni) => (
+                  <option key={uni.universityId} value={uni.universityId}>
+                    {uni.universityName}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            {/* Employee ID */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Employee ID
+              </label>
+              <div className="relative">
+                <Building
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  size={18}
+                />
+                <input
+                  type="number"
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 outline-none transition-all"
+                  placeholder="12345"
+                  value={formData.empId}
+                  onChange={(e) =>
+                    setFormData({ ...formData, empId: e.target.value })
+                  }
+                  disabled={loading}
+                />
+              </div>
+            </div>
+
+            {/* College ID */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                College ID
+              </label>
+              <div className="relative">
+                <Building
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  size={18}
+                />
+                <input
+                  type="number"
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 outline-none transition-all"
+                  placeholder="67890"
+                  value={formData.collegeId}
+                  onChange={(e) =>
+                    setFormData({ ...formData, collegeId: e.target.value })
+                  }
+                  disabled={loading}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            {/* Aadhar Number */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Aadhar Number (12 Digits)
+              </label>
+              <div className="relative">
+                <User
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  size={18}
+                />
+                <input
+                  type="text"
+                  maxLength={12}
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 outline-none transition-all"
+                  placeholder="123456789012"
+                  value={formData.aadharNo}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, "");
+                    setFormData({ ...formData, aadharNo: val });
+                  }}
+                  disabled={loading}
+                />
+              </div>
+            </div>
+
+            {/* PAN Number */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                PAN Number
+              </label>
+              <div className="relative">
+                <User
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  size={18}
+                />
+                <input
+                  type="text"
+                  maxLength={10}
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 outline-none transition-all uppercase"
+                  placeholder="ABCDE1234F"
+                  value={formData.panNo}
+                  onChange={(e) =>
+                    setFormData({ ...formData, panNo: e.target.value.toUpperCase() })
+                  }
+                  disabled={loading}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            {/* Experience */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Evaluation Experience (Years)
+              </label>
+              <div className="relative">
+                <BookOpen
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  size={18}
+                />
+                <input
+                  type="text"
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 outline-none transition-all"
+                  placeholder="e.g. 5 Years"
+                  value={formData.experience}
+                  onChange={(e) =>
+                    setFormData({ ...formData, experience: e.target.value })
+                  }
+                  disabled={loading}
+                />
+              </div>
+            </div>
+
+            {/* Primary Subject */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Primary Subject Area *
+              </label>
+              <div className="relative">
+                <BookOpen
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  size={18}
+                />
+                <select
+                  required
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 outline-none transition-all appearance-none disabled:bg-gray-50 disabled:cursor-not-allowed"
+                  value={formData.subjectId1}
+                  onChange={(e) =>
+                    setFormData({ ...formData, subjectId1: e.target.value })
+                  }
+                  disabled={loading || !formData.universityId}
+                >
+                  <option value="">Select Primary Subject</option>
+                  {subjects.map((sub) => (
+                    <option key={sub.subjectId} value={sub.subjectId}>
+                      {sub.subName} ({sub.subCode})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            {/* Secondary Subject */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Secondary Subject Area (Optional)
+              </label>
+              <div className="relative">
+                <BookOpen
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  size={18}
+                />
+                <select
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 outline-none transition-all appearance-none disabled:bg-gray-50 disabled:cursor-not-allowed"
+                  value={formData.subjectId2}
+                  onChange={(e) =>
+                    setFormData({ ...formData, subjectId2: e.target.value })
+                  }
+                  disabled={loading || !formData.universityId}
+                >
+                  <option value="">Select Secondary Subject</option>
+                  {subjects
+                    .filter((sub) => sub.subjectId.toString() !== formData.subjectId1)
+                    .map((sub) => (
+                      <option key={sub.subjectId} value={sub.subjectId}>
+                        {sub.subName} ({sub.subCode})
+                      </option>
+                    ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Tertiary Subject */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Tertiary Subject Area (Optional)
+              </label>
+              <div className="relative">
+                <BookOpen
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  size={18}
+                />
+                <select
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 outline-none transition-all appearance-none disabled:bg-gray-50 disabled:cursor-not-allowed"
+                  value={formData.subjectId3}
+                  onChange={(e) =>
+                    setFormData({ ...formData, subjectId3: e.target.value })
+                  }
+                  disabled={loading || !formData.universityId}
+                >
+                  <option value="">Select Tertiary Subject</option>
+                  {subjects
+                    .filter(
+                      (sub) =>
+                        sub.subjectId.toString() !== formData.subjectId1 &&
+                        sub.subjectId.toString() !== formData.subjectId2
+                    )
+                    .map((sub) => (
+                      <option key={sub.subjectId} value={sub.subjectId}>
+                        {sub.subName} ({sub.subCode})
+                      </option>
+                    ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {/* Name */}
             <div>
@@ -778,70 +1054,6 @@ const Register = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {/* University Selection */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                University *
-              </label>
-              <div className="relative">
-                <Building
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                  size={18}
-                />
-                <select
-                  required
-                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 outline-none transition-all appearance-none"
-                  value={formData.universityId}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      universityId: e.target.value,
-                      departmentId: "",
-                    })
-                  }
-                  disabled={loading}
-                >
-                  <option value="">Select University</option>
-                  {universities.map((uni) => (
-                    <option key={uni.universityId} value={uni.universityId}>
-                      {uni.universityName}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Department Selection */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Department
-              </label>
-              <div className="relative">
-                <Building
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                  size={18}
-                />
-                <select
-                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 outline-none transition-all appearance-none disabled:bg-gray-50 disabled:cursor-not-allowed"
-                  value={formData.departmentId}
-                  onChange={(e) =>
-                    setFormData({ ...formData, departmentId: e.target.value })
-                  }
-                  disabled={loading || !formData.universityId}
-                >
-                  <option value="">Select Department (Optional)</option>
-                  {departments.map((dept) => (
-                    <option key={dept.departmentId} value={dept.departmentId}>
-                      {dept.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Address */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               Address

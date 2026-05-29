@@ -22,9 +22,28 @@ namespace API.Controllers
             _emailService = emailService;
         }
 
+        private async Task<bool> HasPermissionAsync(string permission)
+        {
+            var userType = User.FindFirst("userType")?.Value;
+            if (string.IsNullOrEmpty(userType)) return false;
+
+            var role = await _context.Roles.FirstOrDefaultAsync(r => r.RoleName.ToLower() == userType.ToLower());
+            if (role == null)
+            {
+                return userType.Equals("admin", StringComparison.OrdinalIgnoreCase);
+            }
+
+            return role.PermissionsList.Contains(permission);
+        }
+
         [HttpGet]
         public async Task<ActionResult<IEnumerable<UserDto>>> GetUsers([FromQuery] int? universityId = null)
         {
+            if (!await HasPermissionAsync("READ_USER"))
+            {
+                return StatusCode(403, new { success = false, message = "You do not have permission to view users." });
+            }
+
             try
             {
                 var query = _context.Users.AsQueryable();
@@ -36,7 +55,6 @@ namespace API.Controllers
 
                 var users = await query
                     .Include(u => u.University)
-                    .Include(u => u.Department)
                     .OrderBy(u => u.Name)
                     .ToListAsync();
 
@@ -47,7 +65,15 @@ namespace API.Controllers
                     Email = u.Email,
                     UserType = u.UserType,
                     UniversityId = u.UniversityId,
-                    DepartmentId = u.DepartmentId,
+                    SubjectId1 = u.SubjectId1,
+                    SubjectId2 = u.SubjectId2,
+                    SubjectId3 = u.SubjectId3,
+                    EmpId = u.EmpId,
+                    Fname = u.Fname,
+                    AadharNo = u.AadharNo,
+                    PanNo = u.PanNo,
+                    CollegeId = u.CollegeId,
+                    Experience = u.Experience,
                     Phone = u.Phone,
                     Address = u.Address,
                     ProfileImage = u.ProfileImage,
@@ -67,11 +93,15 @@ namespace API.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<UserDto>> GetUserById(int id)
         {
+            if (!await HasPermissionAsync("READ_USER"))
+            {
+                return StatusCode(403, new { success = false, message = "You do not have permission to view user details." });
+            }
+
             try
             {
                 var user = await _context.Users
                     .Include(u => u.University)
-                    .Include(u => u.Department)
                     .FirstOrDefaultAsync(u => u.Id == id);
 
                 if (user == null)
@@ -86,14 +116,21 @@ namespace API.Controllers
                     Email = user.Email,
                     UserType = user.UserType,
                     UniversityId = user.UniversityId,
-                    DepartmentId = user.DepartmentId,
+                    SubjectId1 = user.SubjectId1,
+                    SubjectId2 = user.SubjectId2,
+                    SubjectId3 = user.SubjectId3,
+                    EmpId = user.EmpId,
+                    Fname = user.Fname,
+                    AadharNo = user.AadharNo,
+                    PanNo = user.PanNo,
+                    CollegeId = user.CollegeId,
+                    Experience = user.Experience,
                     Phone = user.Phone,
                     Address = user.Address,
                     ProfileImage = user.ProfileImage,
                     IsActive = user.IsActive,
                     IsApproved = user.IsApproved,
-                    University = user.University != null ? new University { UniversityId = user.University.UniversityId, UniversityName = user.University.UniversityName } : null,
-                    Department = user.Department != null ? new Department { DepartmentId = user.Department.DepartmentId, Name = user.Department.Name } : null
+                    University = user.University != null ? new University { UniversityId = user.University.UniversityId, UniversityName = user.University.UniversityName } : null
                 };
 
                 return Ok(userDto);
@@ -107,6 +144,11 @@ namespace API.Controllers
         [HttpGet("examiners")]
         public async Task<ActionResult<IEnumerable<UserDto>>> GetExaminers([FromQuery] int? universityId = null, [FromQuery] int? subjectId = null)
         {
+            if (!await HasPermissionAsync("READ_USER"))
+            {
+                return StatusCode(403, new { success = false, message = "You do not have permission to view examiners." });
+            }
+
             try
             {
                 var query = _context.Users
@@ -136,6 +178,15 @@ namespace API.Controllers
                     Email = u.Email,
                     UserType = u.UserType,
                     UniversityId = u.UniversityId,
+                    SubjectId1 = u.SubjectId1,
+                    SubjectId2 = u.SubjectId2,
+                    SubjectId3 = u.SubjectId3,
+                    EmpId = u.EmpId,
+                    Fname = u.Fname,
+                    AadharNo = u.AadharNo,
+                    PanNo = u.PanNo,
+                    CollegeId = u.CollegeId,
+                    Experience = u.Experience,
                     Phone = u.Phone,
                     ProfileImage = u.ProfileImage,
                     IsActive = u.IsActive
@@ -152,6 +203,11 @@ namespace API.Controllers
         [HttpPut("{id}/approve")]
         public async Task<IActionResult> ApproveUser(int id)
         {
+            if (!await HasPermissionAsync("UPDATE_USER"))
+            {
+                return StatusCode(403, new { success = false, message = "You do not have permission to approve users." });
+            }
+
             try
             {
                 var loggedInUserType = User.FindFirst("userType")?.Value;
@@ -204,6 +260,11 @@ namespace API.Controllers
         [HttpPost("invite")]
         public async Task<IActionResult> InviteUser([FromBody] InviteRequest request)
         {
+            if (!await HasPermissionAsync("CREATE_USER"))
+            {
+                return StatusCode(403, new { success = false, message = "You do not have permission to invite users." });
+            }
+
             try
             {
                 if (request == null || string.IsNullOrWhiteSpace(request.Email))
@@ -257,7 +318,7 @@ namespace API.Controllers
                     UniversityId = request.UniversityId,
                     DepartmentId = request.DepartmentId,
                     UserType = string.IsNullOrWhiteSpace(request.UserType) ? "examiner" : request.UserType.Trim().ToLower(),
-                    ExpiresAt = DateTime.UtcNow.AddDays(7),
+                    ExpiresAt = DateTime.UtcNow.AddMinutes(30),
                     IsUsed = false
                 };
 
@@ -310,6 +371,11 @@ namespace API.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateUser(int id, [FromBody] UpdateUserRequest request)
         {
+            if (!await HasPermissionAsync("UPDATE_USER"))
+            {
+                return StatusCode(403, new { success = false, message = "You do not have permission to update users." });
+            }
+
             try
             {
                 if (request == null)
@@ -334,15 +400,21 @@ namespace API.Controllers
                     user.UserType = request.UserType.Trim().ToLower();
                 }
 
-                if (request.DepartmentId.HasValue)
-                {
-                    user.DepartmentId = request.DepartmentId.Value > 0 ? request.DepartmentId.Value : null;
-                }
-
                 if (request.UniversityId.HasValue)
                 {
                     user.UniversityId = request.UniversityId.Value > 0 ? request.UniversityId.Value : null;
                 }
+
+                if (request.SubjectId1.HasValue) user.SubjectId1 = request.SubjectId1.Value > 0 ? request.SubjectId1.Value : null;
+                if (request.SubjectId2.HasValue) user.SubjectId2 = request.SubjectId2.Value > 0 ? request.SubjectId2.Value : null;
+                if (request.SubjectId3.HasValue) user.SubjectId3 = request.SubjectId3.Value > 0 ? request.SubjectId3.Value : null;
+                if (request.EmpId.HasValue) user.EmpId = request.EmpId.Value > 0 ? request.EmpId.Value : null;
+                if (request.CollegeId.HasValue) user.CollegeId = request.CollegeId.Value > 0 ? request.CollegeId.Value : null;
+
+                if (request.Fname != null) user.Fname = request.Fname;
+                if (request.AadharNo != null) user.AadharNo = request.AadharNo;
+                if (request.PanNo != null) user.PanNo = request.PanNo;
+                if (request.Experience != null) user.Experience = request.Experience;
 
                 user.UpdatedAt = DateTime.UtcNow;
                 _context.Entry(user).State = EntityState.Modified;
