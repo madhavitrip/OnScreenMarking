@@ -13,6 +13,15 @@ export function AuthProvider({ children }) {
       return null;
     }
   });
+
+  const [permissions, setPermissions] = useState(() => {
+    const savedPermissions = localStorage.getItem('permissions');
+    try {
+      return savedPermissions ? JSON.parse(savedPermissions) : [];
+    } catch (e) {
+      return [];
+    }
+  });
   
   // Only show loading if we have a token but no user data yet
   const [loading, setLoading] = useState(() => {
@@ -31,9 +40,32 @@ export function AuthProvider({ children }) {
     } else {
       setLoading(false);
       localStorage.removeItem('user');
+      localStorage.removeItem('permissions');
       setUser(null);
+      setPermissions([]);
     }
   }, []);
+
+  const fetchUserPermissions = async (userData) => {
+    if (!userData || !userData.userType) return [];
+    try {
+      const response = await apiCall('/role');
+      if (response && response.success && response.data) {
+        const matchingRole = response.data.find(
+          r => r.roleName.toLowerCase() === userData.userType.toLowerCase()
+        );
+        if (matchingRole) {
+          const perms = matchingRole.permissionsList || [];
+          setPermissions(perms);
+          localStorage.setItem('permissions', JSON.stringify(perms));
+          return perms;
+        }
+      }
+    } catch (e) {
+      console.error('Failed to fetch user permissions:', e);
+    }
+    return [];
+  };
 
   const fetchUserData = async () => {
     try {
@@ -43,6 +75,7 @@ export function AuthProvider({ children }) {
       const userData = await apiCall('/users/me');
       setUser(userData);
       localStorage.setItem('user', JSON.stringify(userData));
+      await fetchUserPermissions(userData);
       setError(null);
     } catch (err) {
       console.error('Failed to fetch user data:', err);
@@ -78,6 +111,7 @@ export function AuthProvider({ children }) {
       
       // Set user data
       setUser(response.user);
+      await fetchUserPermissions(response.user);
       
       return response;
     } catch (err) {
@@ -91,6 +125,7 @@ export function AuthProvider({ children }) {
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('permissions');
     // Clear other potential legacy items from authService.js
     localStorage.removeItem('userType');
     localStorage.removeItem('userName');
@@ -101,6 +136,7 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('departmentId');
     
     setUser(null);
+    setPermissions([]);
     setError(null);
   };
 
@@ -108,8 +144,15 @@ export function AuthProvider({ children }) {
     await fetchUserData();
   };
 
+  const hasPermission = (permissionName) => {
+    if (user?.userType === 'admin') return true;
+    return permissions.includes(permissionName);
+  };
+
   const value = {
     user,
+    permissions,
+    hasPermission,
     loading,
     error,
     login,

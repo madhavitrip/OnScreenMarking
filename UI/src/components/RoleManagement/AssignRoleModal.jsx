@@ -17,7 +17,18 @@ export default function AssignRoleModal({ user, onClose, onSubmit }) {
     try {
       setLoading(true);
       const data = await roleService.getAllRoles();
-      setRoles(data.data || []);
+      const rolesList = data.data || [];
+      setRoles(rolesList);
+      
+      // Auto-select the matching role based on user.userType (case-insensitive)
+      if (user && user.userType && rolesList.length > 0) {
+        const matchingRole = rolesList.find(
+          r => r.roleName.toLowerCase() === user.userType.toLowerCase()
+        );
+        if (matchingRole) {
+          setSelectedRoleId(matchingRole.roleId);
+        }
+      }
       setError(null);
     } catch (err) {
       setError(err.message || 'Failed to fetch roles');

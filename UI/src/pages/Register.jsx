@@ -437,19 +437,47 @@ const Register = () => {
 
           const allChecksPassed = isCentered && isProperDistance && isFacingForward && isGoodLighting && isSharp;
 
-          if (allChecksPassed) {
-            stableFramesRef.current += 1;
-            const remainingSeconds = Math.max(0, (45 - stableFramesRef.current) / 60);
-            if (stableFramesRef.current < 45) {
-              setLastActionText(`Hold still... ${remainingSeconds.toFixed(1)}s`);
-            } else {
-              setLastActionText("Capturing...");
-              activeLoopRef.current = false;
-              capturePhoto(true);
-              return;
+          // Blink tracking logic for liveness-based hands-free auto-capture
+          if (results.faceBlendshapes && results.faceBlendshapes.length > 0) {
+            const blendshapes = results.faceBlendshapes[0].categories;
+            const eyeBlinkLeft = blendshapes.find((b) => b.categoryName === "eyeBlinkLeft")?.score || 0;
+            const eyeBlinkRight = blendshapes.find((b) => b.categoryName === "eyeBlinkRight")?.score || 0;
+
+            if (eyeBlinkLeft > 0.45 && eyeBlinkRight > 0.45) {
+              if (!eyesClosedRef.current) {
+                eyesClosedRef.current = true;
+                setLastActionText("Blink!");
+              }
+            } else if (eyeBlinkLeft < 0.20 && eyeBlinkRight < 0.20) {
+              if (eyesClosedRef.current) {
+                eyesClosedRef.current = false;
+                
+                if (allChecksPassed) {
+                  blinkCountRef.current += 1;
+                  setBlinkCount(blinkCountRef.current);
+                  setLastActionText(`Blink ${blinkCountRef.current} detected!`);
+
+                  if (blinkCountRef.current >= 2) {
+                    setLastActionText("Capturing...");
+                    activeLoopRef.current = false;
+                    // 250ms delay ensures their eyes are open when the camera snaps the photo!
+                    setTimeout(() => {
+                      capturePhoto(true);
+                    }, 250);
+                    return;
+                  }
+                } else {
+                  if (!isCentered) setLastActionText("Please center your face");
+                  else if (!isProperDistance) setLastActionText(faceWidth < 0.22 ? "Please move closer" : "Please move back");
+                  else if (!isFacingForward) setLastActionText("Please look straight at camera");
+                  else if (!isGoodLighting) setLastActionText("Improve lighting to capture");
+                  else if (!isSharp) setLastActionText("Hold still (image blurry)");
+                }
+              }
             }
-          } else {
-            stableFramesRef.current = 0;
+          }
+
+          if (!eyesClosedRef.current && blinkCountRef.current < 2) {
             if (!isCentered) {
               setLastActionText("Center Face");
             } else if (!isProperDistance) {
@@ -461,7 +489,7 @@ const Register = () => {
             } else if (!isSharp) {
               setLastActionText("Hold Still");
             } else {
-              setLastActionText("Align Face");
+              setLastActionText(`Blink twice to capture (${blinkCountRef.current}/2)`);
             }
           }
         }

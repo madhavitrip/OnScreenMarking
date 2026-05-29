@@ -23,6 +23,7 @@ import userService from "../services/userService";
 import universityService from "../services/universityService";
 import departmentService from "../services/departmentService";
 import roleService from "../services/roleService";
+import AssignRoleModal from "../components/RoleManagement/AssignRoleModal";
 import UniversityConfigHeader from "../components/UniversityConfigHeader";
 
 export default function UsersManagement() {
@@ -66,10 +67,25 @@ export default function UsersManagement() {
   // Profile Image Zoom Modal State
   const [zoomUser, setZoomUser] = useState(null);
 
+  // Dynamic Role Assignment State
+  const [roles, setRoles] = useState([]);
+  const [showAssignRoleModal, setShowAssignRoleModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+
   useEffect(() => {
     fetchUsers();
     fetchUniversities();
+    fetchRoles();
   }, [activeUniversityId]);
+
+  const fetchRoles = async () => {
+    try {
+      const res = await roleService.getAllRoles();
+      setRoles(res.data || []);
+    } catch (err) {
+      console.error("Failed to fetch roles:", err);
+    }
+  };
 
   useEffect(() => {
     const uniId = formData.universityId || activeUniversityId || inviteUniId;
@@ -192,8 +208,8 @@ export default function UsersManagement() {
     return matchSearch;
   });
 
-  // Filter pending examiners (inactive, type examiner)
-  const pendingExaminers = users.filter((u) => u.isApproved == false && u.userType === "examiner");
+  // Filter pending users (inactive, not admin)
+  const pendingExaminers = users.filter((u) => u.isApproved == false && u.userType !== "admin");
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 lg:p-8">
@@ -320,6 +336,7 @@ export default function UsersManagement() {
                         <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Role</th>
                         <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">University</th>
                         <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -366,6 +383,17 @@ export default function UsersManagement() {
                               <span className={`w-1.5 h-1.5 rounded-full ${user.isActive ? "bg-green-600 animate-pulse" : "bg-red-500"}`}></span>
                               {user.isActive ? "Active" : "Pending / Inactive"}
                             </span>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <button
+                              onClick={() => {
+                                setSelectedUser(user);
+                                setShowAssignRoleModal(true);
+                              }}
+                              className="px-3.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl text-xs font-bold border border-blue-100 transition shadow-sm"
+                            >
+                              Assign Role
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -443,7 +471,7 @@ export default function UsersManagement() {
                               className="bg-green-600 hover:bg-green-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition shadow-sm inline-flex items-center gap-1.5"
                             >
                               <UserCheck size={14} />
-                              Approve Examiner
+                              Approve User
                             </button>
                           </td>
                         </tr>
@@ -541,10 +569,24 @@ export default function UsersManagement() {
                       onChange={(e) => setInviteUserType(e.target.value)}
                       className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-slate-900 outline-none transition appearance-none"
                     >
-                      <option value="examiner">Examiner</option>
-                      <option value="coordinator">University Coordinator</option>
-                      {userType === "admin" && (
-                        <option value="admin">Administrator</option>
+                      {roles.filter(r => r.isActive).map((role) => {
+                        if (role.roleName.toLowerCase() === 'admin' && userType !== 'admin') {
+                          return null;
+                        }
+                        return (
+                          <option key={role.roleId} value={role.roleName.toLowerCase()}>
+                            {role.roleName}
+                          </option>
+                        );
+                      })}
+                      {roles.length === 0 && (
+                        <>
+                          <option value="examiner">Examiner (Evaluates Answer Scripts)</option>
+                          <option value="coordinator">University Coordinator (Manages Departments & Subjects)</option>
+                          {userType === "admin" && (
+                            <option value="admin">System Administrator (Global Governance)</option>
+                          )}
+                        </>
                       )}
                     </select>
                   </div>
@@ -657,7 +699,7 @@ export default function UsersManagement() {
                 )}
               </div>
 
-              {!zoomUser.isActive && zoomUser.userType === "examiner" && (
+              {!zoomUser.isActive && zoomUser.userType !== "admin" && (
                 <button
                   onClick={() => {
                     handleApprove(zoomUser.id);
@@ -666,12 +708,40 @@ export default function UsersManagement() {
                   className="w-full mt-5 bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-xl font-bold transition shadow-sm text-sm flex items-center justify-center gap-2"
                 >
                   <UserCheck size={16} />
-                  Approve Examiner Now
+                  Approve User Now
                 </button>
               )}
             </div>
           </div>
         </div>
+      )}
+
+      {showAssignRoleModal && selectedUser && (
+        <AssignRoleModal
+          user={selectedUser}
+          onClose={() => {
+            setShowAssignRoleModal(false);
+            setSelectedUser(null);
+          }}
+          onSubmit={async (roleId) => {
+            const role = roles.find(r => r.roleId === roleId);
+            const roleName = role ? role.roleName.toLowerCase() : 'examiner';
+            try {
+              await userService.updateUser(selectedUser.id, {
+                userType: roleName,
+                departmentId: selectedUser.departmentId,
+                universityId: selectedUser.universityId
+              });
+              setSuccess("Role assigned successfully!");
+              setError("");
+              setShowAssignRoleModal(false);
+              setSelectedUser(null);
+              fetchUsers();
+            } catch (err) {
+              setError(err.message || "Failed to assign role.");
+            }
+          }}
+        />
       )}
     </div>
   );

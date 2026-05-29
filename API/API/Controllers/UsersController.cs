@@ -306,5 +306,54 @@ namespace API.Controllers
                 return StatusCode(500, new { success = false, message = ex.Message });
             }
         }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateUser(int id, [FromBody] UpdateUserRequest request)
+        {
+            try
+            {
+                if (request == null)
+                {
+                    return BadRequest(new { success = false, message = "Invalid request payload" });
+                }
+
+                var loggedInUserType = User.FindFirst("userType")?.Value;
+                if (loggedInUserType != "admin" && loggedInUserType != "coordinator")
+                {
+                    return StatusCode(403, new { success = false, message = "Only coordinators or admins can update users." });
+                }
+
+                var user = await _context.Users.FindAsync(id);
+                if (user == null)
+                {
+                    return NotFound(new { success = false, message = "User not found" });
+                }
+
+                if (!string.IsNullOrWhiteSpace(request.UserType))
+                {
+                    user.UserType = request.UserType.Trim().ToLower();
+                }
+
+                if (request.DepartmentId.HasValue)
+                {
+                    user.DepartmentId = request.DepartmentId.Value > 0 ? request.DepartmentId.Value : null;
+                }
+
+                if (request.UniversityId.HasValue)
+                {
+                    user.UniversityId = request.UniversityId.Value > 0 ? request.UniversityId.Value : null;
+                }
+
+                user.UpdatedAt = DateTime.UtcNow;
+                _context.Entry(user).State = EntityState.Modified;
+                await _context.SaveChangesAsync();
+
+                return Ok(new { success = true, message = "User updated successfully" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
     }
 }

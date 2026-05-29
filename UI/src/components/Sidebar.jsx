@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { Home, FileText, BarChart3, Settings, Users, BookOpen, PenTool, Layers, School, Building2, Calendar, ClipboardList, Shield, UserCheck, GraduationCap } from 'lucide-react';
 
 const Sidebar = () => {
-  const { userType } = useAuth();
+  const { userType, hasPermission } = useAuth();
 
   // Admin navigation
   const adminMenuItems = [
@@ -31,23 +31,69 @@ const Sidebar = () => {
     { icon: <FileText size={20} />, label: 'Papers', path: '/papers' },
     { icon: <Settings size={20} />, label: 'Settings', path: '/settings' },
   ];
+  const getMenuItems = () => {
+    const items = [];
 
-  // Examiner navigation
-  const examinerMenuItems = [
-    { icon: <Home size={20} />, label: 'Dashboard', path: '/' },
-    { icon: <FileText size={20} />, label: 'Scripts', path: '/scripts' },
-    { icon: <PenTool size={20} />, label: 'Marking', path: '/marking' },
-    { icon: <BarChart3 size={20} />, label: 'Reports', path: '/reports' },
-    { icon: <Settings size={20} />, label: 'Settings', path: '/settings' },
-  ];
+    if (userType === 'admin') {
+      items.push({ icon: <Home size={20} />, label: 'Dashboard', path: '/admin/dashboard' });
+      items.push({ icon: <School size={20} />, label: 'Universities', path: '/admin/universities' });
+      items.push({ icon: <Building2 size={20} />, label: 'Departments', path: '/admin/departments' });
+      items.push({ icon: <BookOpen size={20} />, label: 'Subjects', path: '/admin/subjects' });
+      items.push({ icon: <Calendar size={20} />, label: 'Sessions & Projects', path: '/admin/sessions' });
+      items.push({ icon: <FileText size={20} />, label: 'Papers', path: '/admin/papers' });
+      
+      if (hasPermission("READ_USER")) {
+        items.push({ icon: <Users size={20} />, label: 'Users', path: '/admin/users' });
+      }
+      if (hasPermission("READ_ROLE")) {
+        items.push({ icon: <Shield size={20} />, label: 'Roles & Permissions', path: '/admin/role-management' });
+      }
+      if (hasPermission("VIEW_LOGS")) {
+        items.push({ icon: <UserCheck size={20} />, label: 'Attendance', path: '/admin/attendance' });
+      }
+      items.push({ icon: <Settings size={20} />, label: 'Settings', path: '/settings' });
+    } else if (userType === 'coordinator') {
+      items.push({ icon: <Home size={20} />, label: 'Dashboard', path: '/coordinator/dashboard' });
+      items.push({ icon: <Building2 size={20} />, label: 'Departments', path: '/departments' });
+      items.push({ icon: <BookOpen size={20} />, label: 'Subjects', path: '/subjects' });
+      items.push({ icon: <Calendar size={20} />, label: 'Sessions & Projects', path: '/sessions' });
+      items.push({ icon: <FileText size={20} />, label: 'Papers', path: '/papers' });
 
-  // Select menu based on user type
-  let menuItems = examinerMenuItems;
-  if (userType === 'admin') {
-    menuItems = adminMenuItems;
-  } else if (userType === 'coordinator') {
-    menuItems = coordinatorMenuItems;
-  }
+      if (hasPermission("READ_USER")) {
+        items.push({ icon: <Users size={20} />, label: 'Users', path: '/admin/users' });
+      }
+      if (hasPermission("READ_ROLE")) {
+        items.push({ icon: <Shield size={20} />, label: 'Roles & Permissions', path: '/admin/role-management' });
+      }
+      if (hasPermission("VIEW_LOGS")) {
+        items.push({ icon: <UserCheck size={20} />, label: 'Attendance', path: '/admin/attendance' });
+      }
+      items.push({ icon: <Settings size={20} />, label: 'Settings', path: '/settings' });
+    } else if (userType === 'examiner') {
+      items.push({ icon: <Home size={20} />, label: 'Dashboard', path: '/' });
+      
+      if (hasPermission("READ_SCRIPT")) {
+        items.push({ icon: <FileText size={20} />, label: 'Scripts', path: '/scripts' });
+      }
+      if (hasPermission("READ_MARKING")) {
+        items.push({ icon: <PenTool size={20} />, label: 'Marking', path: '/marking' });
+      }
+      items.push({ icon: <Layers size={20} />, label: 'Subject Config', path: '/subject-config' });
+      
+      if (hasPermission("VIEW_REPORTS")) {
+        items.push({ icon: <BarChart3 size={20} />, label: 'Reports', path: '/reports' });
+      }
+      if (hasPermission("READ_USER")) {
+        items.push({ icon: <Users size={20} />, label: 'Examiners', path: '/examiners' });
+      }
+      items.push({ icon: <BookOpen size={20} />, label: 'Subjects', path: '/subjects' });
+      items.push({ icon: <Settings size={20} />, label: 'Settings', path: '/settings' });
+    }
+
+    return items;
+  };
+
+  const menuItems = getMenuItems();
 
   return (
     <aside className="w-64 h-[calc(100vh-4rem)] bg-white border-r border-gray-200 sticky top-16 overflow-y-auto">
