@@ -110,6 +110,7 @@ namespace API.Controllers
             }
         }
         [HttpGet("University")]
+        [AllowAnonymous]
         public async Task<ActionResult<IEnumerable<Subject>>> GetSubjectByUniversity(
       [FromQuery] int universityId)
         {

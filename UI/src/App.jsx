@@ -160,6 +160,7 @@ function AppRoutes() {
           element={hasPermission("VIEW_REPORTS") ? <Reports /> : <Navigate to="/" replace />} 
         />
         <Route path="/settings" element={<Settings />} />
+      </Route>
       {/* University Coordinator Routes - Manage their university */}
       {userType === 'coordinator' && (
         <Route element={<Layout />}>

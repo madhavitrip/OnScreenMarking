@@ -23,10 +23,28 @@ namespace API.Controllers
             _context = context;
         }
 
-        // GET: api/role
+        private async Task<bool> HasPermissionAsync(string permission)
+        {
+            var userType = User.FindFirst("userType")?.Value;
+            if (string.IsNullOrEmpty(userType)) return false;
+
+            var role = await _context.Roles.FirstOrDefaultAsync(r => r.RoleName.ToLower() == userType.ToLower());
+            if (role == null)
+            {
+                return userType.Equals("admin", StringComparison.OrdinalIgnoreCase);
+            }
+
+            return role.PermissionsList.Contains(permission);
+        }
+
         [HttpGet]
         public async Task<ActionResult> GetAllRoles()
         {
+            if (!await HasPermissionAsync("READ_ROLE"))
+            {
+                return StatusCode(403, new { success = false, message = "You do not have permission to view roles." });
+            }
+
             try
             {
                 var roles = await _context.Roles
@@ -53,10 +71,14 @@ namespace API.Controllers
             }
         }
 
-        // GET: api/role/{roleId}
         [HttpGet("{roleId}")]
         public async Task<ActionResult> GetRoleById(int roleId)
         {
+            if (!await HasPermissionAsync("READ_ROLE"))
+            {
+                return StatusCode(403, new { success = false, message = "You do not have permission to view roles." });
+            }
+
             try
             {
                 var role = await _context.Roles.FindAsync(roleId);
@@ -85,10 +107,14 @@ namespace API.Controllers
             }
         }
 
-        // POST: api/role/create
         [HttpPost("create")]
         public async Task<ActionResult> CreateRole([FromBody] CreateRoleRequest request)
         {
+            if (!await HasPermissionAsync("CREATE_ROLE"))
+            {
+                return StatusCode(403, new { success = false, message = "You do not have permission to create roles." });
+            }
+
             try
             {
                 if (request == null || string.IsNullOrWhiteSpace(request.RoleName))
@@ -137,10 +163,14 @@ namespace API.Controllers
             }
         }
 
-        // PUT: api/role/{roleId}
         [HttpPut("{roleId}")]
         public async Task<IActionResult> UpdateRole(int roleId, [FromBody] UpdateRoleRequest request)
         {
+            if (!await HasPermissionAsync("UPDATE_ROLE"))
+            {
+                return StatusCode(403, new { success = false, message = "You do not have permission to update roles." });
+            }
+
             try
             {
                 if (request == null || string.IsNullOrWhiteSpace(request.RoleName))
@@ -178,10 +208,14 @@ namespace API.Controllers
             }
         }
 
-        // DELETE: api/role/{roleId}
         [HttpDelete("{roleId}")]
         public async Task<IActionResult> DeleteRole(int roleId)
         {
+            if (!await HasPermissionAsync("DELETE_ROLE"))
+            {
+                return StatusCode(403, new { success = false, message = "You do not have permission to delete roles." });
+            }
+
             try
             {
                 var role = await _context.Roles.FindAsync(roleId);

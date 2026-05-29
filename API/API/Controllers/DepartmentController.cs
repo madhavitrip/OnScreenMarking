@@ -60,7 +60,6 @@ namespace API.Controllers
                 var department = await _context.Departments
                     .Include(d => d.DepartmentSubjects)
                     .ThenInclude (ds => ds.Subject)
-                    .Include(d => d.Users)
                     .FirstOrDefaultAsync(d => d.DepartmentId == id);
 
                 if (department == null)

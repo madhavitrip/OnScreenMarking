@@ -34,7 +34,7 @@ const authService = {
     localStorage.removeItem('userEmail');
     localStorage.removeItem('profileImage');
     localStorage.removeItem('universityId');
-    localStorage.removeItem('departmentId');
+    localStorage.removeItem('subjectId1');
   }
 };
 
