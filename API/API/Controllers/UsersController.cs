@@ -64,6 +64,46 @@ namespace API.Controllers
             }
         }
 
+        [HttpGet("{id}")]
+        public async Task<ActionResult<UserDto>> GetUserById(int id)
+        {
+            try
+            {
+                var user = await _context.Users
+                    .Include(u => u.University)
+                    .Include(u => u.Department)
+                    .FirstOrDefaultAsync(u => u.Id == id);
+
+                if (user == null)
+                {
+                    return NotFound(new { success = false, message = "User not found" });
+                }
+
+                var userDto = new UserDto
+                {
+                    Id = user.Id,
+                    Name = user.Name,
+                    Email = user.Email,
+                    UserType = user.UserType,
+                    UniversityId = user.UniversityId,
+                    DepartmentId = user.DepartmentId,
+                    Phone = user.Phone,
+                    Address = user.Address,
+                    ProfileImage = user.ProfileImage,
+                    IsActive = user.IsActive,
+                    IsApproved = user.IsApproved,
+                    University = user.University != null ? new University { UniversityId = user.University.UniversityId, UniversityName = user.University.UniversityName } : null,
+                    Department = user.Department != null ? new Department { DepartmentId = user.Department.DepartmentId, Name = user.Department.Name } : null
+                };
+
+                return Ok(userDto);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
         [HttpGet("examiners")]
         public async Task<ActionResult<IEnumerable<UserDto>>> GetExaminers([FromQuery] int? universityId = null, [FromQuery] int? subjectId = null)
         {

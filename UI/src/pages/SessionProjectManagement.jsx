@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import apiCall from '../services/api';
 import { encryptId } from '../utils/encryption';
 import { useBreadcrumb } from '../context/BreadcrumbContext';
+import UniversityConfigHeader from '../components/UniversityConfigHeader';
 
 export default function SessionProjectManagement() {
   const [searchParams] = useSearchParams();
@@ -154,7 +155,10 @@ export default function SessionProjectManagement() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-8">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+        {/* University Sub-navigation Operations Hub */}
+        <UniversityConfigHeader />
+
         {/* Header */}
         <div className="py-6">
           <h1 className="text-2xl font-bold text-gray-900">Sessions & Projects</h1>

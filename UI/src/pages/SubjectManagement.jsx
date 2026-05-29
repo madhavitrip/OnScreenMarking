@@ -4,6 +4,8 @@ import { X, Plus } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import subjectService from '../services/subjectService';
 import departmentService from '../services/departmentService';
+import AddSubjectModal from '../components/AddSubjectModal';
+import UniversityConfigHeader from '../components/UniversityConfigHeader';
 
 export default function SubjectManagement() {
   const [searchParams] = useSearchParams();
@@ -16,8 +18,10 @@ export default function SubjectManagement() {
   const [departments, setDepartments] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [selectedDepartments, setSelectedDepartments] = useState([]);
-  const [formData, setFormData] = useState({
+  const [selectedDepartments, setSelectedDepartments] = useState(
+    departmentId ? [parseInt(departmentId)] : []
+  );
+   const [formData, setFormData] = useState({
     subName: '',
     subCode: '',
     status: true
@@ -83,95 +87,9 @@ export default function SubjectManagement() {
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (selectedDepartments.length === 0) {
-      setError('Please select at least one department');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      
-      if (editingId) {
-        // Update subject details
-        const updatePayload = {
-          subName: formData.subName,
-          subCode: formData.subCode,
-          status: formData.status,
-          departmentId: selectedDepartments[0] // Send first department for compatibility
-        };
-        await subjectService.updateSubject(editingId, updatePayload);
-
-        // Synchronize many-to-many department mappings
-        const existingDepts = await fetchSubjectDepartments(editingId);
-        const existingDeptIds = existingDepts.map(d => d.departmentId);
-
-        // Add newly selected departments
-        for (const deptId of selectedDepartments) {
-          if (!existingDeptIds.includes(deptId)) {
-            try {
-              await subjectService.addDepartmentToSubject(editingId, deptId);
-            } catch (err) {
-              console.error(`Failed to add department ${deptId}:`, err);
-            }
-          }
-        }
-
-        // Remove unselected departments
-        for (const deptId of existingDeptIds) {
-          if (!selectedDepartments.includes(deptId)) {
-            try {
-              await subjectService.removeDepartmentFromSubject(editingId, deptId);
-            } catch (err) {
-              console.error(`Failed to remove department ${deptId}:`, err);
-            }
-          }
-        }
-
-        setSuccess('Subject updated successfully');
-      } else {
-        // Create subject with first department
-        const createPayload = {
-          subName: formData.subName,
-          subCode: formData.subCode,
-          status: formData.status,
-          departmentId: selectedDepartments[0]
-        };
-        const newSubject = await subjectService.createSubject(createPayload);
-        
-        // Add remaining departments to subject
-        for (let i = 1; i < selectedDepartments.length; i++) {
-          try {
-            await subjectService.addDepartmentToSubject(newSubject.subjectId, selectedDepartments[i]);
-          } catch (err) {
-            console.error(`Failed to add department ${selectedDepartments[i]}:`, err);
-          }
-        }
-        setSuccess('Subject created successfully');
-      }
-      
-      setFormData({ subName: '', subCode: '', status: true });
-      setSelectedDepartments([]);
-      setEditingId(null);
-      setShowForm(false);
-      fetchDepartments();
-      
-      if (departmentId) {
-        fetchSubjects(departmentId);
-      } else {
-        fetchAllSubjects();
-      }
-    } catch (err) {
-      setError(err.message || 'Failed to save subject');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleEdit = async (subject) => {
     const depts = await fetchSubjectDepartments(subject.subjectId);
-    
+
     // If the subject has departments, filter the available departments list by their university
     const subjectUniId = depts[0]?.universityId;
     if (subjectUniId) {
@@ -200,28 +118,28 @@ export default function SubjectManagement() {
     setFormData({
       subName: subject.subName,
       subCode: subject.subCode || '',
-      status: subject.status
+      status: subject.status,
+      departmentId: depts[0]?.departmentId || ''
     });
-    setSelectedDepartments(depts.map(d => d.departmentId));
     setEditingId(subject.subjectId);
     setShowForm(true);
   };
 
   const handleCancel = () => {
     setFormData({ subName: '', subCode: '', status: true });
-    setSelectedDepartments([]);
     setEditingId(null);
     setShowForm(false);
     setError('');
     fetchDepartments();
   };
 
-  const toggleDepartment = (deptId) => {
-    setSelectedDepartments(prev =>
-      prev.includes(deptId)
-        ? prev.filter(id => id !== deptId)
-        : [...prev, deptId]
-    );
+  const handleSuccess = (msg) => {
+    setSuccess(msg);
+    if (departmentId) {
+      fetchSubjects(departmentId);
+    } else {
+      fetchAllSubjects();
+    }
   };
 
   const getDepartmentNames = (deptIds) => {
@@ -234,6 +152,9 @@ export default function SubjectManagement() {
   return (
     <div className="min-h-screen bg-gray-50 p-4 lg:p-8">
       <div className="max-w-6xl mx-auto">
+        {/* University Sub-navigation Operations Hub */}
+        <UniversityConfigHeader />
+
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div>
@@ -260,93 +181,16 @@ export default function SubjectManagement() {
           </div>
         )}
 
-        {/* Form */}
-        {showForm && (
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 mb-8">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">
-              {editingId ? 'Edit Subject' : 'Add New Subject'}
-            </h2>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-gray-700 font-semibold mb-2">
-                  Subject Name
-                </label>
-                <input
-                  type="text"
-                  value={formData.subName}
-                  onChange={(e) => setFormData({ ...formData, subName: e.target.value })}
-                  className="w-full bg-white border border-gray-300 text-gray-900 px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                  placeholder="Enter subject name"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-gray-700 font-semibold mb-2">
-                  Subject Code
-                </label>
-                <input
-                  type="text"
-                  value={formData.subCode}
-                  onChange={(e) => setFormData({ ...formData, subCode: e.target.value })}
-                  className="w-full bg-white border border-gray-300 text-gray-900 px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                  placeholder="Enter subject code"
-                />
-              </div>
-
-              <div>
-                <label className="block text-gray-700 font-semibold mb-3">
-                  Departments ({selectedDepartments.length} selected)
-                </label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 bg-gray-50 p-4 rounded-lg border border-gray-200">
-                  {departments.length === 0 ? (
-                    <p className="text-gray-500 col-span-2">No departments available</p>
-                  ) : (
-                    departments.map((dept) => (
-                      <label key={dept.departmentId} className="flex items-center gap-3 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={selectedDepartments.includes(dept.departmentId)}
-                          onChange={() => toggleDepartment(dept.departmentId)}
-                          className="w-4 h-4 rounded border-gray-300"
-                        />
-                        <span className="text-gray-700">{dept.name}</span>
-                      </label>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  id="status"
-                  checked={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.checked })}
-                  className="w-4 h-4 rounded"
-                />
-                <label htmlFor="status" className="text-gray-700 font-semibold">Active</label>
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition disabled:opacity-50"
-                >
-                  {loading ? 'Saving...' : editingId ? 'Update' : 'Create'}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCancel}
-                  className="bg-gray-200 hover:bg-gray-300 text-gray-900 px-6 py-2 rounded-lg font-semibold transition"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
+        {/* Form Modal */}
+        <AddSubjectModal
+          isOpen={showForm}
+          onClose={handleCancel}
+          onSuccess={handleSuccess}
+          editingId={editingId}
+          initialData={formData}
+          activeUniversityId={activeUniversityId}
+          departments={departments}
+        />
 
         {/* Subjects List */}
         {loading && !showForm ? (
@@ -383,34 +227,17 @@ export default function SubjectManagement() {
                       <td className="px-6 py-4 text-gray-900 font-medium">{subject.subName}</td>
                       <td className="px-6 py-4 text-gray-600">{subject.subCode || '-'}</td>
                       <td className="px-6 py-4 text-gray-600">
-                        <button
-                          onClick={() => setExpandedSubject(expandedSubject === subject.subjectId ? null : subject.subjectId)}
-                          className="text-blue-600 hover:text-blue-800 font-semibold"
-                        >
-                          View Departments
-                        </button>
-                        {expandedSubject === subject.subjectId && (
-                          <div className="mt-2 p-3 bg-blue-50 rounded border border-blue-200">
-                            {subject.departmentSubjects && subject.departmentSubjects.length > 0 ? (
-                              <ul className="space-y-1">
-                                {subject.departmentSubjects.map((ds) => (
-                                  <li key={ds.id} className="text-sm text-gray-700">
-                                    • {ds.department?.name}
-                                  </li>
-                                ))}
-                              </ul>
-                            ) : (
-                              <p className="text-sm text-gray-600">No departments assigned</p>
-                            )}
-                          </div>
-                        )}
+                        {subject.departmentSubjects && subject.departmentSubjects.length > 0
+                          ? subject.departmentSubjects
+                            .map((ds) => ds.department?.name)
+                            .join(', ')
+                          : 'No departments assigned'}
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                          subject.status 
-                            ? 'bg-green-100 text-green-700' 
-                            : 'bg-red-100 text-red-700'
-                        }`}>
+                        <span className={`px-3 py-1 rounded-full text-sm font-semibold ${subject.status
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-red-100 text-red-700'
+                          }`}>
                           {subject.status ? 'Active' : 'Inactive'}
                         </span>
                       </td>
@@ -421,12 +248,6 @@ export default function SubjectManagement() {
                         >
                           Edit
                         </button>
-                        <a
-                          href={`/admin/papers?subjectId=${subject.subjectId}&universityId=${activeUniversityId}`}
-                          className="text-green-600 hover:text-green-800 font-semibold"
-                        >
-                          View Papers
-                        </a>
                       </td>
                     </tr>
                   ))}

@@ -23,6 +23,7 @@ import Attendance from './pages/Attendance';
 import Register from './pages/Register';
 import AcceptInvitation from './pages/AcceptInvitation';
 import ScriptAllocation from './pages/ScriptAllocation';
+import Profile from './pages/Profile';
 
 function AppRoutes() {
   const { userType, loading, hasPermission } = useAuth();
@@ -159,6 +160,72 @@ function AppRoutes() {
           element={hasPermission("VIEW_REPORTS") ? <Reports /> : <Navigate to="/" replace />} 
         />
         <Route path="/settings" element={<Settings />} />
+      {/* University Coordinator Routes - Manage their university */}
+      {userType === 'coordinator' && (
+        <Route element={<Layout />}>
+          <Route 
+            path="/" 
+            element={<Navigate to="/coordinator/dashboard" replace />} 
+          />
+          <Route 
+            path="/coordinator/dashboard" 
+            element={<CoordinatorDashboard />} 
+          />
+          <Route 
+            path="/departments" 
+            element={<DepartmentManagement />} 
+          />
+          <Route 
+            path="/subjects" 
+            element={<SubjectManagement />} 
+          />
+          <Route 
+            path="/sessions" 
+            element={<SessionProjectManagement />} 
+          />
+          <Route 
+            path="/projects" 
+            element={<SessionProjectManagement />} 
+          />
+          <Route 
+            path="/papers" 
+            element={<PapersManagement />} 
+          />
+          <Route 
+            path="/allocate-scripts" 
+            element={<ScriptAllocation />} 
+          />
+          <Route 
+            path="/users" 
+            element={<UsersManagement />} 
+          />
+        </Route>
+      )}
+
+      {/* Examiner Routes - View and mark scripts */}
+      {userType === 'examiner' && (
+        <Route element={<Layout />}>
+          <Route path="/" element={<Home />} />
+          <Route path="/scripts" element={<Scripts />} />
+          <Route path="/marking" element={<ExaminerMarking />} />
+          <Route path="/reports" element={<Reports />} />
+          <Route path="/settings" element={<Settings />} />
+        </Route>
+      )}
+      
+      {/* Protected Routes with Layout */}
+      <Route element={<ProtectedRoute />}>
+        <Route element={<Layout />}>
+          <Route path="/" element={<Home />} />
+          <Route path="/scripts" element={<Scripts />} />
+          <Route path="/marking" element={<ExaminerMarking />} />
+          <Route path="/subject-config" element={<SubjectConfig />} />
+          <Route path="/reports" element={<Reports />} />
+          <Route path="/examiners" element={<Home />} />
+          <Route path="/subjects" element={<Home />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/profile" element={<Profile />} />
+        </Route>
       </Route>
 
       {/* Redirect unknown routes */}
