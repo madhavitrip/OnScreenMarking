@@ -95,4 +95,11 @@ namespace API.Models.DTOs
         public int? DepartmentId { get; set; }
         public string UserType { get; set; } = "examiner";
     }
+
+    public class UpdateUserRequest
+    {
+        public string UserType { get; set; }
+        public int? DepartmentId { get; set; }
+        public int? UniversityId { get; set; }
+    }
 }
