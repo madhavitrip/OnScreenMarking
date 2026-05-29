@@ -1,21 +1,21 @@
-using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace API.Models
 {
-    public class DepartmentSubject
+    public class Courses
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; }
-
+        public string Name { get; set; }
+        public string Type { get; set; }
+        public bool IsActive { get; set; }
         public int DepartmentId { get; set; }
         public Department Department { get; set; }
 
-        public int SubjectId { get; set; }
-        public Subject Subject { get; set; }
-
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        // Navigation properties
+        public ICollection<CourseSubject> CourseSubjects { get; set; } = new List<CourseSubject>();
     }
 }

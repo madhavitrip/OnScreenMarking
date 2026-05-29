@@ -8,7 +8,8 @@ import {
   Users, 
   School,
   Sparkles,
-  ChevronRight
+  ChevronRight,
+  GraduationCap
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import apiCall from '../services/api';
@@ -60,6 +61,12 @@ export default function UniversityConfigHeader() {
       label: 'Departments',
       icon: <Building2 size={16} />,
       path: userType === 'admin' ? '/admin/departments' : '/departments'
+    },
+    {
+      id: 'courses',
+      label: 'Courses',
+      icon: <GraduationCap size={16} />,
+      path: userType === 'admin' ? '/admin/courses' : '/courses'
     },
     {
       id: 'subjects',

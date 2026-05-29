@@ -18,7 +18,8 @@ namespace API.Models
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
         // Navigation properties
-        public ICollection<DepartmentSubject> DepartmentSubjects { get; set; }
+        public ICollection<Courses> Courses { get; set; } = new List<Courses>();
+        public ICollection<DepartmentSubject> DepartmentSubjects { get; set; } = new List<DepartmentSubject>();
         public ICollection<User> Users { get; set; } = new List<User>();
     }
 }

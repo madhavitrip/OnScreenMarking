@@ -12,6 +12,7 @@ namespace API.Data
         // DbSet entries for all models
         public DbSet<User> Users { get; set; }
         public DbSet<Department> Departments { get; set; }
+        public DbSet<College> Colleges { get; set; }
         public DbSet<University> Universities { get; set; }
         public DbSet<Subject> Subjects { get; set; }
         public DbSet<Session> Sessions { get; set; }
@@ -29,6 +30,8 @@ namespace API.Data
         public DbSet<ErrorLog> ErrorLogs { get; set; }
         public DbSet<SubjectPaper> SubjectPapers { get; set; }
         public DbSet<DepartmentSubject> DepartmentSubjects { get; set; }
+        public DbSet<Courses> Courses { get; set; }
+        public DbSet<CourseSubject> CourseSubjects { get; set; }
         public DbSet<Invitation> Invitations { get; set; }
         public DbSet<Role> Roles { get; set; }
         public DbSet<Attendance> Attendances { get; set; }
@@ -55,9 +58,36 @@ namespace API.Data
                 .HasForeignKey(u => u.UniversityId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            // College configuration
+            modelBuilder.Entity<College>()
+                .HasKey(c => c.Id);
+
             // Department configuration
             modelBuilder.Entity<Department>()
                 .HasKey(d => d.DepartmentId);
+
+            // Courses configuration
+            modelBuilder.Entity<Courses>()
+                .HasKey(c => c.Id);
+            modelBuilder.Entity<Courses>()
+                .HasOne(c => c.Department)
+                .WithMany(d => d.Courses)
+                .HasForeignKey(c => c.DepartmentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // CourseSubject configuration
+            modelBuilder.Entity<CourseSubject>()
+                .HasKey(cs => cs.Id);
+            modelBuilder.Entity<CourseSubject>()
+                .HasOne(cs => cs.Course)
+                .WithMany(c => c.CourseSubjects)
+                .HasForeignKey(cs => cs.CourseId)
+                .OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<CourseSubject>()
+                .HasOne(cs => cs.Subject)
+                .WithMany(s => s.CourseSubjects)
+                .HasForeignKey(cs => cs.SubjectId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             // User configuration
             modelBuilder.Entity<User>()

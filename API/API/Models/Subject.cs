@@ -22,5 +22,6 @@ namespace API.Models
             = new List<SubjectPaper>();
         // Navigation properties
         public ICollection<ExaminerExpertise> ExaminerExpertises { get; set; } = new List<ExaminerExpertise>();
+        public ICollection<CourseSubject> CourseSubjects { get; set; } = new List<CourseSubject>();
     }
 }

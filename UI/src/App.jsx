@@ -13,7 +13,9 @@ import ProtectedRoute from './components/ProtectedRoute';
 import AdminDashboard from './pages/AdminDashboard';
 import CoordinatorDashboard from './pages/CoordinatorDashboard';
 import UniversityManagement from './pages/UniversityManagement';
+import CollegeManagement from './pages/CollegeManagement';
 import DepartmentManagement from './pages/DepartmentManagement';
+import CourseManagement from './pages/CourseManagement';
 import SubjectManagement from './pages/SubjectManagement';
 import SessionProjectManagement from './pages/SessionProjectManagement';
 import PapersManagement from './pages/PapersManagement';
@@ -62,8 +64,16 @@ function AppRoutes() {
             element={<UniversityManagement />} 
           />
           <Route 
+            path="/admin/colleges" 
+            element={<CollegeManagement />} 
+          />
+          <Route 
             path="/admin/departments" 
             element={<DepartmentManagement />} 
+          />
+          <Route 
+            path="/admin/courses" 
+            element={<CourseManagement />} 
           />
           <Route 
             path="/admin/subjects" 
@@ -119,6 +129,10 @@ function AppRoutes() {
           <Route 
             path="/departments" 
             element={<DepartmentManagement />} 
+          />
+          <Route 
+            path="/courses" 
+            element={<CourseManagement />} 
           />
           <Route 
             path="/subjects" 
