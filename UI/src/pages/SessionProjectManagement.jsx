@@ -250,7 +250,7 @@ export default function SessionProjectManagement() {
                   type="submit"
                   className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
                 >
-                  {editingId ? 'Update' : 'Create'}
+                  {editingId ? 'Update' : 'Add Session'}
                 </button>
                 <button
                   type="button"
@@ -315,7 +315,7 @@ export default function SessionProjectManagement() {
                       type="submit"
                       className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
                     >
-                      {editingId ? 'Update' : 'Create'}
+                      {editingId ? 'Update' : 'Add Project'}
                     </button>
                     <button
                       type="button"

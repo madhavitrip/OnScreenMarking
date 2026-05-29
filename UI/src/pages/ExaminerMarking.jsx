@@ -17,6 +17,7 @@ import {
 import PDFAnnotator from "../components/PDFAnnotator";
 import sectionService from "../services/sectionService";
 import markingService from "../services/markingService";
+import userService from "../services/userService";
 import { useAuth } from "../context/AuthContext";
 
 // Helper to extract landmarks from an image URL or base64
@@ -125,6 +126,7 @@ const ExaminerMarking = () => {
   const landmarkerRef = useRef(null);
   const [isLandmarkerLoaded, setIsLandmarkerLoaded] = useState(false);
   const registeredLandmarksRef = useRef(null);
+  const consecutiveMismatchesRef = useRef(0);
   const [sectionAttemptCounts, setSectionAttemptCounts] = useState({}); // Track attempted questions per section
   const [submitted, setSubmitted] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -196,19 +198,48 @@ const ExaminerMarking = () => {
         landmarkerRef.current = localLandmarker;
         setIsLandmarkerLoaded(true);
 
-        const profileImageBase64 = localStorage.getItem("profileImage");
+        let profileImageBase64 = localStorage.getItem("profileImage") || user?.profileImage;
+        if (!profileImageBase64 && examinerId) {
+          try {
+            console.log(`OSM Proctoring: Profile image not found locally. Fetching details for user: ${examinerId}...`);
+            const fetchedUser = await userService.getUserById(examinerId);
+            if (fetchedUser && fetchedUser.profileImage) {
+              profileImageBase64 = fetchedUser.profileImage;
+              localStorage.setItem("profileImage", profileImageBase64);
+              console.log("OSM Proctoring: Successfully fetched and cached profile image from DB.");
+            } else {
+              console.warn("OSM Proctoring: Fetched user does not have a profile image.");
+            }
+          } catch (e) {
+            console.error("OSM Proctoring: Failed to fetch user profile image:", e);
+          }
+        }
+
         if (profileImageBase64) {
+          console.log("OSM Proctoring: Profile image found. Extracting registered landmarks...");
           const landmarks = await extractImageLandmarks(profileImageBase64, localLandmarker);
           if (landmarks) {
             registeredLandmarksRef.current = landmarks;
             console.log("OSM Proctoring: Registered profile landmarks cached successfully!");
+          } else {
+            console.error("OSM Proctoring: Failed to extract landmarks from registered profile image.");
           }
+        } else {
+          console.error("OSM Proctoring: No registered profile image available in local storage, user context, or database!");
         }
 
         const runVerificationCheck = () => {
-          if (!videoRef.current || !landmarkerRef.current) return;
+          if (!videoRef.current || !landmarkerRef.current) {
+            console.log("OSM Proctoring check skipped: Video ref or landmarker not initialized.");
+            return;
+          }
           const video = videoRef.current;
-          if (video.readyState < 2) return;
+          if (video.readyState < 2) {
+            console.log("OSM Proctoring check skipped: Video is not ready yet.");
+            return;
+          }
+
+          console.log("OSM Proctoring: Executing periodic face matching check...");
 
           try {
             const tempCanvas = document.createElement("canvas");
@@ -226,25 +257,51 @@ const ExaminerMarking = () => {
             const results = landmarkerRef.current.detect(tempCanvas);
             const facesCount = results.faceLandmarks ? results.faceLandmarks.length : 0;
 
+            console.log(`OSM Proctoring: Detected ${facesCount} face(s) in frame.`);
+
+            let currentCheckWarning = "";
+
             if (facesCount === 0) {
-              setProctorWarning("No Face");
+              currentCheckWarning = "No Face";
             } else if (facesCount > 1) {
-              setProctorWarning("Multiple Faces");
+              currentCheckWarning = "Multiple Faces";
             } else {
               const currentLandmarks = results.faceLandmarks[0];
               if (registeredLandmarksRef.current) {
                 const distance = compareFaces(registeredLandmarksRef.current, currentLandmarks);
-                console.log(`OSM Proctoring: Verification match score: ${distance.toFixed(4)}`);
+                console.log(`OSM Proctoring: Face match distance: ${distance.toFixed(4)} (Threshold: 0.11)`);
                 
-                if (distance > 0.065) {
-                  setProctorWarning("Mismatch");
-                } else {
-                  setProctorWarning("");
+                if (distance > 0.11) {
+                  currentCheckWarning = "Mismatch";
                 }
               } else {
-                // If profile photo is missing, default to just validating face presence
-                setProctorWarning("");
+                console.warn("OSM Proctoring: Registered landmarks missing, defaulting to presence check.");
               }
+            }
+
+            if (currentCheckWarning !== "") {
+              consecutiveMismatchesRef.current = (consecutiveMismatchesRef.current || 0) + 1;
+              console.warn(`OSM Proctoring: Check failed (${currentCheckWarning}). Consecutive failures: ${consecutiveMismatchesRef.current}/3`);
+              
+              if (consecutiveMismatchesRef.current >= 3) {
+                setProctorWarning((prevWarning) => {
+                  if (prevWarning !== currentCheckWarning) {
+                    if (currentCheckWarning === "Mismatch") {
+                      setTimeout(() => {
+                        alert("⚠️ Security Alert: Face Mismatch Detected!\n\nThe person currently in front of the camera does not match the examiner profile captured at the time of registration.\n\nPlease ensure the registered examiner is actively evaluating and facing the camera clearly.");
+                      }, 100);
+                    }
+                    return currentCheckWarning;
+                  }
+                  return prevWarning;
+                });
+              }
+            } else {
+              if (consecutiveMismatchesRef.current > 0) {
+                console.log("OSM Proctoring: Verification succeeded, resetting failure counter.");
+              }
+              consecutiveMismatchesRef.current = 0;
+              setProctorWarning("");
             }
           } catch (err) {
             console.error("OSM Proctoring Check Error:", err);
@@ -254,8 +311,8 @@ const ExaminerMarking = () => {
         // Trigger initial fast check after 4 seconds
         setTimeout(runVerificationCheck, 4000);
 
-        // Run matching every 60 seconds (1 minute)
-        intervalId = setInterval(runVerificationCheck, 60000);
+        // Run matching every 5 seconds
+        intervalId = setInterval(runVerificationCheck, 5000);
       } catch (err) {
         console.error("OSM Proctoring Setup failed:", err);
       }

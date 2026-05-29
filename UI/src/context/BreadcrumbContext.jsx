@@ -16,7 +16,7 @@ const routeLabels = {
   '/admin/papers': { label: 'Paper Management', icon: 'FileText' },
   '/admin/subject-config': { label: 'Subject Configuration', icon: 'Layers' },
   '/admin/users': { label: 'Users', icon: 'Users' },
-  '/admin/role-management': { label: 'Role Management', icon: 'Users' },
+  '/admin/role-management': { label: 'Roles & Permissions', icon: 'Shield' },
   '/admin/attendance': { label: 'Attendance', icon: 'Users' },
   '/admin/allocate-scripts': { label: 'Script Allocation', icon: 'Layers' },
 

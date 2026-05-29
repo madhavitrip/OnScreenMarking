@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 
 const Navbar = () => {
   const navigate = useNavigate();
-  const { user, userType, logout } = useAuth();
+  const { user, userType, logout, hasPermission } = useAuth();
 
   const handleLogout = () => {
     logout();
@@ -12,7 +12,37 @@ const Navbar = () => {
   };
 
   const getNavLinks = () => {
+    const links = [];
+
     if (userType === 'admin') {
+      links.push({ label: 'Dashboard', path: '/admin/dashboard' });
+      links.push({ label: 'Universities', path: '/admin/universities' });
+      links.push({ label: 'Sessions & Projects', path: '/admin/sessions' });
+      if (hasPermission("READ_USER")) {
+        links.push({ label: 'Users', path: '/admin/users' });
+      }
+      if (hasPermission("READ_ROLE")) {
+        links.push({ label: 'Roles & Permissions', path: '/admin/role-management' });
+      }
+      if (hasPermission("VIEW_LOGS")) {
+        links.push({ label: 'Attendance', path: '/admin/attendance' });
+      }
+    } else if (userType === 'coordinator') {
+      links.push({ label: 'Dashboard', path: '/coordinator/dashboard' });
+      links.push({ label: 'Departments', path: '/departments' });
+      links.push({ label: 'Subjects', path: '/subjects' });
+      links.push({ label: 'Sessions & Projects', path: '/sessions' });
+      links.push({ label: 'Papers', path: '/papers' });
+      links.push({ label: 'Allocations', path: '/allocate-scripts' });
+      if (hasPermission("READ_USER")) {
+        links.push({ label: 'Users', path: '/admin/users' });
+      }
+      if (hasPermission("READ_ROLE")) {
+        links.push({ label: 'Roles & Permissions', path: '/admin/role-management' });
+      }
+      if (hasPermission("VIEW_LOGS")) {
+        links.push({ label: 'Attendance', path: '/admin/attendance' });
+      }
       return [
         { label: 'Dashboard', path: '/admin/dashboard' },
         { label: 'Universities', path: '/admin/universities' },
@@ -25,11 +55,15 @@ const Navbar = () => {
         { label: 'Sessions & Projects', path: '/sessions' },
       ];
     } else if (userType === 'examiner') {
-      return [
-        { label: 'Dashboard', path: '/' }
-      ];
+      links.push({ label: 'Dashboard', path: '/' });
+      if (hasPermission("READ_SCRIPT")) {
+        links.push({ label: 'Scripts', path: '/scripts' });
+      }
+      if (hasPermission("VIEW_REPORTS")) {
+        links.push({ label: 'Reports', path: '/reports' });
+      }
     }
-    return [];
+    return links;
   };
 
   return (
