@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import {
   X,
@@ -16,7 +16,8 @@ import {
   AlertCircle,
   Loader,
   Search,
-  Sparkles
+  Sparkles,
+  ChevronRight
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import userService from "../services/userService";
@@ -26,35 +27,21 @@ import roleService from "../services/roleService";
 import AssignRoleModal from "../components/RoleManagement/AssignRoleModal";
 import UniversityConfigHeader from "../components/UniversityConfigHeader";
 import departmentService from "../services/departmentService";
+import AddUserModal from "../components/AddUserModal";
+import { useTable } from "../services/tableService";
+import TablePagination from "../components/TablePagination";
 
 export default function UsersManagement() {
   const [searchParams] = useSearchParams();
   const { userType, universityId: userUniversityId, hasPermission } = useAuth();
   const universityIdFromUrl = searchParams.get("universityId");
-  const activeUniversityId =
-    userType === "coordinator" ? userUniversityId : universityIdFromUrl;
+  const activeUniversityId = userType === "coordinator" ? userUniversityId : universityIdFromUrl;
 
   const [activeTab, setActiveTab] = useState("all"); // "all", "pending", "invite"
-  const [users, setUsers] = useState([]);
   const [universities, setUniversities] = useState([]);
   const [departments, setDepartments] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
-
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    password: "",
-    userType: "",
-    universityId: "",
-    departmentId: "",
-    phone: "",
-    address: "",
-    profileImage: "",
-  });
-
+  
   // Invitation Form State
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteDeptId, setInviteDeptId] = useState("");
@@ -65,16 +52,82 @@ export default function UsersManagement() {
   const [copiedLink, setCopiedLink] = useState(false);
   const [emailStatus, setEmailStatus] = useState(null);
 
-  // Profile Image Zoom Modal State
+  // Zoom / View User profile state
   const [zoomUser, setZoomUser] = useState(null);
-
   const [subjects, setSubjects] = useState([]);
   const [roles, setRoles] = useState([]);
   const [showAssignRoleModal, setShowAssignRoleModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [showAddUserModal, setShowAddUserModal] = useState(false);
+
+  // Define fetch function for useTable to load users with search, role and tab filters
+  const fetchFn = useCallback(async (params) => {
+    const data = await userService.getAllUsers(activeUniversityId);
+    let result = data || [];
+
+    // Filter by Active Tab
+    if (activeTab === "pending") {
+      result = result.filter(u => u.isApproved === false && u.userType !== "admin");
+    }
+
+    // Apply Status Filter
+    if (params.isActive !== undefined && params.isActive !== "") {
+      const activeBool = params.isActive === "true";
+      result = result.filter(u => u.isActive === activeBool);
+    }
+
+    // Apply Role Filter
+    if (params.userType) {
+      result = result.filter(u => u.userType.toLowerCase() === params.userType.toLowerCase());
+    }
+
+    // Apply Search Term
+    if (params.search) {
+      const s = params.search.toLowerCase();
+      result = result.filter(
+        u => u.name.toLowerCase().includes(s) || u.email.toLowerCase().includes(s)
+      );
+    }
+
+    return result;
+  }, [activeUniversityId, activeTab]);
+
+  // Centralized hook for users table states
+  const {
+    items: users,
+    totalCount,
+    totalPages,
+    page,
+    setPage,
+    pageSize,
+    setPageSize,
+    search,
+    setSearch,
+    loading,
+    error,
+    setError,
+    filters,
+    setFilter,
+    refresh: refreshUsers
+  } = useTable({
+    fetchFn,
+    initialParams: { pageSize: 10 }
+  });
+
+  // Calculate quick count of total pending approvals globally
+  const [pendingCount, setPendingCount] = useState(0);
+  useEffect(() => {
+    if (activeUniversityId) {
+      userService.getAllUsers(activeUniversityId)
+        .then(data => {
+          const pending = data?.filter(u => u.isApproved === false && u.userType !== "admin") || [];
+          setPendingCount(pending.length);
+        })
+        .catch(console.error);
+    }
+  }, [activeUniversityId, users]);
 
   useEffect(() => {
-    fetchUsers();
     fetchUniversities();
     fetchRoles();
     if (activeUniversityId) {
@@ -82,10 +135,16 @@ export default function UsersManagement() {
     }
   }, [activeUniversityId]);
 
+  // Refresh table when tab changes
+  useEffect(() => {
+    setPage(1);
+    refreshUsers();
+  }, [activeTab, refreshUsers]);
+
   const fetchSubjects = async (universityId) => {
     try {
-      const data = await subjectService.getSubjectByUniversity(universityId);
-      setSubjects(data);
+      const data = await subjectService.getSubjectByUniversity(universityId, { pageSize: 0 });
+      setSubjects(data?.items || data || []);
     } catch (err) {
       console.error("Failed to fetch subjects:", err);
     }
@@ -97,12 +156,9 @@ export default function UsersManagement() {
       const loadedRoles = res.data || [];
       setRoles(loadedRoles);
       
-      // Auto-align default inviteUserType state with the first eligible role in the select dropdown
       const activeRoles = loadedRoles.filter(r => r.isActive);
       const firstEligible = activeRoles.find(role => {
-        if (role.roleName.toLowerCase() === 'admin' && userType !== 'admin') {
-          return false;
-        }
+        if (role.roleName.toLowerCase() === 'admin' && userType !== 'admin') return false;
         return true;
       });
       if (firstEligible) {
@@ -114,64 +170,39 @@ export default function UsersManagement() {
   };
 
   useEffect(() => {
-    const uniId = formData.universityId || activeUniversityId || inviteUniId;
+    const uniId = activeUniversityId || inviteUniId;
     if (uniId) {
-      fetchDepartments(uniId);
+      departmentService.getDepartmentsByUniversity(uniId, { pageSize: 0 })
+        .then(data => setDepartments(data?.items || data || []))
+        .catch(console.error);
     } else {
       setDepartments([]);
     }
-  }, [formData.universityId, activeUniversityId, inviteUniId]);
-
-
-  const fetchUsers = async () => {
-    try {
-      setLoading(true);
-      const data = await userService.getAllUsers(activeUniversityId);
-      setUsers(data);
-    } catch (err) {
-      setError("Failed to fetch users");
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [activeUniversityId, inviteUniId]);
 
   const fetchUniversities = async () => {
     try {
       const data = await universityService.getAllUniversities();
-      setUniversities(data);
+      setUniversities(data || []);
     } catch (err) {
       setError("Failed to fetch universities");
       console.error(err);
     }
   };
 
-  const fetchDepartments = async (universityId) => {
-    try {
-      const data = await departmentService.getDepartmentsByUniversity(universityId);
-      setDepartments(data);
-    } catch (err) {
-      console.error("Failed to fetch departments:", err);
-    }
-  };
-
-  // Approval handler
   const handleApprove = async (userId) => {
     try {
-      setLoading(true);
       setError("");
       setSuccess("");
       await userService.approveUser(userId);
       setSuccess("Examiner approved and activated successfully!");
-      fetchUsers();
+      refreshUsers();
+      setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       setError(err.message || "Failed to approve examiner.");
-    } finally {
-      setLoading(false);
     }
   };
 
-  // Invitation handler
   const handleSendInvite = async (e) => {
     e.preventDefault();
     setError("");
@@ -204,33 +235,25 @@ export default function UsersManagement() {
         setInviteEmail("");
         setInviteDeptId("");
         
-        // Reset role to the first eligible role to keep UI synced
         const activeRoles = roles.filter(r => r.isActive);
         const firstEligible = activeRoles.find(role => {
-          if (role.roleName.toLowerCase() === 'admin' && userType !== 'admin') {
-            return false;
-          }
+          if (role.roleName.toLowerCase() === 'admin' && userType !== 'admin') return false;
           return true;
         });
-        if (firstEligible) {
-          setInviteUserType(firstEligible.roleName.toLowerCase());
-        } else {
-          setInviteUserType("examiner");
-        }
+        setInviteUserType(firstEligible ? firstEligible.roleName.toLowerCase() : "examiner");
 
         const link = res.invitation?.invitationLink || res.invitation?.InvitationLink;
-        if (link) {
-          setGeneratedLink(link);
-        }
+        if (link) setGeneratedLink(link);
 
         if (res.emailSent === false) {
           setEmailStatus({ sent: false, error: res.emailError || "SMTP Configuration Issue" });
-          setError("Invitation generated, but the invitation email failed to send. Please copy and share the link below manually.");
+          setError("Invitation generated, but email failed. Please share link manually.");
         } else {
           setEmailStatus({ sent: true, error: null });
-          setSuccess("Invitation email has been sent successfully!");
+          setSuccess("Invitation email sent successfully!");
         }
-        fetchUsers();
+        refreshUsers();
+        setTimeout(() => setSuccess(''), 3000);
       }
     } catch (err) {
       setError(err.message || "Failed to send invitation.");
@@ -239,331 +262,322 @@ export default function UsersManagement() {
     }
   };
 
-  // Filter users based on search
-  const filteredUsers = users.filter((u) => {
-    const matchSearch =
-      u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.email.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchSearch;
-  });
-
-  // Filter pending users (inactive, not admin)
-  const pendingExaminers = users.filter((u) => u.isApproved == false && u.userType !== "admin");
-
   return (
-    <div className="min-h-screen bg-slate-50 p-4 lg:p-8">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-slate-50/50 p-4 md:p-6 w-full max-w-none">
+      <div className="w-full space-y-3">
         {/* University Sub-navigation Operations Hub */}
         <UniversityConfigHeader />
 
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-          <div>
-            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-              Users Management
-            </h1>
-            <p className="text-slate-500 mt-1">Manage system accounts, coordinate registration, and issue examiner invitations.</p>
+        {/* Unified Dashboard Header & Filters Panel */}
+        <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-1 text-indigo-655 font-extrabold text-[10px] uppercase tracking-widest leading-none mb-1">
+                <Users size={11} />
+                <span>Personnel Governance</span>
+              </div>
+              <h1 className="text-xl font-black text-slate-900 tracking-tight leading-none flex items-center gap-1.5">
+                <span>Personnel & Users</span>
+              </h1>
+              <p className="text-slate-500 text-[10px] mt-0.5">Approve incoming examiner registrations, manage roles, and provision system accounts</p>
+            </div>
+            
+            <div className="flex items-center gap-2 shrink-0">
+              {hasPermission('CREATE_USER') && (
+                <button
+                  onClick={() => setShowAddUserModal(true)}
+                  className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-655 hover:from-blue-700 hover:to-indigo-755 text-white rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all duration-200 cursor-pointer shadow-sm hover:shadow shrink-0"
+                >
+                  <UserPlus size={14} />
+                  <span>Add New User</span>
+                </button>
+              )}
+            </div>
           </div>
+          
+          {/* Tab Selection Controls */}
+          <div className="flex flex-wrap gap-1.5 pt-2 border-t border-slate-100">
+            <button
+              onClick={() => setActiveTab("all")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all text-[10px] uppercase tracking-wider cursor-pointer ${
+                activeTab === "all"
+                  ? "bg-slate-900 text-white shadow-sm"
+                  : "text-slate-655 hover:bg-slate-50 hover:text-slate-950"
+              }`}
+            >
+              <Users size={12} />
+              <span>All Users</span>
+              <span className={`text-[9px] px-1.5 py-0.5 rounded font-black ${
+                activeTab === "all" ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600"
+              }`}>
+                {users.length}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab("pending")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all text-[10px] uppercase tracking-wider cursor-pointer ${
+                activeTab === "pending"
+                  ? "bg-slate-900 text-white shadow-sm"
+                  : "text-slate-655 hover:bg-slate-50 hover:text-slate-955"
+              }`}
+            >
+              <UserCheck size={12} />
+              <span>Pending Approvals</span>
+              {pendingCount > 0 && (
+                <span className="bg-red-500 text-white font-extrabold text-[8px] px-1.5 py-0.5 rounded leading-none animate-pulse">
+                  {pendingCount}
+                </span>
+              )}
+            </button>
+
+            {hasPermission('CREATE_USER') && (
+              <button
+                onClick={() => setActiveTab("invite")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all text-[10px] uppercase tracking-wider cursor-pointer ${
+                  activeTab === "invite"
+                    ? "bg-slate-900 text-white shadow-sm"
+                    : "text-slate-655 hover:bg-slate-50 hover:text-slate-955"
+                }`}
+              >
+                <Mail size={12} />
+                <span>Invite User</span>
+              </button>
+            )}
+          </div>
+
+          {/* Search & Filters Row (Only for lists, hidden on invite page) */}
+          {activeTab !== "invite" && (
+            <div className="flex flex-col md:flex-row gap-3 pt-2 border-t border-slate-100 items-center justify-between">
+              {/* Search Bar */}
+              <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-150 flex-1 w-full max-w-md">
+                <Search size={14} className="text-slate-400 shrink-0" />
+                <input
+                  type="text"
+                  placeholder="Search by name or email..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full bg-transparent text-slate-800 placeholder-slate-400 font-semibold text-[11px] focus:outline-none"
+                />
+                {search && (
+                  <button
+                    onClick={() => setSearch('')}
+                    className="text-[9px] font-black uppercase text-slate-400 hover:text-slate-600 transition cursor-pointer"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+
+              {/* Filters */}
+              <div className="flex flex-wrap items-center gap-2 select-none">
+                {/* Status selector */}
+                <select
+                  value={filters.isActive === undefined ? '' : filters.isActive}
+                  onChange={(e) => setFilter('isActive', e.target.value)}
+                  className="px-2.5 py-1.5 bg-slate-50 border border-slate-150 rounded-xl font-bold text-[10px] text-slate-700 focus:outline-none cursor-pointer"
+                >
+                  <option value="">All Statuses</option>
+                  <option value="true">Active Only</option>
+                  <option value="false">Inactive Only</option>
+                </select>
+
+                {/* Role selector */}
+                <select
+                  value={filters.userType || ''}
+                  onChange={(e) => setFilter('userType', e.target.value)}
+                  className="px-2.5 py-1.5 bg-slate-50 border border-slate-150 rounded-xl font-bold text-[10px] text-slate-700 focus:outline-none cursor-pointer"
+                >
+                  <option value="">All Roles</option>
+                  <option value="examiner">Examiners</option>
+                  <option value="coordinator">Coordinators</option>
+                  {userType === 'admin' && <option value="admin">Administrators</option>}
+                </select>
+
+                {(filters.isActive || filters.userType) && (
+                  <button
+                    onClick={() => {
+                      setFilter('isActive', '');
+                      setFilter('userType', '');
+                    }}
+                    className="text-[9px] font-black uppercase text-rose-500 hover:text-rose-700 transition cursor-pointer"
+                  >
+                    Reset
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Notifications */}
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6 flex items-start gap-3 shadow-sm animate-fade-in">
-            <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-            <p className="text-sm font-medium">{error}</p>
+          <div className="bg-rose-50 border border-rose-100 text-rose-700 px-5 py-4 rounded-2xl text-xs font-semibold shadow-sm animate-fade-in flex items-start gap-2">
+            <AlertCircle size={14} className="shrink-0 mt-0.5" />
+            <span>{error}</span>
           </div>
         )}
         {success && (
-          <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl mb-6 flex items-start gap-3 shadow-sm animate-fade-in">
-            <CheckCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-            <p className="text-sm font-medium">{success}</p>
+          <div className="bg-emerald-50 border border-emerald-100 text-emerald-700 px-5 py-4 rounded-2xl text-xs font-semibold shadow-sm animate-fade-in flex items-start gap-2">
+            <CheckCircle size={14} className="shrink-0 mt-0.5" />
+            <span>{success}</span>
           </div>
         )}
 
-        {/* Tab Controls */}
-        <div className="bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap gap-2 mb-8">
-          <button
-            onClick={() => {
-              setActiveTab("all");
-            }}
-            className={`flex items-center gap-2 px-5 py-3 rounded-xl font-bold transition-all text-sm ${activeTab === "all"
-                ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md"
-                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-              }`}
-          >
-            <Users size={16} />
-            All Users
-            <span
-              className={`text-xs px-2 py-0.5 rounded-full ${activeTab === "all" ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600"
-                }`}
-            >
-              {users.length}
-            </span>
-          </button>
-
-          <button
-            onClick={() => {
-              setActiveTab("pending");
-            }}
-            className={`flex items-center gap-2 px-5 py-3 rounded-xl font-bold transition-all text-sm ${activeTab === "pending"
-                ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md"
-                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-              }`}
-          >
-            <UserCheck size={16} />
-            Pending Approvals
-            {pendingExaminers.length > 0 && (
-              <span className="animate-pulse bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
-                {pendingExaminers.length}
-              </span>
-            )}
-          </button>
-
-          {hasPermission('CREATE_USER') && (
-            <button
-              onClick={() => {
-                setActiveTab("invite");
-              }}
-              className={`flex items-center gap-2 px-5 py-3 rounded-xl font-bold transition-all text-sm ${activeTab === "invite"
-                  ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md"
-                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                }`}
-            >
-              <UserPlus size={16} />
-              Invite User
-            </button>
-          )}
-        </div>
-
-        {/* Tab Content 1: All Users */}
-        {activeTab === "all" && (
-          <div className="space-y-6 animate-fade-in">
-            {/* Direct Create User Form */}
-            {/* List and search */}
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-              <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4">
-                <h3 className="text-lg font-bold text-slate-900">User</h3>
-                <div className="relative max-w-sm w-full">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                  <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Search by name or email..."
-                    className="w-full bg-slate-50 border border-slate-300 text-slate-900 pl-10 pr-4 py-2 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                  />
+        {/* Tab Content 1: All Users & 2: Pending Approvals */}
+        {activeTab !== "invite" && (
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden animate-fade-in">
+            {loading && users.length === 0 ? (
+              <div className="p-12 text-center text-slate-400 font-bold text-xs flex flex-col items-center gap-3">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-650"></div>
+                <span>Loading users...</span>
+              </div>
+            ) : users.length === 0 ? (
+              <div className="p-16 text-center text-slate-500 font-medium leading-relaxed max-w-sm mx-auto space-y-3">
+                <Users className="mx-auto text-slate-455" size={32} />
+                <div>
+                  <h3 className="font-extrabold text-slate-900 text-xs uppercase tracking-wider">No Records Found</h3>
+                  <p className="text-[10px] text-slate-400 mt-1">There are no registered accounts matching your filters or search terms.</p>
                 </div>
               </div>
-
-              {loading ? (
-                <div className="text-center py-16">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                  <p className="text-slate-500 font-medium">Loading system users...</p>
-                </div>
-              ) : filteredUsers.length === 0 ? (
-                <div className="p-12 text-center text-slate-500 font-medium leading-relaxed">
-                  <Users className="text-slate-400 mx-auto mb-3" size={32} />
-                  <p className="text-lg text-slate-700 font-bold mb-1">No Users Found</p>
-                  <p className="text-sm">There are no registered users matching your search or filters at the moment.</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left">
-                    <thead className="bg-slate-50 border-b border-slate-100">
-                      <tr>
-                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Photo</th>
-                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Name</th>
-                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Email Address</th>
-                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Role</th>
-                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">University</th>
-                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
-                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {filteredUsers.map((user) => (
-                        <tr key={user.id} className="hover:bg-slate-50 transition-colors">
-                           <td className="px-6 py-4">
-                            <Link to={`/profile?userId=${user.id}`} title="View Detailed Profile">
-                              {user.profileImage ? (
-                                <div className="relative group w-10 h-10 rounded-full overflow-hidden border border-slate-200">
-                                  <img src={user.profileImage} alt={user.name} className="w-full h-full object-cover transition group-hover:scale-110" />
-                                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
-                                    <Eye className="text-white" size={14} />
-                                  </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-black text-slate-450 uppercase tracking-widest select-none">
+                      <th className="px-6 py-4">Photo</th>
+                      <th className="px-6 py-4">Name</th>
+                      <th className="px-6 py-4">Email</th>
+                      <th className="px-6 py-4">System Role</th>
+                      <th className="px-6 py-4">University</th>
+                      <th className="px-6 py-4 text-center">Status</th>
+                      <th className="px-6 py-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-xs">
+                    {users.map((user) => (
+                      <tr key={user.id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-6 py-4">
+                          <Link to={`/profile?userId=${user.id}`} title="View Detailed Profile">
+                            {user.profileImage ? (
+                              <div className="relative group w-8 h-8 rounded-xl overflow-hidden border border-slate-250/70 shadow-sm shrink-0">
+                                <img src={user.profileImage} alt={user.name} className="w-full h-full object-cover transition group-hover:scale-105" />
+                                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
+                                  <Eye className="text-white" size={12} />
                                 </div>
-                              ) : (
-                                <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center border border-slate-200 hover:bg-slate-200 transition-colors">
-                                  <Users size={16} className="text-slate-400" />
-                                </div>
-                              )}
-                            </Link>
-                          </td>
-                          <td className="px-6 py-4 font-semibold text-slate-900">{user.name}</td>
-                          <td className="px-6 py-4 text-slate-600">{user.email}</td>
-                          <td className="px-6 py-4">
-                            <span className={`px-2.5 py-1 text-xs font-bold rounded-lg capitalize border ${user.userType === "admin"
-                                ? "bg-purple-50 text-purple-700 border-purple-200"
-                                : user.userType === "coordinator"
-                                  ? "bg-amber-50 text-amber-700 border-amber-200"
-                                  : "bg-emerald-50 text-emerald-700 border-emerald-200"
-                              }`}>
-                              {user.userType}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-slate-600 text-sm">
-                            {user.university?.universityName || "-"}
-                          </td>
-                          <td className="px-6 py-4">
-                            <span
-                              className={`px-3 py-1 rounded-full text-xs font-bold border inline-flex items-center gap-1.5 ${user.isActive
-                                  ? "bg-green-50 text-green-700 border-green-200"
-                                  : "bg-red-50 text-red-700 border-red-200"
-                                }`}
-                            >
-                              <span className={`w-1.5 h-1.5 rounded-full ${user.isActive ? "bg-green-600 animate-pulse" : "bg-red-500"}`}></span>
-                              {user.isActive ? "Active" : "Pending / Inactive"}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            {hasPermission('UPDATE_USER') && (
+                              </div>
+                            ) : (
+                              <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-200 hover:bg-slate-100 transition-colors shrink-0">
+                                <Users size={14} className="text-slate-450" />
+                              </div>
+                            )}
+                          </Link>
+                        </td>
+                        <td className="px-6 py-4 font-extrabold text-slate-900">{user.name}</td>
+                        <td className="px-6 py-4 text-slate-600 font-medium">{user.email}</td>
+                        <td className="px-6 py-4">
+                          <span className={`px-2 py-0.5 text-[9px] font-black rounded-lg capitalize border tracking-wider ${
+                            user.userType === "admin"
+                              ? "bg-purple-50 text-purple-700 border-purple-100"
+                              : user.userType === "coordinator"
+                                ? "bg-amber-50 text-amber-700 border-amber-100"
+                                : "bg-emerald-50 text-emerald-700 border-emerald-100"
+                          }`}>
+                            {user.userType}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-slate-600 text-sm font-semibold">
+                          {user.university?.universityName || "-"}
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-black text-[9px] uppercase tracking-wider border ${
+                            user.isActive
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-100"
+                              : "bg-rose-50 text-rose-700 border-rose-100"
+                          }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${user.isActive ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`}></span>
+                            {user.isActive ? "Active" : "Pending / Inactive"}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right whitespace-nowrap">
+                          {activeTab === "pending" ? (
+                            hasPermission('UPDATE_USER') && (
+                              <button
+                                onClick={() => handleApprove(user.id)}
+                                className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl text-[10px] uppercase tracking-wider transition cursor-pointer inline-flex items-center gap-1 shadow-sm"
+                              >
+                                <UserCheck size={12} />
+                                <span>Approve</span>
+                              </button>
+                            )
+                          ) : (
+                            hasPermission('UPDATE_USER') && (
                               <button
                                 onClick={() => {
                                   setSelectedUser(user);
                                   setShowAssignRoleModal(true);
                                 }}
-                                className="px-3.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl text-xs font-bold border border-blue-100 transition shadow-sm"
+                                className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl font-bold text-[10px] uppercase tracking-wider border border-indigo-150 transition cursor-pointer"
                               >
                                 Assign Role
                               </button>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Tab Content 2: Pending Approvals */}
-        {activeTab === "pending" && (
-          <div className="space-y-6 animate-fade-in">
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-              <div className="p-5 border-b border-slate-100">
-                <h3 className="text-lg font-bold text-slate-900">Awaiting University Coordinator Approval</h3>
-                <p className="text-slate-500 text-xs mt-1">Review applicant profiles, verification pictures, and validate registrations.</p>
-              </div>
-
-              {loading ? (
-                <div className="text-center py-16">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                  <p className="text-slate-500 font-medium">Loading requests...</p>
-                </div>
-              ) : pendingExaminers.length === 0 ? (
-                <div className="p-12 text-center text-slate-500 font-medium leading-relaxed">
-                  <CheckCircle className="text-green-500 mx-auto mb-3" size={32} />
-                  <p className="text-lg text-slate-700 font-bold mb-1">All Caught Up!</p>
-                  <p className="text-sm">There are no pending examiner approvals for this university at the moment.</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left">
-                    <thead className="bg-slate-50 border-b border-slate-100">
-                      <tr>
-                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Photo</th>
-                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Name</th>
-                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Email Address</th>
-                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Primary Subject</th>
-                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Phone</th>
-                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Actions</th>
+                            )
+                          )}
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {pendingExaminers.map((user) => (
-                        <tr key={user.id} className="hover:bg-slate-50 transition-colors">
-                           <td className="px-6 py-4">
-                            <Link to={`/profile?userId=${user.id}`} title="View Detailed Profile">
-                              {user.profileImage ? (
-                                <div className="relative group w-12 h-12 rounded-xl overflow-hidden border border-slate-200">
-                                  <img src={user.profileImage} alt={user.name} className="w-full h-full object-cover transition group-hover:scale-110" />
-                                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
-                                    <Eye className="text-white" size={16} />
-                                  </div>
-                                </div>
-                              ) : (
-                                <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center border border-slate-200 hover:bg-slate-200 transition-colors">
-                                  <Users size={20} className="text-slate-400" />
-                                </div>
-                              )}
-                            </Link>
-                          </td>
-                          <td className="px-6 py-4 font-bold text-slate-900">{user.name}</td>
-                          <td className="px-6 py-4 text-slate-600 text-sm font-medium">{user.email}</td>
-                          <td className="px-6 py-4 text-slate-600 text-sm font-semibold">
-                            {subjects.find(s => s.subjectId === user.subjectId1)?.subName || "General / Not Specified"}
-                          </td>
-                          <td className="px-6 py-4 text-slate-600 text-sm">
-                            {user.phone || "-"}
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            {hasPermission('UPDATE_USER') && (
-                              <button
-                                onClick={() => handleApprove(user.id)}
-                                className="bg-green-600 hover:bg-green-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition shadow-sm inline-flex items-center gap-1.5"
-                              >
-                                <UserCheck size={14} />
-                                Approve User
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
+                    ))}
+                  </tbody>
+                </table>
+
+                {/* Standard Centralized Table Pagination */}
+                <TablePagination
+                  page={page}
+                  totalPages={totalPages}
+                  totalCount={totalCount}
+                  pageSize={pageSize}
+                  setPage={setPage}
+                  setPageSize={setPageSize}
+                />
+              </div>
+            )}
           </div>
         )}
 
-        {/* Tab Content 3: Invite Examiner */}
+        {/* Tab Content 3: Invite Examiner Panel */}
         {activeTab === "invite" && hasPermission('CREATE_USER') && (
-          <div className="max-w-2xl mx-auto animate-fade-in">
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-xl overflow-hidden p-6 md:p-8">
-              <div className="text-center mb-6">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-xl flex items-center justify-center mx-auto mb-3 shadow-md">
-                  <Mail size={24} />
+          <div className="max-w-xl mx-auto animate-fade-in mt-4">
+            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 space-y-5">
+              <div className="text-center">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-650 text-white rounded-2xl flex items-center justify-center mx-auto mb-2 shadow">
+                  <Mail size={22} />
                 </div>
-                <h3 className="text-xl font-extrabold text-slate-950">Issue Examiner Invitation</h3>
-                <p className="text-sm text-slate-500 mt-1">Generate a secure unique token and onboarding link for pre-authorized examiners.</p>
+                <h3 className="text-lg font-black text-slate-900 tracking-tight">Issue Onboarding Invitation</h3>
+                <p className="text-xs text-slate-505 mt-1">Generate a pre-authorized onboarding token invitation for examiners or coordinators</p>
               </div>
 
-              <form onSubmit={handleSendInvite} className="space-y-6">
+              <form onSubmit={handleSendInvite} className="space-y-4 text-xs font-semibold text-slate-700">
                 {/* Email Address */}
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Examiner Email Address *</label>
+                  <label className="block text-[10px] font-black uppercase text-slate-500 tracking-wider mb-1.5">Examiner Email *</label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                     <input
                       type="email"
                       required
                       value={inviteEmail}
                       onChange={(e) => setInviteEmail(e.target.value)}
-                      placeholder="examiner.name@cbse.gov.in"
-                      className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-slate-900 outline-none transition"
+                      placeholder="e.g. examiner.smith@board.org"
+                      className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-655 bg-slate-50/50 text-slate-900 outline-none transition"
                     />
                   </div>
                 </div>
 
-                {/* University Selection (Only shown for Admin, locked for Coordinator) */}
+                {/* University Selection (Only shown for Global Admin, hidden for coordinator) */}
                 {userType === "admin" && (
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">Assign University *</label>
+                    <label className="block text-[10px] font-black uppercase text-slate-500 tracking-wider mb-1.5">Assign University *</label>
                     <div className="relative">
-                      <Building className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                      <Building className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                       <select
                         required
                         value={inviteUniId}
@@ -571,7 +585,7 @@ export default function UsersManagement() {
                           setInviteUniId(e.target.value);
                           setInviteDeptId("");
                         }}
-                        className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-slate-900 outline-none transition appearance-none"
+                        className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-655 bg-slate-50/50 text-slate-900 font-medium outline-none transition cursor-pointer appearance-none"
                       >
                         <option value="">Select University</option>
                         {universities.map((uni) => (
@@ -586,13 +600,13 @@ export default function UsersManagement() {
 
                 {/* Department Selection */}
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Assign Department</label>
+                  <label className="block text-[10px] font-black uppercase text-slate-500 tracking-wider mb-1.5">Assign Department</label>
                   <div className="relative">
-                    <Building className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <Building className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                     <select
                       value={inviteDeptId}
                       onChange={(e) => setInviteDeptId(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-slate-900 outline-none transition appearance-none disabled:bg-slate-50"
+                      className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-655 bg-slate-50/50 text-slate-900 font-medium outline-none transition cursor-pointer appearance-none disabled:bg-slate-100 disabled:cursor-not-allowed"
                       disabled={!(activeUniversityId || inviteUniId)}
                     >
                       <option value="">Select Department (Optional)</option>
@@ -604,20 +618,19 @@ export default function UsersManagement() {
                     </select>
                   </div>
                 </div>
-                {/* Role / User Type Selection */}
+
+                {/* System Role */}
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Assign System Role *</label>
+                  <label className="block text-[10px] font-black uppercase text-slate-500 tracking-wider mb-1.5">System Role *</label>
                   <div className="relative">
-                    <UserPlus className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <UserPlus className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                     <select
                       value={inviteUserType}
                       onChange={(e) => setInviteUserType(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-slate-900 outline-none transition appearance-none"
+                      className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-655 bg-slate-50/50 text-slate-900 font-medium outline-none transition cursor-pointer appearance-none"
                     >
                       {roles.filter(r => r.isActive).map((role) => {
-                        if (role.roleName.toLowerCase() === 'admin' && userType !== 'admin') {
-                          return null;
-                        }
+                        if (role.roleName.toLowerCase() === 'admin' && userType !== 'admin') return null;
                         return (
                           <option key={role.roleId} value={role.roleName.toLowerCase()}>
                             {role.roleName}
@@ -626,63 +639,58 @@ export default function UsersManagement() {
                       })}
                       {roles.length === 0 && (
                         <>
-                          <option value="examiner">Examiner (Evaluates Answer Scripts)</option>
-                          <option value="coordinator">University Coordinator (Manages Departments & Subjects)</option>
-                          {userType === "admin" && (
-                            <option value="admin">System Administrator (Global Governance)</option>
-                          )}
+                          <option value="examiner">Examiner</option>
+                          <option value="coordinator">University Coordinator</option>
+                          {userType === "admin" && <option value="admin">System Administrator</option>}
                         </>
                       )}
                     </select>
                   </div>
                 </div>
+
                 <button
                   type="submit"
                   disabled={inviteLoading}
-                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-3 rounded-xl transition shadow-lg flex items-center justify-center gap-2 text-sm disabled:opacity-50"
+                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-650 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-3 rounded-xl transition shadow flex items-center justify-center gap-1.5 text-xs cursor-pointer disabled:opacity-50"
                 >
                   {inviteLoading ? (
                     <>
-                      <Loader className="animate-spin" size={16} />
-                      Sending Invitation...
+                      <Loader className="animate-spin" size={14} />
+                      Dispatching Link...
                     </>
                   ) : (
                     <>
-                      <Sparkles size={16} />
-                      Send Invitation Email
+                      <Sparkles size={14} />
+                      Send Secure Invitation
                     </>
                   )}
                 </button>
               </form>
 
               {generatedLink && (
-                <div className="mt-8 border-t border-slate-100 pt-6 animate-slide-up">
-                  <div className={`p-4 rounded-xl border flex flex-col gap-3 ${emailStatus?.sent
-                      ? "bg-emerald-50/50 border-emerald-100"
-                      : "bg-amber-50/50 border-amber-100"
-                    }`}>
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h4 className={`text-sm font-bold ${emailStatus?.sent ? "text-emerald-800" : "text-amber-800"
-                          }`}>
-                          {emailStatus?.sent ? "✓ Invitation Generated & Dispatched" : "⚠ Invitation Generated (Email Failed)"}
-                        </h4>
-                        <p className={`text-xs mt-1 ${emailStatus?.sent ? "text-emerald-600" : "text-amber-600"
-                          }`}>
-                          {emailStatus?.sent
-                            ? "An email was successfully sent, but you can also copy the direct link below as a backup:"
-                            : `SMTP Delivery failed (${emailStatus?.error || "Credentials issue"}). Please copy the link below to share it manually via chat, WhatsApp, or another channel:`
-                          }
-                        </p>
-                      </div>
+                <div className="border-t border-slate-100 pt-4 animate-slide-up text-xs">
+                  <div className={`p-4 rounded-xl border flex flex-col gap-2.5 ${emailStatus?.sent
+                    ? "bg-emerald-50/40 border-emerald-100"
+                    : "bg-amber-50/40 border-amber-100"
+                  }`}>
+                    <div>
+                      <h4 className={`font-extrabold ${emailStatus?.sent ? "text-emerald-800" : "text-amber-800"}`}>
+                        {emailStatus?.sent ? "✓ Link Dispatched Successfully" : "⚠ Secure Link Ready (Delivery Issue)"}
+                      </h4>
+                      <p className={`text-[10px] mt-0.5 leading-relaxed ${emailStatus?.sent ? "text-emerald-600" : "text-amber-600"}`}>
+                        {emailStatus?.sent
+                          ? "Email invite went through successfully! Copy link below as a backup if needed:"
+                          : `Email transfer returned an SMTP error (${emailStatus?.error || "credentials"}). Copy and share the token link manually:`
+                        }
+                      </p>
                     </div>
 
-                    <div className="flex items-center gap-2 mt-1">
+                    <div className="flex items-center gap-2">
                       <input
                         type="text"
                         readOnly
                         value={generatedLink}
-                        className="flex-1 bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-800 font-mono select-all outline-none"
+                        className="flex-1 bg-white border border-slate-205 rounded-lg px-2.5 py-1.5 text-[10px] text-slate-800 font-mono select-all outline-none"
                       />
                       <button
                         type="button"
@@ -691,12 +699,12 @@ export default function UsersManagement() {
                           setCopiedLink(true);
                           setTimeout(() => setCopiedLink(false), 2000);
                         }}
-                        className={`p-2 rounded-lg border flex items-center justify-center gap-1.5 transition text-xs font-semibold ${copiedLink
-                            ? "bg-emerald-600 border-emerald-600 text-white"
-                            : "bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700"
-                          }`}
+                        className={`px-3 py-1.5 rounded-lg border flex items-center justify-center gap-1 transition text-[10px] font-bold ${copiedLink
+                          ? "bg-emerald-650 border-emerald-650 text-white"
+                          : "bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700 cursor-pointer"
+                        }`}
                       >
-                        {copiedLink ? <Check size={14} /> : <Copy size={14} />}
+                        {copiedLink ? <Check size={12} /> : <Copy size={12} />}
                         <span>{copiedLink ? "Copied" : "Copy"}</span>
                       </button>
                     </div>
@@ -708,124 +716,7 @@ export default function UsersManagement() {
         )}
       </div>
 
-      {/* Profile Photo Zoom Modal */}
-      {zoomUser && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in" onClick={() => setZoomUser(null)}>
-          <div className="bg-white rounded-2xl max-w-md w-full overflow-hidden shadow-2xl animate-scale-up" onClick={(e) => e.stopPropagation()}>
-            <div className="relative aspect-square bg-slate-950">
-              <img src={zoomUser.profileImage} alt={zoomUser.name} className="w-full h-full object-cover" />
-              <button
-                onClick={() => setZoomUser(null)}
-                className="absolute top-3 right-3 bg-black/60 hover:bg-black/80 text-white rounded-full p-2 shadow-lg transition"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            <div className="p-5">
-              <h4 className="text-lg font-bold text-slate-900">{zoomUser.name}</h4>
-              <p className="text-slate-600 text-sm font-medium mt-1">{zoomUser.email}</p>
-
-              <div className="border-t border-slate-100 mt-4 pt-4 space-y-3">
-                <div className="flex items-center gap-2 text-slate-600 text-xs font-semibold">
-                  <Building size={14} className="text-slate-400" />
-                  <span>{zoomUser.university?.universityName || "No University"}</span>
-                </div>
-                {zoomUser.fname && (
-                  <div className="text-slate-700 text-xs font-medium">
-                    <span className="text-slate-400 font-bold block mb-0.5">Official Name</span>
-                    <span>{zoomUser.fname}</span>
-                  </div>
-                )}
-                {(zoomUser.empId || zoomUser.collegeId) && (
-                  <div className="grid grid-cols-2 gap-3 text-slate-700 text-xs font-medium bg-slate-50 p-2 rounded-lg border border-slate-100">
-                    {zoomUser.empId && (
-                      <div>
-                        <span className="text-slate-400 block mb-0.5">Employee ID</span>
-                        <span className="font-bold">{zoomUser.empId}</span>
-                      </div>
-                    )}
-                    {zoomUser.collegeId && (
-                      <div>
-                        <span className="text-slate-400 block mb-0.5">College ID</span>
-                        <span className="font-bold">{zoomUser.collegeId}</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-                {(zoomUser.aadharNo || zoomUser.panNo) && (
-                  <div className="grid grid-cols-2 gap-3 text-slate-700 text-xs font-medium bg-slate-50 p-2 rounded-lg border border-slate-100">
-                    {zoomUser.aadharNo && (
-                      <div>
-                        <span className="text-slate-400 block mb-0.5">Aadhar Number</span>
-                        <span className="font-mono">{zoomUser.aadharNo}</span>
-                      </div>
-                    )}
-                    {zoomUser.panNo && (
-                      <div>
-                        <span className="text-slate-400 block mb-0.5">PAN Number</span>
-                        <span className="font-mono uppercase">{zoomUser.panNo}</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-                {zoomUser.experience && (
-                  <div className="text-slate-700 text-xs font-medium">
-                    <span className="text-slate-400 font-bold block mb-0.5">Evaluation Experience</span>
-                    <span>{zoomUser.experience}</span>
-                  </div>
-                )}
-                <div className="text-slate-700 text-xs font-medium bg-blue-50/50 p-2.5 rounded-lg border border-blue-100/50">
-                  <span className="text-blue-500 font-bold block mb-1">Subject Expertise</span>
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-500">Primary:</span>
-                      <span className="font-semibold text-slate-800">
-                        {subjects.find(s => s.subjectId === zoomUser.subjectId1)?.subName || "Not Assigned"}
-                      </span>
-                    </div>
-                    {zoomUser.subjectId2 && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-500">Secondary:</span>
-                        <span className="font-semibold text-slate-800">
-                          {subjects.find(s => s.subjectId === zoomUser.subjectId2)?.subName}
-                        </span>
-                      </div>
-                    )}
-                    {zoomUser.subjectId3 && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-500">Tertiary:</span>
-                        <span className="font-semibold text-slate-800">
-                          {subjects.find(s => s.subjectId === zoomUser.subjectId3)?.subName}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                {zoomUser.phone && (
-                  <div className="flex items-center gap-2 text-slate-600 text-xs font-semibold pt-1">
-                    <Phone size={14} className="text-slate-400" />
-                    <span>{zoomUser.phone}</span>
-                  </div>
-                )}
-              </div>
-
-              {!zoomUser.isActive && zoomUser.userType !== "admin" && (
-                <button
-                  onClick={() => {
-                    handleApprove(zoomUser.id);
-                    setZoomUser(null);
-                  }}
-                  className="w-full mt-5 bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-xl font-bold transition shadow-sm text-sm flex items-center justify-center gap-2"
-                >
-                  <UserCheck size={16} />
-                  Approve User Now
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
+      {/* Assign Role Modal */}
       {showAssignRoleModal && selectedUser && (
         <AssignRoleModal
           user={selectedUser}
@@ -846,13 +737,27 @@ export default function UsersManagement() {
               setError("");
               setShowAssignRoleModal(false);
               setSelectedUser(null);
-              fetchUsers();
+              refreshUsers();
+              setTimeout(() => setSuccess(''), 3000);
             } catch (err) {
               setError(err.message || "Failed to assign role.");
             }
           }}
         />
       )}
+
+      {/* Add New User Modal */}
+      <AddUserModal
+        isOpen={showAddUserModal}
+        onClose={() => setShowAddUserModal(false)}
+        onSuccess={(msg) => {
+          setSuccess(msg);
+          setError("");
+          refreshUsers();
+          setTimeout(() => setSuccess(''), 3000);
+        }}
+        activeUniversityId={activeUniversityId}
+      />
     </div>
   );
 }

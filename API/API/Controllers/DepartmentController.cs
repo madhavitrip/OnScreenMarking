@@ -20,8 +20,11 @@ namespace API.Controllers
         }
         [AllowAnonymous]
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Department>>> GetDepartments(
-     [FromQuery] int? universityId = null)
+        public async Task<IActionResult> GetDepartments(
+            [FromQuery] int? universityId = null,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string search = "")
         {
             try
             {
@@ -29,18 +32,45 @@ namespace API.Controllers
 
                 if (universityId.HasValue)
                 {
-                    query = query.Where(d =>
-                        d.UniversityId == universityId.Value);
+                    query = query.Where(d => d.UniversityId == universityId.Value);
                 }
 
-                var departments = await query
-                    .Where(d => d.IsActive)
+                if (!string.IsNullOrWhiteSpace(search))
+                {
+                    query = query.Where(d => d.Name.Contains(search));
+                }
+
+                var totalCount = await query.CountAsync();
+
+                query = query.Where(d => d.IsActive)
+                    .Include(d => d.Courses)
                     .Include(d => d.DepartmentSubjects)
                         .ThenInclude(ds => ds.Subject)
-                    .OrderBy(d => d.Name)
-                    .ToListAsync();
+                    .OrderBy(d => d.Name);
 
-                return Ok(departments);
+                List<Department> departments;
+                if (pageSize > 0)
+                {
+                    departments = await query
+                        .Skip((page - 1) * pageSize)
+                        .Take(pageSize)
+                        .ToListAsync();
+                }
+                else
+                {
+                    departments = await query.ToListAsync();
+                }
+
+                var totalPages = pageSize > 0 ? (int)Math.Ceiling((double)totalCount / pageSize) : 1;
+
+                return Ok(new
+                {
+                    items = departments,
+                    totalCount = totalCount,
+                    page = page,
+                    pageSize = pageSize,
+                    totalPages = totalPages
+                });
             }
             catch (Exception ex)
             {
@@ -58,6 +88,7 @@ namespace API.Controllers
             try
             {
                 var department = await _context.Departments
+                    .Include(d => d.Courses)
                     .Include(d => d.DepartmentSubjects)
                     .ThenInclude (ds => ds.Subject)
                     .FirstOrDefaultAsync(d => d.DepartmentId == id);

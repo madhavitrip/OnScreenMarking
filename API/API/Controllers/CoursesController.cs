@@ -25,9 +25,14 @@ namespace API.Controllers
 
         [AllowAnonymous]
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Courses>>> GetCourses(
+        public async Task<IActionResult> GetCourses(
             [FromQuery] int? departmentId = null,
-            [FromQuery] int? universityId = null)
+            [FromQuery] int? universityId = null,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string search = "",
+            [FromQuery] bool? isActive = null,
+            [FromQuery] string type = null)
         {
             try
             {
@@ -42,14 +47,52 @@ namespace API.Controllers
                     query = query.Where(c => c.Department.UniversityId == universityId.Value);
                 }
 
-                var courses = await query
+                if (isActive.HasValue)
+                {
+                    query = query.Where(c => c.IsActive == isActive.Value);
+                }
+
+                if (!string.IsNullOrWhiteSpace(type))
+                {
+                    query = query.Where(c => c.Type == type);
+                }
+
+                if (!string.IsNullOrWhiteSpace(search))
+                {
+                    query = query.Where(c => c.Name.Contains(search));
+                }
+
+                var totalCount = await query.CountAsync();
+
+                query = query
                     .Include(c => c.Department)
                     .Include(c => c.CourseSubjects)
                         .ThenInclude(cs => cs.Subject)
-                    .OrderBy(c => c.Name)
-                    .ToListAsync();
+                    .OrderBy(c => c.Name);
 
-                return Ok(courses);
+                List<Courses> courses;
+                if (pageSize > 0)
+                {
+                    courses = await query
+                        .Skip((page - 1) * pageSize)
+                        .Take(pageSize)
+                        .ToListAsync();
+                }
+                else
+                {
+                    courses = await query.ToListAsync();
+                }
+
+                var totalPages = pageSize > 0 ? (int)Math.Ceiling((double)totalCount / pageSize) : 1;
+
+                return Ok(new
+                {
+                    items = courses,
+                    totalCount = totalCount,
+                    page = page,
+                    pageSize = pageSize,
+                    totalPages = totalPages
+                });
             }
             catch (Exception ex)
             {
@@ -129,6 +172,8 @@ namespace API.Controllers
                 
                 course.Type = courseDto.Type;
                 course.IsActive = courseDto.IsActive;
+                if (courseDto.DepartmentId > 0)
+                    course.DepartmentId = courseDto.DepartmentId;
 
                 _context.Courses.Update(course);
                 await _context.SaveChangesAsync();

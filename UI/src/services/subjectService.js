@@ -1,20 +1,37 @@
 import apiCall from "./api";
 
 const subjectService = {
-  getAllSubjects: async () => {
-    return apiCall("/subject");
+  getAllSubjects: async (params = {}) => {
+    const query = new URLSearchParams();
+    if (params.page) query.append('page', params.page);
+    if (params.pageSize !== undefined) query.append('pageSize', params.pageSize);
+    if (params.search) query.append('search', params.search);
+    const queryString = query.toString();
+    return apiCall(`/subject${queryString ? `?${queryString}` : ''}`);
   },
   
-  getSubjectByUniversity: async (universityId) => {
-    return apiCall(`/Subject/University?universityId=${universityId}`);
+  getSubjectByUniversity: async (universityId, params = {}) => {
+    const query = new URLSearchParams();
+    if (universityId) query.append('universityId', universityId);
+    if (params.page) query.append('page', params.page);
+    if (params.pageSize !== undefined) query.append('pageSize', params.pageSize);
+    if (params.search) query.append('search', params.search);
+    const queryString = query.toString();
+    return apiCall(`/Subject/University${queryString ? `?${queryString}` : ''}`);
   },
 
   getSubjectByProject: async (projectId) => {
     return apiCall(`/Subject/Project?projectId=${projectId}`);
   },
 
-  getSubjectsByDepartment: async (departmentId) => {
-    return apiCall(`/subject?departmentId=${departmentId}`);
+  getSubjectsByDepartment: async (departmentId, params = {}) => {
+    const query = new URLSearchParams();
+    if (departmentId) query.append('departmentId', departmentId);
+    if (params.page) query.append('page', params.page);
+    if (params.pageSize !== undefined) query.append('pageSize', params.pageSize);
+    if (params.search) query.append('search', params.search);
+    const queryString = query.toString();
+    return apiCall(`/subject${queryString ? `?${queryString}` : ''}`);
   },
 
   getSubjectById: async (subjectId) => {
