@@ -283,7 +283,7 @@ export default function CollegeManagement() {
                   <li>Download the CSV template and open it in <strong>Microsoft Excel</strong>.</li>
                   <li>Fill in college details. <strong>CollegeName</strong> and <strong>CollegeCode</strong> are mandatory fields.</li>
                   <li>Ensure each <strong>CollegeCode</strong> is unique; duplicate codes will trigger a skip.</li>
-                  <li>When saving in Excel, choose <strong>Save As -> CSV (Comma Delimited) (*.csv)</strong> format.</li>
+                  <li>When saving in Excel, choose <strong>Save As &rarr; CSV (Comma Delimited) (*.csv)</strong> format.</li>
                   <li>Upload the resulting CSV file to complete bulk registration.</li>
                 </ul>
 
