@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import departmentService from '../services/departmentService';
+import courseService from '../services/courseService';
 
 export default function AddDepartmentModal({
   isOpen,
@@ -12,21 +13,59 @@ export default function AddDepartmentModal({
 }) {
   const [name, setName] = useState('');
   const [isActive, setIsActive] = useState(true);
+  const [courses, setCourses] = useState([]);
+  const [selectedCourses, setSelectedCourses] = useState([]);
+  const [initialCourses, setInitialCourses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (editingId && initialData) {
-      setName(initialData.name || '');
-      setIsActive(initialData.isActive !== undefined ? initialData.isActive : true);
-    } else {
-      setName('');
-      setIsActive(true);
-    }
-    setError('');
-  }, [editingId, initialData, isOpen]);
+    const loadModalData = async () => {
+      if (!isOpen || !activeUniversityId) return;
+
+      try {
+        setLoading(true);
+        setError('');
+
+        // 1. Fetch all courses for this university
+        const uniCourses = await courseService.getAllCourses(null, activeUniversityId);
+        setCourses(uniCourses);
+
+        if (editingId) {
+          setName(initialData?.name || '');
+          setIsActive(initialData?.isActive !== undefined ? initialData.isActive : true);
+
+          // Fetch full department details to get mapped courses
+          const dept = await departmentService.getDepartmentById(editingId);
+          
+          // Find courses belonging to this department
+          const mappedCourseIds = dept.courses ? dept.courses.map(c => c.id) : [];
+          setSelectedCourses(mappedCourseIds);
+          setInitialCourses(mappedCourseIds);
+        } else {
+          setName('');
+          setIsActive(true);
+          setSelectedCourses([]);
+          setInitialCourses([]);
+        }
+      } catch (err) {
+        console.error('Failed to load department modal options:', err);
+        setError('Failed to load courses for selection');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadModalData();
+  }, [editingId, initialData, isOpen, activeUniversityId]);
 
   if (!isOpen) return null;
+
+  const toggleCourse = (courseId) => {
+    setSelectedCourses(prev =>
+      prev.includes(courseId) ? prev.filter(id => id !== courseId) : [...prev, courseId]
+    );
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -42,6 +81,7 @@ export default function AddDepartmentModal({
     try {
       setLoading(true);
       setError('');
+      
       const payload = {
         name: name.trim(),
         universityId: parseInt(activeUniversityId, 10),
@@ -49,10 +89,28 @@ export default function AddDepartmentModal({
         departmentSubjects: []
       };
 
+      let responseDept;
       if (editingId) {
-        await departmentService.updateDepartment(editingId, payload);
+        responseDept = await departmentService.updateDepartment(editingId, payload);
       } else {
-        await departmentService.createDepartment(payload);
+        responseDept = await departmentService.createDepartment(payload);
+      }
+
+      const deptId = editingId || responseDept?.departmentId || responseDept?.id;
+
+      if (deptId) {
+        // Sync Mapped Courses
+        for (const courseId of selectedCourses) {
+          if (!initialCourses.includes(courseId)) {
+            const courseObj = courses.find(c => c.id === courseId);
+            if (courseObj) {
+              await courseService.updateCourse(courseId, {
+                ...courseObj,
+                departmentId: deptId
+              });
+            }
+          }
+        }
       }
 
       onSuccess(editingId ? 'Department updated successfully' : 'Department created successfully');
@@ -73,7 +131,7 @@ export default function AddDepartmentModal({
       />
 
       <div className="flex min-h-full items-center justify-center p-4">
-        <div className="relative w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 shadow-xl border border-slate-100 transition-all">
+        <div className="relative w-full max-w-lg transform overflow-hidden rounded-2xl bg-white p-6 shadow-xl border border-slate-100 transition-all">
           
           {/* Header */}
           <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
@@ -108,6 +166,50 @@ export default function AddDepartmentModal({
                 placeholder="e.g. Computer Science"
                 required
               />
+            </div>
+
+            {/* Courses Selector */}
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
+                Assign Courses ({selectedCourses.length} selected)
+              </label>
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 max-h-48 overflow-y-auto">
+                {courses.length === 0 ? (
+                  <p className="text-xs text-rose-500 font-bold py-2 text-center">
+                    No courses exist. Please add courses in the Courses Management screen first.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {courses.map((course) => (
+                      <label key={course.id} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={selectedCourses.includes(course.id)}
+                          onChange={() => toggleCourse(course.id)}
+                          className="w-3.5 h-3.5 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                        />
+                        <span className="text-[11px] font-semibold text-slate-700 leading-tight">
+                          {course.name}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Status */}
+            <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100 select-none">
+              <input
+                type="checkbox"
+                id="deptIsActive"
+                checked={isActive}
+                onChange={(e) => setIsActive(e.target.checked)}
+                className="w-4 h-4 text-blue-600 border-slate-200 rounded focus:ring-blue-500 cursor-pointer"
+              />
+              <label htmlFor="deptIsActive" className="text-xs font-semibold text-slate-700 cursor-pointer">
+                Activate this department
+              </label>
             </div>
 
             {/* Actions */}

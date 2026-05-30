@@ -1,13 +1,17 @@
 import apiCall from './api';
 
 const courseService = {
-  getAllCourses: async (departmentId = null, universityId = null) => {
-    let url = '/courses';
-    const params = [];
-    if (departmentId) params.push(`departmentId=${departmentId}`);
-    if (universityId) params.push(`universityId=${universityId}`);
-    if (params.length > 0) url += `?${params.join('&')}`;
-    return apiCall(url);
+  getAllCourses: async (departmentId = null, universityId = null, params = {}) => {
+    const query = new URLSearchParams();
+    if (departmentId) query.append('departmentId', departmentId);
+    if (universityId) query.append('universityId', universityId);
+    if (params.page) query.append('page', params.page);
+    if (params.pageSize !== undefined) query.append('pageSize', params.pageSize);
+    if (params.search) query.append('search', params.search);
+    if (params.isActive !== undefined && params.isActive !== null && params.isActive !== '') query.append('isActive', params.isActive);
+    if (params.type) query.append('type', params.type);
+    const queryString = query.toString();
+    return apiCall(`/courses${queryString ? `?${queryString}` : ''}`);
   },
 
   getCourseById: async (id) => {

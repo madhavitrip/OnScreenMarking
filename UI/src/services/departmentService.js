@@ -1,12 +1,23 @@
 import apiCall from './api';
 
 const departmentService = {
-  getAllDepartments: async () => {
-    return apiCall('/department');
+  getAllDepartments: async (params = {}) => {
+    const query = new URLSearchParams();
+    if (params.page) query.append('page', params.page);
+    if (params.pageSize !== undefined) query.append('pageSize', params.pageSize);
+    if (params.search) query.append('search', params.search);
+    const queryString = query.toString();
+    return apiCall(`/department${queryString ? `?${queryString}` : ''}`);
   },
 
-  getDepartmentsByUniversity: async (universityId) => {
-    return apiCall(`/department?universityId=${universityId}`);
+  getDepartmentsByUniversity: async (universityId, params = {}) => {
+    const query = new URLSearchParams();
+    if (universityId) query.append('universityId', universityId);
+    if (params.page) query.append('page', params.page);
+    if (params.pageSize !== undefined) query.append('pageSize', params.pageSize);
+    if (params.search) query.append('search', params.search);
+    const queryString = query.toString();
+    return apiCall(`/department${queryString ? `?${queryString}` : ''}`);
   },
 
   getDepartmentById: async (departmentId) => {
