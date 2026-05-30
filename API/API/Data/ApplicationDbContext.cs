@@ -65,10 +65,16 @@ namespace API.Data
             // Department configuration
             modelBuilder.Entity<Department>()
                 .HasKey(d => d.DepartmentId);
+            modelBuilder.Entity<Department>()
+                .HasIndex(d => new { d.UniversityId, d.Name })
+                .IsUnique();
 
             // Courses configuration
             modelBuilder.Entity<Courses>()
                 .HasKey(c => c.Id);
+            modelBuilder.Entity<Courses>()
+                .HasIndex(c => new { c.DepartmentId, c.Name })
+                .IsUnique();
             modelBuilder.Entity<Courses>()
                 .HasOne(c => c.Department)
                 .WithMany(d => d.Courses)
@@ -78,6 +84,9 @@ namespace API.Data
             // CourseSubject configuration
             modelBuilder.Entity<CourseSubject>()
                 .HasKey(cs => cs.Id);
+            modelBuilder.Entity<CourseSubject>()
+                .HasIndex(cs => new { cs.CourseId, cs.SubjectId })
+                .IsUnique();
             modelBuilder.Entity<CourseSubject>()
                 .HasOne(cs => cs.Course)
                 .WithMany(c => c.CourseSubjects)

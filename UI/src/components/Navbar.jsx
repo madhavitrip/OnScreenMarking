@@ -18,9 +18,6 @@ const Navbar = () => {
       links.push({ label: 'Dashboard', path: '/admin/dashboard' });
       links.push({ label: 'Universities', path: '/admin/universities' });
       links.push({ label: 'Colleges', path: '/admin/colleges' });
-      links.push({ label: 'Departments', path: '/admin/departments' });
-      links.push({ label: 'Courses', path: '/admin/courses' });
-      links.push({ label: 'Subjects', path: '/admin/subjects' });
       links.push({ label: 'Sessions & Projects', path: '/admin/sessions' });
       links.push({ label: 'Papers', path: '/admin/papers' });
       if (hasPermission("READ_USER")) {
@@ -34,9 +31,6 @@ const Navbar = () => {
       }
     } else if (userType === 'coordinator') {
       links.push({ label: 'Dashboard', path: '/coordinator/dashboard' });
-      links.push({ label: 'Departments', path: '/departments' });
-      links.push({ label: 'Courses', path: '/courses' });
-      links.push({ label: 'Subjects', path: '/subjects' });
       links.push({ label: 'Sessions & Projects', path: '/sessions' });
       links.push({ label: 'Papers', path: '/papers' });
       if (hasPermission("READ_ALLOCATION")) {

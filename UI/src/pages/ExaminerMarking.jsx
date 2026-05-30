@@ -139,6 +139,142 @@ const ExaminerMarking = () => {
   const [showQpModal, setShowQpModal] = useState(false);
   const [stream, setStream] = useState(null);
   const videoRef = useRef(null);
+  const [isBlurred, setIsBlurred] = useState(false);
+
+  // Security Print & Screenshot Prevention
+  useEffect(() => {
+    const handleContextMenu = (e) => {
+      e.preventDefault();
+    };
+
+    const handleKeyDown = (e) => {
+      // Ctrl+P or Cmd+P
+      if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+        e.preventDefault();
+        alert("Printing is disabled on this secure marking page.");
+        return;
+      }
+      // Ctrl+S or Cmd+S
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        return;
+      }
+      // F12 or Ctrl+Shift+I / Cmd+Opt+I
+      if (e.key === 'F12' || ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'I')) {
+        e.preventDefault();
+        return;
+      }
+      // PrintScreen key
+      if (e.key === 'PrintScreen' || e.key === 'PrtScn' || e.keyCode === 44) {
+        e.preventDefault();
+        
+        // Show solid black security mask immediately to prevent OS screenshot capture
+        const mask = document.getElementById("secure-screenshot-mask");
+        if (mask) {
+          mask.style.display = 'flex';
+        }
+        
+        // Clear clipboard
+        try {
+          navigator.clipboard.writeText("");
+        } catch (err) {}
+        
+        alert("Screenshots are strictly prohibited on this secure marking page.");
+        
+        // Restore visibility after a delay
+        setTimeout(() => {
+          if (mask) {
+            mask.style.display = 'none';
+          }
+        }, 1000);
+        return;
+      }
+    };
+
+    const handleKeyUp = (e) => {
+      // PrintScreen key (in Chrome, PrintScreen triggers keyup but not keydown)
+      if (e.key === 'PrintScreen' || e.key === 'PrtScn' || e.keyCode === 44) {
+        e.preventDefault();
+        
+        // Show solid black security mask immediately to prevent OS screenshot capture
+        const mask = document.getElementById("secure-screenshot-mask");
+        if (mask) {
+          mask.style.display = 'flex';
+        }
+        
+        // Clear clipboard
+        try {
+          navigator.clipboard.writeText("");
+        } catch (err) {}
+        
+        alert("Screenshots are strictly prohibited on this secure marking page.");
+        
+        // Restore visibility after a delay
+        setTimeout(() => {
+          if (mask) {
+            mask.style.display = 'none';
+          }
+        }, 1000);
+      }
+    };
+
+    const handleCopy = (e) => {
+      e.preventDefault();
+      alert("Copying text is disabled for security reasons.");
+    };
+
+    const handleBlur = () => {
+      setIsBlurred(true);
+    };
+
+    const handleFocus = () => {
+      setIsBlurred(false);
+      // Immediately wipe clipboard on refocus (in case an OS screenshot utility was opened)
+      try {
+        navigator.clipboard.writeText("");
+      } catch (err) {}
+    };
+
+    const style = document.createElement("style");
+    style.id = "secure-marking-print-block";
+    style.innerHTML = `
+      @media print {
+        body {
+          display: none !important;
+        }
+        html {
+          display: none !important;
+        }
+      }
+      .secure-marking-container {
+        user-select: none !important;
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        -ms-user-select: none !important;
+      }
+    `;
+    document.head.appendChild(style);
+
+    window.addEventListener("contextmenu", handleContextMenu);
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    window.addEventListener("copy", handleCopy);
+    window.addEventListener("cut", handleCopy);
+    window.addEventListener("blur", handleBlur);
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      const printStyle = document.getElementById("secure-marking-print-block");
+      if (printStyle) printStyle.remove();
+      window.removeEventListener("contextmenu", handleContextMenu);
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+      window.removeEventListener("copy", handleCopy);
+      window.removeEventListener("cut", handleCopy);
+      window.removeEventListener("blur", handleBlur);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, []);
 
   useEffect(() => {
     if (loading) return;
@@ -744,7 +880,34 @@ const ExaminerMarking = () => {
   }
 
   return (
-    <div className="bg-gray-50 min-h-screen flex flex-col overflow-hidden">
+    <div className="bg-gray-50 min-h-screen flex flex-col overflow-hidden secure-marking-container relative">
+      {/* SECURITY BLUR OVERLAY */}
+      {isBlurred && (
+        <div className="absolute inset-0 bg-slate-900/90 backdrop-blur-md z-[9999] flex flex-col items-center justify-center text-center p-6 select-none pointer-events-auto">
+          <div className="w-20 h-20 bg-red-500/10 border border-red-500/30 rounded-3xl flex items-center justify-center text-red-500 mb-6 shadow-lg animate-pulse">
+            <AlertCircle size={44} />
+          </div>
+          <h2 className="text-2xl font-black text-white uppercase tracking-wider mb-2">Screen Capture Protection Active</h2>
+          <p className="text-slate-450 text-sm max-w-md font-semibold leading-relaxed">
+            Screenshots and window switching are strictly restricted. Please refocus your browser window to resume marking.
+          </p>
+        </div>
+      )}
+
+      {/* SCREENSHOT KEY OPAQUE OVERLAY */}
+      <div 
+        id="secure-screenshot-mask" 
+        className="fixed inset-0 bg-slate-950 z-[99999] hidden flex-col items-center justify-center text-center p-6 select-none pointer-events-auto"
+      >
+        <div className="w-20 h-20 bg-red-500/10 border border-red-500/30 rounded-3xl flex items-center justify-center text-red-500 mb-6 shadow-lg animate-pulse">
+          <AlertCircle size={44} />
+        </div>
+        <h2 className="text-2xl font-black text-white uppercase tracking-wider mb-2">Screen Capture Prohibited</h2>
+        <p className="text-slate-400 text-sm max-w-md font-medium leading-relaxed">
+          The PrintScreen key is disabled. Screen captures are strictly prohibited on this secure marking page.
+        </p>
+      </div>
+
       {/* HEADER */}
       <header className="bg-white text-gray-900 shadow-md px-6 py-4 flex justify-between items-center z-50 border-b border-gray-200">
         <div className="flex items-center gap-6">
