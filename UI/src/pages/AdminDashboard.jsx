@@ -289,13 +289,7 @@ export default function AdminDashboard() {
                               to={`/admin/departments?universityId=${uni.universityId}`}
                               className="px-2.5 py-1 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg font-bold text-[9px] uppercase tracking-wider transition-all"
                             >
-                              Config
-                            </Link>
-                            <Link 
-                              to={`/admin/users?universityId=${uni.universityId}`}
-                              className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg font-bold text-[9px] uppercase tracking-wider transition-all"
-                            >
-                              Users
+                              Config Masters
                             </Link>
                           </div>
                         </td>

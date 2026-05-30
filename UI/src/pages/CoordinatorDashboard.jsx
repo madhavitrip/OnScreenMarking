@@ -79,7 +79,8 @@ export default function CoordinatorDashboard() {
       
       // 2. Fetch departments and subjects stats
       const deptData = await apiCall(`/department?universityId=${uniData.universityId}`);
-      setDepartmentsList(deptData || []);
+      const departmentsArray = Array.isArray(deptData) ? deptData : (deptData?.items || []);
+      setDepartmentsList(departmentsArray);
       
       // 3. Fetch all scripts in the system to compute live marking statistics
       let pendingCount = 0;
@@ -116,8 +117,8 @@ export default function CoordinatorDashboard() {
       }
 
       setStats({
-        departments: deptData.length,
-        subjects: deptData.reduce((sum, dept) => sum + (dept.departmentSubjects?.length || 0), 0),
+        departments: departmentsArray.length,
+        subjects: departmentsArray.reduce((sum, dept) => sum + (dept.departmentSubjects?.length || 0), 0),
         projects: uniData.projects?.length || 0,
         totalScripts: totalScriptsCount,
         assignedScripts: assignedCount,
