@@ -424,7 +424,7 @@ const projectId = searchParams.get('projectId')
 |-------|-------|------|
 | `/admin/dashboard` | Dashboard | LayoutDashboard |
 | `/admin/universities` | Universities | Building2 |
-| `/admin/departments` | Departments | Briefcase |
+| `/admin/masters` | Departments | Briefcase |
 | `/admin/subjects` | Subjects | BookOpen |
 | `/admin/sessions` | Sessions & Projects | Calendar |
 | `/admin/papers` | Papers | FileText |

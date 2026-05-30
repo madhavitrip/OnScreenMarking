@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
-import { 
-  Building2, 
-  BookOpen, 
-  Calendar, 
-  Users, 
+import {
+  Building2,
+  BookOpen,
+  Calendar,
+  Users,
   School,
   ChevronRight,
   GraduationCap
@@ -16,7 +16,7 @@ export default function UniversityConfigHeader() {
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const { userType, universityId: userUniversityId } = useAuth();
-  
+
   const universityId = userType === 'coordinator' ? userUniversityId : searchParams.get('universityId');
   const [universityName, setUniversityName] = useState('University Management');
   const [loading, setLoading] = useState(false);
@@ -52,12 +52,12 @@ export default function UniversityConfigHeader() {
   if (!universityId) return null;
 
   // Tabs layout
-  const baseTabs = [
+  const tabs = [
     {
       id: 'departments',
       label: 'Departments',
       icon: <Building2 size={12} />,
-      path: userType === 'admin' ? '/admin/departments' : '/departments'
+      path: userType === 'admin' ? '/admin/masters' : '/masters'
     },
     {
       id: 'courses',
@@ -77,19 +77,15 @@ export default function UniversityConfigHeader() {
       icon: <Calendar size={12} />,
       path: userType === 'admin' ? '/admin/sessions' : '/sessions'
     },
+    {
+      id: 'users',
+      label: 'Personnel & Users',
+      icon: <Users size={12} />,
+      path: '/admin/users'
+    },
   ];
 
-  const tabs = userType === 'admin' 
-    ? [
-        ...baseTabs,
-        {
-          id: 'users',
-          label: 'Personnel & Users',
-          icon: <Users size={12} />,
-          path: '/admin/users'
-        }
-      ]
-    : baseTabs;
+
 
   const isCurrentTab = (tabPath) => {
     return location.pathname === tabPath;
@@ -124,16 +120,15 @@ export default function UniversityConfigHeader() {
         {tabs.map((tab) => {
           const isActive = isCurrentTab(tab.path);
           const targetUrl = `${tab.path}?universityId=${universityId}`;
-          
+
           return (
             <Link
               key={tab.id}
               to={targetUrl}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all duration-150 cursor-pointer ${
-                isActive
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all duration-150 cursor-pointer ${isActive
                   ? 'bg-gradient-to-r from-blue-600 to-indigo-650 text-white shadow-sm'
                   : 'text-slate-500 hover:text-slate-950 hover:bg-slate-100'
-              }`}
+                }`}
             >
               {tab.icon}
               <span>{tab.label}</span>

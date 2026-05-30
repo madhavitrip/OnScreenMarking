@@ -66,7 +66,7 @@ When clicking on a module within a university card, the admin is taken to that m
 
 ### URL Pattern
 ```
-/admin/departments?universityId=1
+/admin/masters?universityId=1
 /admin/subjects?universityId=1
 /admin/sessions?universityId=1
 /admin/projects?universityId=1
@@ -98,7 +98,7 @@ Admin Dashboard
     │
     └─ Universities Grid
        ├─ University 1 Card
-       │  ├─ Departments → /admin/departments?universityId=1
+       │  ├─ Departments → /admin/masters?universityId=1
        │  ├─ Subjects → /admin/subjects?universityId=1
        │  ├─ Sessions → /admin/sessions?universityId=1
        │  ├─ Projects → /admin/projects?universityId=1

@@ -286,7 +286,7 @@ export default function AdminDashboard() {
                         <td className="px-5 py-4 text-right">
                           <div className="flex justify-end gap-1.5">
                             <Link 
-                              to={`/admin/departments?universityId=${uni.universityId}`}
+                              to={`/admin/masters?universityId=${uni.universityId}`}
                               className="px-2.5 py-1 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg font-bold text-[9px] uppercase tracking-wider transition-all"
                             >
                               Config Masters

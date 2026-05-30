@@ -9,7 +9,7 @@ const routeLabels = {
   // Admin paths
   '/admin/dashboard': { label: 'Dashboard', icon: 'LayoutDashboard' },
   '/admin/universities': { label: 'Universities', icon: 'Building2' },
-  '/admin/departments': { label: 'Departments', icon: 'Briefcase' },
+  '/admin/masters': { label: 'Masters', icon: 'Briefcase' },
   '/admin/subjects': { label: 'Subjects', icon: 'BookOpen' },
   '/admin/sessions': { label: 'Sessions & Projects', icon: 'Calendar' },
   '/admin/projects': { label: 'Sessions & Projects', icon: 'Calendar' },
@@ -22,7 +22,7 @@ const routeLabels = {
 
   // Coordinator paths
   '/coordinator/dashboard': { label: 'Dashboard', icon: 'LayoutDashboard' },
-  '/departments': { label: 'Departments', icon: 'Briefcase' },
+  '/masters': { label: 'Masters', icon: 'Briefcase' },
   '/subjects': { label: 'Subjects', icon: 'BookOpen' },
   '/sessions': { label: 'Sessions & Projects', icon: 'Calendar' },
   '/projects': { label: 'Sessions & Projects', icon: 'Calendar' },
@@ -80,8 +80,9 @@ export function BreadcrumbProvider({ children }) {
     const hasVisitedSession = navigationHistory.some(isProjectOrSessionPath);
     const isCurrentlySession = isProjectOrSessionPath(path);
     const isConfig = path.includes('subject-config');
+    const isMainPage = path.includes('papers') || path.includes('allocate-scripts') || path.includes('users') || path.includes('project-dashboard');
 
-    if ((hasVisitedSession || isConfig) && !isCurrentlySession) {
+    if ((hasVisitedSession || isConfig) && !isCurrentlySession && !isMainPage) {
       newBreadcrumbs.push({
         label: 'Sessions & Projects',
         path: sessionPath,

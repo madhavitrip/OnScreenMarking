@@ -18,16 +18,8 @@ const Navbar = () => {
       links.push({ label: 'Dashboard', path: '/admin/dashboard' });
       links.push({ label: 'Universities', path: '/admin/universities' });
       links.push({ label: 'Colleges', path: '/admin/colleges' });
-      links.push({ label: 'Sessions & Projects', path: '/admin/sessions' });
-      links.push({ label: 'Papers', path: '/admin/papers' });
-      if (hasPermission("READ_USER")) {
-        links.push({ label: 'Users', path: '/admin/users' });
-      }
       if (hasPermission("READ_ROLE")) {
         links.push({ label: 'Roles', path: '/admin/role-management' });
-      }
-      if (hasPermission("VIEW_LOGS")) {
-        links.push({ label: 'Attendance', path: '/admin/attendance' });
       }
     } else if (userType === 'coordinator') {
       links.push({ label: 'Dashboard', path: '/coordinator/dashboard' });

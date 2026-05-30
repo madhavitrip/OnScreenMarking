@@ -248,6 +248,13 @@ export default function SubjectConfig() {
       return;
     }
 
+    // Validate if the sum of individual question marks matches the section's total marks
+    const questionsSum = questions.reduce((sum, q) => sum + (parseFloat(q.marks) || 0), 0);
+    if (Math.abs(questionsSum - parseFloat(sectionForm.totalMarks)) > 0.01) {
+      setError(`Mismatched Marks! The sum of your individual questions is ${questionsSum}, but the section total marks is configured as ${sectionForm.totalMarks}. Please update the section's Total Marks (under 'Structure' in the left panel) to ${questionsSum} before saving.`);
+      return;
+    }
+
     try {
       setLoading(true);
       const sectionData = {
@@ -362,42 +369,42 @@ export default function SubjectConfig() {
 
   // Helper component for Step Indicator
   const StepIndicator = ({ step, label, active, completed }) => (
-    <div className={`flex flex-col items-center gap-2 ${active || completed ? 'text-blue-600' : 'text-gray-400'}`}>
-      <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
+    <div className={`flex items-center gap-2 ${active || completed ? 'text-blue-600' : 'text-gray-400'}`}>
+      <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 transition-all duration-300 text-xs ${
         completed ? 'bg-blue-600 border-blue-600 text-white' : 
         active ? 'border-blue-500 bg-blue-50 text-blue-600 shadow-sm' : 
         'border-gray-200 bg-gray-50'
       }`}>
-        {completed ? <CheckCircle2 className="w-6 h-6" /> : <span className="font-bold">{step}</span>}
+        {completed ? <CheckCircle2 className="w-3.5 h-3.5" /> : <span className="font-bold">{step}</span>}
       </div>
-      <span className={`text-[10px] font-bold uppercase tracking-wider ${active ? 'text-blue-600' : ''}`}>{label}</span>
+      <span className={`text-[9px] font-extrabold uppercase tracking-wider ${active ? 'text-blue-600' : ''}`}>{label}</span>
     </div>
   );
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 lg:p-6">
       <div className="max-w-[1800px] mx-auto">
-        {/* Compact Header Section */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-3xl shadow-lg p-6 mb-6 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-white/10 rounded-2xl">
-              <Layers className="w-8 h-8 text-blue-100" />
+        {/* Slim Header Section */}
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-2xl shadow-md px-5 py-3 mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-1.5 bg-white/10 rounded-xl">
+              <Layers className="w-5 h-5 text-blue-100" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">
+              <h1 className="text-sm font-bold tracking-tight">
                 Subject Configuration
               </h1>
-              <p className="text-blue-100/80 text-sm font-medium">
-                Structure and manage examinations
+              <p className="text-blue-100/80 text-[10px] font-medium leading-none mt-0.5">
+                Structure and manage examination sections
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-4 md:gap-8 bg-white/10 backdrop-blur-sm border border-white/20 px-6 py-3 rounded-2xl">
+          <div className="flex items-center gap-3 bg-white/10 backdrop-blur-sm border border-white/20 px-4 py-1.5 rounded-xl">
             <StepIndicator step={1} label="Subject" active={currentStep === 1} completed={currentStep > 1} />
-            <div className={`h-1 w-8 md:w-12 rounded-full ${currentStep > 1 ? 'bg-white' : 'bg-white/20'}`} />
+            <div className={`h-0.5 w-6 rounded-full ${currentStep > 1 ? 'bg-white' : 'bg-white/20'}`} />
             <StepIndicator step={2} label="Paper" active={currentStep === 2} completed={currentStep > 2} />
-            <div className={`h-1 w-8 md:w-12 rounded-full ${currentStep > 2 ? 'bg-white' : 'bg-white/20'}`} />
+            <div className={`h-0.5 w-6 rounded-full ${currentStep > 2 ? 'bg-white' : 'bg-white/20'}`} />
             <StepIndicator step={3} label="Sections" active={currentStep === 3} completed={currentStep > 3} />
           </div>
         </div>

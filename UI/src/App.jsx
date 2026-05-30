@@ -26,6 +26,7 @@ import Profile from './pages/Profile';
 
 import AdminDashboard from './pages/AdminDashboard';
 import CoordinatorDashboard from './pages/CoordinatorDashboard';
+import ProjectDashboard from './pages/ProjectDashboard';
 
 import UniversityManagement from './pages/UniversityManagement';
 import CollegeManagement from './pages/CollegeManagement';
@@ -96,6 +97,14 @@ function AppRoutes() {
           path="/coordinator/dashboard" 
           element={userType === 'coordinator' ? <CoordinatorDashboard /> : <Navigate to="/" replace />} 
         />
+        <Route 
+          path="/admin/project-dashboard" 
+          element={userType === 'admin' ? <ProjectDashboard /> : <Navigate to="/" replace />} 
+        />
+        <Route 
+          path="/project-dashboard" 
+          element={userType === 'coordinator' ? <ProjectDashboard /> : <Navigate to="/" replace />} 
+        />
 
         {/* Dynamic Permission Guided Routes */}
         <Route 
@@ -107,11 +116,11 @@ function AppRoutes() {
           element={userType === 'admin' ? <CollegeManagement /> : <Navigate to="/" replace />} 
         />
         <Route 
-          path="/admin/departments" 
+          path="/admin/masters" 
           element={userType === 'admin' ? <DepartmentManagement /> : <Navigate to="/" replace />} 
         />
         <Route 
-          path="/departments" 
+          path="/masters" 
           element={userType === 'coordinator' ? <DepartmentManagement /> : <Navigate to="/" replace />} 
         />
         <Route 
@@ -160,7 +169,7 @@ function AppRoutes() {
         />
         <Route 
           path="/subject-config" 
-          element={userType === 'examiner' ? <SubjectConfig /> : <Navigate to="/" replace />} 
+          element={userType === 'examiner' || userType === 'coordinator' ? <SubjectConfig /> : <Navigate to="/" replace />} 
         />
 
         {/* Dynamic Permissions Controlled Routes */}

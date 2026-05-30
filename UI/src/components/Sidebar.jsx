@@ -1,49 +1,38 @@
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Home, FileText, BarChart3, Settings, Users, BookOpen, PenTool, Layers, School, Building2, Calendar, ClipboardList, Shield, UserCheck, GraduationCap } from 'lucide-react';
+import { Home, FileText, BarChart3, Settings, Users, BookOpen, PenTool, Layers, School, Building2, Calendar, ClipboardList, Shield, UserCheck, GraduationCap, Zap } from 'lucide-react';
+import { encryptId } from '../utils/encryption';
 
 const Sidebar = () => {
   const { userType, hasPermission } = useAuth();
+  
+  const selectedProjectId = localStorage.getItem('selectedProjectId');
+  const encryptedProjId = selectedProjectId ? encryptId(selectedProjectId) : '';
 
-  // Admin navigation
-  const adminMenuItems = [
-    { icon: <Home size={20} />, label: 'Dashboard', path: '/admin/dashboard' },
-    { icon: <School size={20} />, label: 'Universities', path: '/admin/universities' },
-    { icon: <Building2 size={20} />, label: 'Colleges', path: '/admin/colleges' },
-    { icon: <Building2 size={20} />, label: 'Departments', path: '/admin/departments' },
-    { icon: <GraduationCap size={20} />, label: 'Courses', path: '/admin/courses' },
-    { icon: <BookOpen size={20} />, label: 'Subjects', path: '/admin/subjects' },
-    { icon: <Calendar size={20} />, label: 'Sessions & Projects', path: '/admin/sessions' },
-    { icon: <FileText size={20} />, label: 'Papers', path: '/admin/papers' },
-    { icon: <Users size={20} />, label: 'Users', path: '/admin/users' },
-    { icon: <Shield size={20} />, label: 'Role Management', path: '/admin/role-management' },
-    { icon: <UserCheck size={20} />, label: 'Attendance', path: '/admin/attendance' },
-    { icon: <Settings size={20} />, label: 'Settings', path: '/settings' },
-  ];
- 
-  // Coordinator navigation
-  const coordinatorMenuItems = [
-    { icon: <Home size={20} />, label: 'Dashboard', path: '/coordinator/dashboard' },
-    { icon: <Building2 size={20} />, label: 'Departments', path: '/departments' },
-    { icon: <GraduationCap size={20} />, label: 'Courses', path: '/courses' },
-    { icon: <BookOpen size={20} />, label: 'Subjects', path: '/subjects' },
-    { icon: <Calendar size={20} />, label: 'Sessions & Projects', path: '/sessions' },
-    { icon: <FileText size={20} />, label: 'Papers', path: '/papers' },
-    { icon: <Settings size={20} />, label: 'Settings', path: '/settings' },
-  ];
   const getMenuItems = () => {
     const items = [];
+
+    const papersPath = userType === 'admin' 
+      ? (encryptedProjId ? `/admin/papers?projectId=${encryptedProjId}` : '/admin/papers')
+      : (encryptedProjId ? `/papers?projectId=${encryptedProjId}` : '/papers');
+
+    const allocationPath = userType === 'admin'
+      ? (encryptedProjId ? `/admin/allocate-scripts?projectId=${encryptedProjId}` : '/admin/allocate-scripts')
+      : (encryptedProjId ? `/allocate-scripts?projectId=${encryptedProjId}` : '/allocate-scripts');
 
     if (userType === 'admin') {
       items.push({ icon: <Home size={20} />, label: 'Dashboard', path: '/admin/dashboard' });
       items.push({ icon: <School size={20} />, label: 'Universities', path: '/admin/universities' });
       items.push({ icon: <Building2 size={20} />, label: 'Colleges', path: '/admin/colleges' });
-      items.push({ icon: <Building2 size={20} />, label: 'Departments', path: '/admin/departments' });
+      items.push({ icon: <Building2 size={20} />, label: 'Departments', path: '/admin/masters' });
       items.push({ icon: <GraduationCap size={20} />, label: 'Courses', path: '/admin/courses' });
       items.push({ icon: <BookOpen size={20} />, label: 'Subjects', path: '/admin/subjects' });
       items.push({ icon: <Calendar size={20} />, label: 'Sessions & Projects', path: '/admin/sessions' });
-      items.push({ icon: <FileText size={20} />, label: 'Papers', path: '/admin/papers' });
+      items.push({ icon: <FileText size={20} />, label: 'Papers', path: papersPath });
       
+      if (hasPermission("READ_ALLOCATION")) {
+        items.push({ icon: <Zap size={20} />, label: 'Script Allocation', path: allocationPath });
+      }
       if (hasPermission("READ_USER")) {
         items.push({ icon: <Users size={20} />, label: 'Users', path: '/admin/users' });
       }
@@ -56,12 +45,15 @@ const Sidebar = () => {
       items.push({ icon: <Settings size={20} />, label: 'Settings', path: '/settings' });
     } else if (userType === 'coordinator') {
       items.push({ icon: <Home size={20} />, label: 'Dashboard', path: '/coordinator/dashboard' });
-      items.push({ icon: <Building2 size={20} />, label: 'Departments', path: '/departments' });
+      items.push({ icon: <Building2 size={20} />, label: 'Masters', path: '/masters' });
       items.push({ icon: <GraduationCap size={20} />, label: 'Courses', path: '/courses' });
       items.push({ icon: <BookOpen size={20} />, label: 'Subjects', path: '/subjects' });
       items.push({ icon: <Calendar size={20} />, label: 'Sessions & Projects', path: '/sessions' });
-      items.push({ icon: <FileText size={20} />, label: 'Papers', path: '/papers' });
+      items.push({ icon: <FileText size={20} />, label: 'Papers', path: papersPath });
 
+      if (hasPermission("READ_ALLOCATION")) {
+        items.push({ icon: <Zap size={20} />, label: 'Script Allocation', path: allocationPath });
+      }
       if (hasPermission("READ_USER")) {
         items.push({ icon: <Users size={20} />, label: 'Users', path: '/admin/users' });
       }

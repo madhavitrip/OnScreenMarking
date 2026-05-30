@@ -16,26 +16,35 @@ import {
   Layers,
   Users,
   CheckCircle,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Clock,
+  UserCheck,
+  Award,
+  Search,
+  X
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import apiCall from '../services/api';
 import { encryptId } from '../utils/encryption';
-import AddDepartmentModal from '../components/AddDepartmentModal';
-import AddSubjectModal from '../components/AddSubjectModal';
 
 export default function CoordinatorDashboard() {
-  const { universityId } = useAuth();
+  const { userType, universityId: userUniversityId } = useAuth();
   const [university, setUniversity] = useState(null);
+  const [sessions, setSessions] = useState([]);
+  const [selectedSessionId, setSelectedSessionId] = useState('');
+  
   const [stats, setStats] = useState({
     departments: 0,
     subjects: 0,
     projects: 0,
     totalScripts: 0,
     assignedScripts: 0,
-    completedScripts: 0
+    completedScripts: 0,
+    users: 0
   });
+
   const [activeProjects, setActiveProjects] = useState([]);
+  const [projectStats, setProjectStats] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [unassignedCount, setUnassignedCount] = useState(0);
@@ -43,30 +52,24 @@ export default function CoordinatorDashboard() {
     return localStorage.getItem('selectedProjectId') || '';
   });
 
+  const [examiners, setExaminers] = useState([]);
+  const [examinerSearch, setExaminerSearch] = useState('');
+
   const handleProjectSelect = (id) => {
-    setSelectedProjectId(id);
-    if (id) {
-      localStorage.setItem('selectedProjectId', id);
+    const stringId = id ? id.toString() : '';
+    setSelectedProjectId(stringId);
+    if (stringId) {
+      localStorage.setItem('selectedProjectId', stringId);
     } else {
       localStorage.removeItem('selectedProjectId');
     }
   };
 
-  const [showDeptModal, setShowDeptModal] = useState(false);
-  const [showSubModal, setShowSubModal] = useState(false);
   const [departmentsList, setDepartmentsList] = useState([]);
-
-  const handleDeptSuccess = (msg) => {
-    fetchUniversityData();
-  };
-
-  const handleSubSuccess = (msg) => {
-    fetchUniversityData();
-  };
 
   useEffect(() => {
     fetchUniversityData();
-  }, []);
+  }, [selectedSessionId]);
 
   const fetchUniversityData = async () => {
     try {
@@ -76,60 +79,106 @@ export default function CoordinatorDashboard() {
       // 1. Get coordinator's university
       const uniData = await apiCall('/universities/current/my-university');
       setUniversity(uniData);
+
+      // 2. Fetch Sessions
+      const sessionsData = await apiCall('/session');
+      setSessions(sessionsData || []);
       
-      // 2. Fetch departments and subjects stats
+      // Set active session by default on initial load
+      if (!selectedSessionId && sessionsData && sessionsData.length > 0) {
+        const active = sessionsData.find(s => s.isActive) || sessionsData[0];
+        setSelectedSessionId(active.sessionId.toString());
+      }
+      
+      // 3. Fetch departments and subjects stats
       const deptData = await apiCall(`/department?universityId=${uniData.universityId}`);
       const departmentsArray = Array.isArray(deptData) ? deptData : (deptData?.items || []);
       setDepartmentsList(departmentsArray);
       
-      // 3. Fetch all scripts in the system to compute live marking statistics
-      let pendingCount = 0;
-      let assignedCount = 0;
-      let completedCount = 0;
-      let totalScriptsCount = 0;
+      // 4. Fetch all papers
+      const papersData = await apiCall(`/papers?universityId=${uniData.universityId}`);
       
+      // 5. Fetch all scripts in the system
+      const scripts = await apiCall('/scripts?limit=5000');
+
+      // 6. Fetch all allocations
+      let allocationsData = [];
       try {
-        const scripts = await apiCall('/scripts?limit=5000');
-        // Filter scripts belonging to papers in this university's projects
-        const universityProjectIds = uniData.projects?.map(p => p.projectId) || [];
-        
-        // Fetch all papers for university projects to filter scripts
-        const papersData = await apiCall(`/papers?universityId=${uniData.universityId}`);
-        const universityPaperIds = papersData.map(p => p.paperId);
-        
-        const universityScripts = scripts.filter(s => universityPaperIds.includes(s.paperId));
-        totalScriptsCount = universityScripts.length;
-        pendingCount = universityScripts.filter(s => s.status === 'pending').length;
-        assignedCount = universityScripts.filter(s => s.status === 'allocated' || s.status === 'marking').length;
-        completedCount = universityScripts.filter(s => s.status === 'completed').length;
-        
-        setUnassignedCount(pendingCount);
-      } catch (scriptErr) {
-        console.error('Failed to fetch pending scripts:', scriptErr);
+        allocationsData = await apiCall('/allocation');
+      } catch (allocErr) {
+        console.error('Failed to fetch allocations:', allocErr);
       }
 
-      let usersCount = 0;
-      try {
-        const usersData = await apiCall(`/users?universityId=${uniData.universityId}`);
-        usersCount = usersData?.length || 0;
-      } catch (userErr) {
-        console.error('Failed to fetch university users count:', userErr);
-      }
+      // Calculate project-wise statistics
+      const statsMap = {};
+      const rawProjects = uniData.projects || [];
+      
+      rawProjects.forEach(proj => {
+        const projPapers = papersData.filter(p => p.projectId === proj.projectId);
+        const projPaperIds = projPapers.map(p => p.paperId);
+        const projScripts = scripts.filter(s => projPaperIds.includes(s.paperId));
+        
+        const total = projScripts.length;
+        const completed = projScripts.filter(s => s.status === 'completed').length;
+        const allocated = projScripts.filter(s => s.status === 'allocated' || s.status === 'marking').length;
+        const pending = projScripts.filter(s => s.status === 'pending' || (!s.allocatedUserId && s.status !== 'completed')).length;
+
+        statsMap[proj.projectId] = {
+          papersCount: projPapers.length,
+          totalScripts: total,
+          pendingScripts: pending,
+          allocatedScripts: allocated,
+          completedScripts: completed
+        };
+      });
+      setProjectStats(statsMap);
+
+      // Filter projects by selected session
+      const sessIdNum = parseInt(selectedSessionId || '0', 10);
+      const filteredProj = sessIdNum 
+        ? rawProjects.filter(p => p.sessionId === sessIdNum)
+        : rawProjects;
+      setActiveProjects(filteredProj);
+      
+      // Compute unallocated scripts globally
+      const universityPaperIds = papersData.map(p => p.paperId);
+      const universityScripts = scripts.filter(s => universityPaperIds.includes(s.paperId));
+      const totalScriptsCount = universityScripts.length;
+      const pendingCount = universityScripts.filter(s => s.status === 'pending').length;
+      const assignedCount = universityScripts.filter(s => s.status === 'allocated' || s.status === 'marking').length;
+      const completedCount = universityScripts.filter(s => s.status === 'completed').length;
+      
+      setUnassignedCount(pendingCount);
+
+      // Load examiners workload
+      const usersData = await apiCall(`/users?universityId=${uniData.universityId}`);
+      const examinersList = (usersData || []).filter(u => u.userType?.toLowerCase() === 'examiner');
+
+      const examinersWithWorkload = examinersList.map(ex => {
+        const examinerAllocations = allocationsData.filter(a => a.examinerId === ex.id || a.allocatedUserId === ex.id);
+        const count = examinerAllocations.length;
+        
+        let workload = 'Free';
+        if (count > 20) workload = 'Fully Allocated';
+        else if (count > 0) workload = 'Partially Allocated';
+
+        return {
+          ...ex,
+          allocatedCount: count,
+          workload
+        };
+      });
+      setExaminers(examinersWithWorkload);
 
       setStats({
         departments: departmentsArray.length,
         subjects: departmentsArray.reduce((sum, dept) => sum + (dept.departmentSubjects?.length || 0), 0),
-        projects: uniData.projects?.length || 0,
+        projects: filteredProj.length,
         totalScripts: totalScriptsCount,
         assignedScripts: assignedCount,
         completedScripts: completedCount,
-        users: usersCount
+        users: usersData?.length || 0
       });
-
-      // Map projects data
-      if (uniData.projects) {
-        setActiveProjects(uniData.projects);
-      }
     } catch (err) {
       console.error('Failed to fetch university data:', err);
       setError(err.message || 'Failed to load university data');
@@ -140,8 +189,8 @@ export default function CoordinatorDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-3">
-        <div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-600 border-t-transparent"></div>
+      <div className="min-h-screen bg-slate-50/50 flex flex-col items-center justify-center gap-3">
+        <div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-650 border-t-transparent"></div>
         <p className="text-slate-500 font-bold text-xs uppercase tracking-wider animate-pulse">Synchronizing Cockpit...</p>
       </div>
     );
@@ -155,10 +204,10 @@ export default function CoordinatorDashboard() {
             <AlertCircle size={28} />
             <h2 className="text-lg font-bold">Cockpit Synch Failure</h2>
           </div>
-          <p className="text-slate-600 text-sm mb-6">{error}</p>
+          <p className="text-slate-605 text-sm mb-6">{error}</p>
           <button 
             onClick={fetchUniversityData}
-            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold py-2.5 rounded-xl hover:shadow-lg transition-all"
+            className="w-full bg-gradient-to-r from-blue-600 to-indigo-650 text-white font-bold py-2.5 rounded-xl hover:shadow-lg transition-all"
           >
             Try Again
           </button>
@@ -166,6 +215,14 @@ export default function CoordinatorDashboard() {
       </div>
     );
   }
+
+  const selectedProjectInfo = activeProjects.find(p => p.projectId.toString() === selectedProjectId);
+  const selectedProjStats = projectStats[selectedProjectId] || { papersCount: 0, totalScripts: 0, pendingScripts: 0, allocatedScripts: 0, completedScripts: 0 };
+
+  const filteredExaminers = examiners.filter(ex => 
+    ex.name?.toLowerCase().includes(examinerSearch.toLowerCase()) || 
+    ex.email?.toLowerCase().includes(examinerSearch.toLowerCase())
+  );
 
   return (
     <div className="min-h-screen bg-slate-50/50 pb-12 w-full px-6 lg:px-10">
@@ -204,7 +261,24 @@ export default function CoordinatorDashboard() {
           </h1>
           <p className="text-slate-500 text-xs mt-0.5">University Examinations & Evaluation Control Room</p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          {/* Academic Session Selector */}
+          <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-150">
+            <span className="text-[9px] uppercase font-bold text-slate-400">Academic Session:</span>
+            <select
+              value={selectedSessionId}
+              onChange={(e) => setSelectedSessionId(e.target.value)}
+              className="bg-transparent text-xs font-bold text-slate-700 focus:outline-none cursor-pointer"
+            >
+              <option value="">All Sessions</option>
+              {sessions.map(s => (
+                <option key={s.sessionId} value={s.sessionId}>
+                  {s.sessionName} {s.isActive ? '(Active)' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div className="bg-slate-50 px-4 py-2 rounded-2xl border border-slate-150 flex items-center gap-3">
             <div className="p-2 bg-emerald-100 text-emerald-600 rounded-xl">
               <Activity size={14} />
@@ -223,61 +297,6 @@ export default function CoordinatorDashboard() {
         {/* LEFT COLUMN - MAIN ANALYTICS AND DETAILS (75% Width) */}
         <div className="col-span-12 lg:col-span-9 space-y-6">
           
-          {/* Step-by-Step OSM Configuration Guide */}
-          <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
-            <div className="flex justify-between items-center mb-4">
-              <div>
-                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
-                  OSM Onboarding Checklist
-                </h2>
-                <p className="text-[11px] text-slate-500">A step-by-step setup checklist for University Coordinators to enable paper evaluation</p>
-              </div>
-              <span className="bg-emerald-50 text-emerald-700 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider border border-emerald-100 animate-pulse">
-                Self-Guiding Flow
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3.5 mt-2">
-              <SetupStep
-                step={1}
-                title="Board Departments"
-                desc="Define academic branches first"
-                count={`${stats.departments} Configured`}
-                path="/departments"
-                isCompleted={stats.departments > 0}
-                actionLabel="+ Add Dept"
-                onAction={() => setShowDeptModal(true)}
-              />
-              <SetupStep
-                step={2}
-                title="Syllabus Subjects"
-                desc="Add subjects to departments"
-                count={`${stats.subjects} Subjects`}
-                path="/subjects"
-                isCompleted={stats.subjects > 0}
-                actionLabel="+ Add Subject"
-                onAction={() => setShowSubModal(true)}
-              />
-              <SetupStep
-                step={3}
-                title="Create Projects"
-                desc="Launch active evaluation seasons"
-                count={`${activeProjects.length} Active`}
-                path="/sessions"
-                isCompleted={activeProjects.length > 0}
-              />
-              <SetupStep
-                step={4}
-                title="User Directory"
-                desc="Invite examiners & manage roles"
-                count={`${stats.users || 0} Members`}
-                path="/users"
-                isCompleted={stats.users > 0}
-              />
-            </div>
-          </div>
-
           {/* Real-time Evaluations Performance Cockpit Card */}
           <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
             <div className="flex justify-between items-center mb-4">
@@ -329,125 +348,195 @@ export default function CoordinatorDashboard() {
             </div>
           </div>
 
-          {/* Active Examination Projects & Progress */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-            <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-              <div>
-                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800">Active Evaluation Projects</h2>
-                <p className="text-[11px] text-slate-500">Live projects associated with this university session</p>
-              </div>
-              <Link to="/sessions" className="text-[11px] font-bold text-blue-600 hover:underline flex items-center gap-1">
-                Manage Projects <ArrowUpRight size={12} />
+          {/* Active Examination Projects as Premium Cards */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between pl-1 select-none">
+              <h2 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                <ClipboardList size={16} className="text-indigo-650" />
+                <span>Academic Evaluation Projects</span>
+              </h2>
+              <Link to="/sessions" className="flex items-center gap-1 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-750 rounded-xl font-bold text-[10px] uppercase tracking-wider border border-indigo-150 transition cursor-pointer">
+                <span>Configure Project</span>
               </Link>
             </div>
-            
+
             {activeProjects.length === 0 ? (
-              <div className="py-12 text-center text-slate-400">
+              <div className="bg-white rounded-3xl border border-slate-100 p-12 text-center text-slate-450">
                 <ClipboardList size={32} className="mx-auto mb-1.5 opacity-20" />
-                <p className="text-[10px] font-bold uppercase tracking-wider">No projects launched yet</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider">No active projects launched yet</p>
                 <Link to="/sessions" className="text-[10px] text-blue-600 underline font-bold mt-0.5 inline-block">Create first project</Link>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                  <thead className="bg-slate-50/50 border-b border-slate-100">
-                    <tr>
-                      <th className="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Project details</th>
-                      <th className="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Status</th>
-                      <th className="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Date Created</th>
-                      <th className="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {activeProjects.map((project) => (
-                      <tr key={project.projectId} className="hover:bg-slate-50/30 transition-colors">
-                        <td className="px-5 py-4">
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center font-bold text-xs">
-                              {project.projectName.substring(0, 2).toUpperCase()}
-                            </div>
-                            <div>
-                              <p className="font-bold text-xs text-slate-900 leading-none">{project.projectName}</p>
-                              <p className="text-[9px] text-slate-400 uppercase font-bold mt-1 tracking-wider">ID: PROJECT-{project.projectId}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-5 py-4">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
-                            project.isActive ? "bg-emerald-50 text-emerald-700" : "bg-slate-50 text-slate-600"
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {activeProjects.map((project) => {
+                  const pStat = projectStats[project.projectId] || { papersCount: 0, totalScripts: 0, pendingScripts: 0, allocatedScripts: 0, completedScripts: 0 };
+                  const isSelected = selectedProjectId === project.projectId.toString();
+                  const completePercentage = pStat.totalScripts > 0 ? Math.round((pStat.completedScripts / pStat.totalScripts) * 100) : 0;
+
+                  return (
+                    <div 
+                      key={project.projectId}
+                      onClick={() => handleProjectSelect(project.projectId)}
+                      className={`relative group bg-white rounded-2xl p-5 border transition-all duration-300 cursor-pointer flex flex-col justify-between hover:shadow-md ${
+                        isSelected 
+                          ? 'border-indigo-600 ring-2 ring-indigo-500/20' 
+                          : 'border-slate-100/80 hover:border-indigo-300'
+                      }`}
+                    >
+                      <div>
+                        {/* Header Details */}
+                        <div className="flex items-center justify-between mb-3">
+                          <span className={`px-2 py-0.5 rounded-full text-[8px] font-extrabold uppercase tracking-wider border ${
+                            project.isActive
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                              : 'bg-slate-50 text-slate-605 border-slate-100'
                           }`}>
-                            {project.isActive ? "Active" : "Archived"}
+                            {project.isActive ? 'Active' : 'Archived'}
                           </span>
-                        </td>
-                        <td className="px-5 py-4 text-[10px] font-bold text-slate-500">
-                          {new Date(project.createdAt).toLocaleDateString()}
-                        </td>
-                        <td className="px-5 py-4 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <Link 
-                              to={`/sessions?edit=true&id=${project.projectId}`}
-                              className="px-2.5 py-1 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-lg font-bold text-[9px] uppercase tracking-wider transition-all"
-                            >
-                              Config
-                            </Link>
-                            <Link 
-                              to={`/allocate-scripts?projectId=${project.projectId}`}
-                              className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg font-bold text-[9px] uppercase tracking-wider transition-all"
-                            >
-                              Allocate
-                            </Link>
+                          <span className="text-[9px] text-slate-400 font-semibold font-mono">ID: PRJ-{project.projectId}</span>
+                        </div>
+
+                        <h3 className="font-extrabold text-xs text-slate-900 group-hover:text-indigo-600 transition-colors leading-tight mb-2">
+                          {project.projectName}
+                        </h3>
+
+                        {/* Script statistics breakdown */}
+                        <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-slate-100 text-[10px] font-bold text-slate-500">
+                          <div>
+                            <span className="text-slate-400 uppercase tracking-wider text-[8px] block">Total Papers</span>
+                            <span className="text-slate-900 font-extrabold text-xs block">{pStat.papersCount}</span>
                           </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                          <div>
+                            <span className="text-slate-400 uppercase tracking-wider text-[8px] block">Pending scripts</span>
+                            <span className="text-amber-600 font-extrabold text-xs block">{pStat.pendingScripts}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 uppercase tracking-wider text-[8px] block">Allocated scripts</span>
+                            <span className="text-blue-600 font-extrabold text-xs block">{pStat.allocatedScripts}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 uppercase tracking-wider text-[8px] block">Completed Scripts</span>
+                            <span className="text-emerald-600 font-extrabold text-xs block">{pStat.completedScripts} / {pStat.totalScripts}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Progress bar slider */}
+                      <div className="mt-5 pt-2">
+                        <div className="flex justify-between items-center mb-1 text-[9px] font-extrabold">
+                          <span className="text-slate-400">MARKING RATIO</span>
+                          <span className="text-indigo-600">{completePercentage}%</span>
+                        </div>
+                        <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                          <div
+                            className="bg-indigo-600 h-full rounded-full transition-all duration-300"
+                            style={{ width: `${completePercentage}%` }}
+                          ></div>
+                        </div>
+                      </div>
+
+                      {/* Clickable prompt guide instruction */}
+                      <div className="mt-4 pt-2.5 border-t border-slate-100/60 text-center select-none">
+                        <span className={`text-[9px] font-black uppercase tracking-wider ${
+                          isSelected 
+                            ? 'text-indigo-650 animate-pulse' 
+                            : 'text-slate-400 group-hover:text-indigo-500'
+                        }`}>
+                          {isSelected ? '✓ Selected (Cockpit Unlocked)' : '💡 Click card to open project sidebar'}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
+
+          {/* Examiner Workload Analytics Cockpit (Visible only when project is selected) */}
+          {selectedProjectId && selectedProjectInfo && (
+            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 space-y-4 animate-fade-in">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                <div>
+                  <h3 className="text-sm font-black uppercase text-slate-950 tracking-wider flex items-center gap-1.5">
+                    <Users size={16} className="text-indigo-600" />
+                    <span>Examiner Workload Dashboard</span>
+                  </h3>
+                  <p className="text-[10px] text-slate-500 mt-0.5">
+                    Real-time script allocation workloads for university evaluation project: <span className="font-extrabold text-slate-800">{selectedProjectInfo.projectName}</span>
+                  </p>
+                </div>
+                
+                {/* Search Examiners Input */}
+                <div className="max-w-xs flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-150 w-full shrink-0">
+                  <Search size={12} className="text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search examiner workload..."
+                    value={examinerSearch}
+                    onChange={(e) => setExaminerSearch(e.target.value)}
+                    className="w-full bg-transparent text-slate-800 placeholder-slate-400 font-semibold text-[10px] focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {filteredExaminers.length === 0 ? (
+                <div className="py-12 text-center text-slate-400 font-bold text-xs">
+                  No examiners matching search term found.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5 pt-2">
+                  {filteredExaminers.map((examiner) => (
+                    <div 
+                      key={examiner.id}
+                      className="bg-slate-50/50 p-4 rounded-xl border border-slate-100 flex items-center justify-between hover:border-indigo-200 transition-all"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-755 font-extrabold text-xs uppercase shadow-sm">
+                          {examiner.name?.substring(0, 2)}
+                        </div>
+                        <div>
+                          <span className="font-extrabold text-slate-900 tracking-tight text-xs block">{examiner.name}</span>
+                          <span className="text-[9px] text-slate-400 font-bold block">{examiner.email}</span>
+                        </div>
+                      </div>
+
+                      <div className="text-right">
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider mb-1 ${
+                          examiner.workload === 'Free' 
+                            ? 'bg-emerald-50 text-emerald-700' 
+                            : examiner.workload === 'Fully Allocated'
+                              ? 'bg-rose-50 text-rose-700 animate-pulse'
+                              : 'bg-amber-50 text-amber-700'
+                        }`}>
+                          {examiner.workload}
+                        </span>
+                        <span className="text-[9px] text-slate-400 block font-bold uppercase tracking-wider">
+                          <span className="text-slate-900 font-extrabold">{examiner.allocatedCount}</span> scripts
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* RIGHT COLUMN - SLICK SIDE BAR (25% Width) */}
         <div className="col-span-12 lg:col-span-3 space-y-6">
           
           {/* Quick Action Navigation Dock */}
-          {/* Quick Action Navigation Dock */}
-          <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
+          <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
             <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Active Evaluation Cockpit</h3>
             
-            {/* Project Selection Dropdown */}
-            <div className="mb-4 bg-slate-50/50 p-2.5 rounded-xl border border-slate-100">
-              <label className="text-[9px] text-slate-400 uppercase font-bold tracking-wider mb-1 block">Active Project Scope</label>
-              <select
-                value={selectedProjectId}
-                onChange={(e) => handleProjectSelect(e.target.value)}
-                className="w-full text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-blue-500 outline-none transition-all cursor-pointer"
-              >
-                <option value="">-- No Project Selected --</option>
-                {activeProjects.map((p) => (
-                  <option key={p.projectId} value={p.projectId}>
-                    {p.projectName}
-                  </option>
-                ))}
-              </select>
-            </div>
-
             <div className="flex flex-col gap-1.5">
               <SidebarLink 
-                to={selectedProjectId ? `/papers?projectId=${encryptId(selectedProjectId)}` : "#"} 
-                label="Question Papers" 
-                desc="Setup sections & marking criteria" 
-                icon={<FileText size={14} />} 
-                color="text-indigo-600 bg-indigo-50" 
-                disabled={!selectedProjectId}
-              />
-              <SidebarLink 
-                to={selectedProjectId ? `/allocate-scripts?projectId=${encryptId(selectedProjectId)}` : "#"} 
-                label="Script Allocator" 
-                desc="Assign scripts to examiners" 
-                icon={<Zap size={14} />} 
-                color="text-blue-600 bg-blue-50 animate-pulse" 
-                disabled={!selectedProjectId}
+                to="/masters" 
+                label="Add Masters" 
+                desc="Configure departments & courses" 
+                icon={<Layers size={14} />} 
+                color="text-emerald-600 bg-emerald-50" 
+                disabled={false}
               />
             </div>
           </div>
@@ -479,22 +568,90 @@ export default function CoordinatorDashboard() {
         </div>
       </div>
 
-      {/* Direct Add Department Modal */}
-      <AddDepartmentModal
-        isOpen={showDeptModal}
-        onClose={() => setShowDeptModal(false)}
-        onSuccess={handleDeptSuccess}
-        activeUniversityId={university?.universityId}
-      />
+      {/* Premium Project Cockpit Sidebar Drawer Overlay */}
+      {selectedProjectId && selectedProjectInfo && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity" 
+            onClick={() => handleProjectSelect('')}
+          />
 
-      {/* Direct Add Subject Modal */}
-      <AddSubjectModal
-        isOpen={showSubModal}
-        onClose={() => setShowSubModal(false)}
-        onSuccess={handleSubSuccess}
-        activeUniversityId={university?.universityId}
-        departments={departmentsList}
-      />
+          {/* Drawer Body */}
+          <div className="relative w-full max-w-sm bg-white shadow-2xl border-l border-slate-100 flex flex-col justify-between h-full animate-in slide-in-from-right duration-350 z-50">
+            <div className="p-6 overflow-y-auto space-y-6 flex-1">
+              
+              {/* Drawer Header */}
+              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                <div>
+                  <span className="text-[8px] uppercase tracking-wider font-extrabold text-indigo-650 bg-indigo-50 px-2 py-0.5 rounded">Project</span>
+                  <h3 className="text-xs font-black text-slate-900 mt-1 leading-tight">{selectedProjectInfo.projectName}</h3>
+                </div>
+                <button 
+                  onClick={() => handleProjectSelect('')} 
+                  className="text-slate-400 hover:text-slate-655 rounded-lg p-1.5 hover:bg-slate-50 transition-colors"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* Stats Breakdown */}
+             
+
+              {/* Sidebar Navigation Actions */}
+              <div className="space-y-2">
+                <h4 className="text-[9px] uppercase font-bold text-slate-400 tracking-wider mb-2">Evaluation Controls</h4>
+                
+                <Link
+                  to={userType === 'admin' 
+                    ? `/admin/project-dashboard?projectId=${encryptId(selectedProjectId)}`
+                    : `/project-dashboard?projectId=${encryptId(selectedProjectId)}`}
+                  className="flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 transition text-xs font-bold text-slate-700"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg">
+                      <Calendar size={14} />
+                    </div>
+                    <span>Project Dashboard</span>
+                  </div>
+                  <ChevronRight size={12} className="text-slate-400" />
+                </Link>
+
+                <Link
+                  to={userType === 'admin'
+                    ? `/admin/allocate-scripts?projectId=${encryptId(selectedProjectId)}`
+                    : `/allocate-scripts?projectId=${encryptId(selectedProjectId)}`}
+                  className="flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 transition text-xs font-bold text-slate-700"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-1.5 bg-blue-50 text-blue-600 rounded-lg">
+                      <Zap size={14} />
+                    </div>
+                    <span>Script Allocation</span>
+                  </div>
+                  <ChevronRight size={12} className="text-slate-400" />
+                </Link>
+
+                <Link
+                  to={userType === 'admin' 
+                    ? `/admin/papers?projectId=${encryptId(selectedProjectId)}`
+                    : `/papers?projectId=${encryptId(selectedProjectId)}`}
+                  className="flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 transition text-xs font-bold text-slate-700"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg">
+                      <FileText size={14} />
+                    </div>
+                    <span>Add / Configure Paper</span>
+                  </div>
+                  <ChevronRight size={12} className="text-slate-400" />
+                </Link>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -538,58 +695,5 @@ const SidebarLink = ({ to, label, desc, icon, color, disabled }) => {
       </div>
       <ChevronRight size={12} className="text-slate-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all flex-shrink-0" />
     </Link>
-  );
-};
-
-const SetupStep = ({ step, title, desc, count, path, isCompleted, actionLabel, onAction }) => {
-  return (
-    <div
-      className={`group p-3.5 rounded-xl border flex flex-col justify-between hover:shadow-md transition-all duration-300 relative bg-white border-slate-100/80`}
-    >
-      <div>
-        <div className="flex items-center justify-between gap-2 mb-2">
-          <span className={`w-5 h-5 rounded-md flex items-center justify-center font-bold text-[10px] ${
-            isCompleted
-              ? 'bg-emerald-100 text-emerald-700'
-              : 'bg-blue-50 text-blue-600'
-          }`}>
-            {step}
-          </span>
-          <span className={`text-[8px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded-full ${
-            isCompleted
-              ? 'bg-emerald-50 text-emerald-700 border border-emerald-100/60'
-              : 'bg-amber-50 text-amber-700 border border-amber-100/60'
-          }`}>
-            {isCompleted ? 'Completed' : 'Pending'}
-          </span>
-        </div>
-        <h4 className="text-[11px] font-bold text-slate-900 group-hover:text-blue-600 transition-colors leading-tight">{title}</h4>
-        <p className="text-[9px] text-slate-400 mt-1 leading-tight">{desc}</p>
-      </div>
-
-      <div className="mt-3 pt-2.5 border-t border-slate-100/60 flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <span className={`text-[9px] font-extrabold ${isCompleted ? 'text-emerald-700' : 'text-blue-600'}`}>
-            {count}
-          </span>
-          <Link to={path} className="text-[9px] font-bold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-0.5 transition-colors">
-            View Page <ChevronRight size={10} />
-          </Link>
-        </div>
-
-        {actionLabel && onAction && (
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onAction();
-            }}
-            className="w-full text-center py-1 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 hover:shadow text-white font-extrabold text-[9px] uppercase tracking-wider transition-all cursor-pointer"
-          >
-            {actionLabel}
-          </button>
-        )}
-      </div>
-    </div>
   );
 };

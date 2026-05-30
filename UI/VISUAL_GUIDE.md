@@ -269,7 +269,7 @@ Route                          Label                    Icon
 ─────────────────────────────────────────────────────────────
 /admin/dashboard               Dashboard                🏠
 /admin/universities            Universities             🏢
-/admin/departments             Departments              💼
+/admin/masters             Departments              💼
 /admin/subjects                Subjects                 📖
 /admin/sessions                Sessions & Projects      📅
 /admin/papers                  Papers                   📄

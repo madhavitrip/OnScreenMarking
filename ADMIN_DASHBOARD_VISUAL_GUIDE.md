@@ -177,7 +177,7 @@
    ↓
 2. Admin clicks "Departments" module
    ↓
-3. Navigates to: /admin/departments?universityId=1
+3. Navigates to: /admin/masters?universityId=1
    ↓
 4. DepartmentManagement page loads
    ↓
@@ -308,7 +308,7 @@ Admin Dashboard
 │
 ├─ Universities Grid
 │  ├─ University 1
-│  │  ├─ Departments → /admin/departments?universityId=1
+│  │  ├─ Departments → /admin/masters?universityId=1
 │  │  ├─ Subjects → /admin/subjects?universityId=1
 │  │  ├─ Sessions → /admin/sessions?universityId=1
 │  │  ├─ Projects → /admin/projects?universityId=1
