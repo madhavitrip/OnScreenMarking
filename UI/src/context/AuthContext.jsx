@@ -148,6 +148,18 @@ export function AuthProvider({ children }) {
     // Admin fallback
     if (user?.userType === 'admin') return true;
 
+    // Coordinator fallback (grant default coordinator permissions)
+    if (user?.userType === 'coordinator') {
+      const coordinatorPerms = [
+        "READ_SCRIPT", "READ_MARKING", "CREATE_MARKING", "UPDATE_MARKING", 
+        "VIEW_REPORTS", "READ_ALLOCATION", "CREATE_ALLOCATION", "UPDATE_ALLOCATION", 
+        "DELETE_ALLOCATION", "READ_USER", "READ_ROLE", "VIEW_LOGS"
+      ];
+      if (coordinatorPerms.includes(permissionName)) {
+        return true;
+      }
+    }
+
     // Examiner fallback (grant default examiner permissions)
     if (user?.userType === 'examiner') {
       const examinerPerms = ["READ_SCRIPT", "READ_MARKING", "CREATE_MARKING", "UPDATE_MARKING", "VIEW_REPORTS", "READ_ALLOCATION"];

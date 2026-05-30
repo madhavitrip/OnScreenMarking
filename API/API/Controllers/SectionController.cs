@@ -179,9 +179,55 @@ namespace API.Controllers
                 section.Description = sectionDto.Description;
                 section.TotalQuestions = sectionDto.TotalQuestions;
                 section.TotalMarks = sectionDto.TotalMarks;
+                section.StartQuestion = sectionDto.StartQuestion;
+                section.EndQuestion = sectionDto.EndQuestion;
+                section.MaxQuestionsToAttempt = sectionDto.MaxQuestionsToAttempt;
 
                 _context.Sections.Update(section);
                 await _context.SaveChangesAsync();
+
+                // Save or update individual questions
+                if (sectionDto.Questions != null && sectionDto.Questions.Count > 0)
+                {
+                    var existingQuestions = await _context.Questions.Where(q => q.SectionId == id).ToListAsync();
+                    
+                    foreach (var questionDto in sectionDto.Questions)
+                    {
+                        var existingQuestion = existingQuestions.FirstOrDefault(q => q.QuestionNo == questionDto.QuestionNo);
+                        if (existingQuestion != null)
+                        {
+                            existingQuestion.Marks = questionDto.Marks;
+                            existingQuestion.Type = questionDto.Type;
+                            existingQuestion.IsOptional = questionDto.IsOptional;
+                            existingQuestion.OptionalGroupCode = questionDto.OptionalGroupCode;
+                            _context.Questions.Update(existingQuestion);
+                        }
+                        else
+                        {
+                            var newQuestion = new Question
+                            {
+                                SectionId = id,
+                                QuestionNo = questionDto.QuestionNo,
+                                Marks = questionDto.Marks,
+                                Type = questionDto.Type,
+                                IsOptional = questionDto.IsOptional,
+                                OptionalGroupCode = questionDto.OptionalGroupCode,
+                                CreatedAt = DateTime.UtcNow
+                            };
+                            _context.Questions.Add(newQuestion);
+                        }
+                    }
+                    
+                    // Remove any questions that are no longer in the range
+                    var questionNosToKeep = sectionDto.Questions.Select(q => q.QuestionNo).ToList();
+                    var questionsToRemove = existingQuestions.Where(q => !questionNosToKeep.Contains(q.QuestionNo)).ToList();
+                    if (questionsToRemove.Count > 0)
+                    {
+                        _context.Questions.RemoveRange(questionsToRemove);
+                    }
+                    
+                    await _context.SaveChangesAsync();
+                }
 
                 return Ok(new { success = true, message = "Section updated successfully" });
             }

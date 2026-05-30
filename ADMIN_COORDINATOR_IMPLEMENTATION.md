@@ -59,7 +59,7 @@ This implementation provides role-based access control for the On-Screen Marking
 ```
 /admin/dashboard          → AdminDashboard
 /admin/universities       → UniversityManagement (all universities)
-/admin/departments        → DepartmentManagement (all universities)
+/admin/masters        → DepartmentManagement (all universities)
 /admin/subjects           → SubjectManagement
 /admin/sessions           → SessionProjectManagement
 /admin/projects           → SessionProjectManagement

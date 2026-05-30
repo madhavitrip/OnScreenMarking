@@ -90,7 +90,7 @@ Admin Dashboard
 ```
 1. Admin sees University 1 card on dashboard
 2. Admin clicks "Departments" module
-3. Navigates to: /admin/departments?universityId=1
+3. Navigates to: /admin/masters?universityId=1
 4. DepartmentManagement page loads with University 1 pre-selected
 5. Admin can create/edit/delete departments for University 1
 ```
@@ -125,7 +125,7 @@ Admin Dashboard
 
 ### University-scoped Modules
 ```
-/admin/departments?universityId=1    - Departments for University 1
+/admin/masters?universityId=1    - Departments for University 1
 /admin/subjects?universityId=1       - Subjects for University 1
 /admin/sessions?universityId=1       - Sessions for University 1
 /admin/projects?universityId=1       - Projects for University 1
@@ -277,7 +277,7 @@ GET /api/universities
 5. No changes to your workflows
 
 ### For Developers
-1. Update any bookmarks to `/admin/departments` to include `?universityId=X`
+1. Update any bookmarks to `/admin/masters` to include `?universityId=X`
 2. All existing API endpoints remain unchanged
 3. No database migrations needed
 4. No breaking changes to existing code

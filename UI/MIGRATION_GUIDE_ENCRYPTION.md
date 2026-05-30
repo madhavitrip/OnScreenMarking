@@ -64,7 +64,7 @@ Edit `UI/src/context/BreadcrumbContext.jsx`:
 const routeLabels = {
   '/admin/dashboard': { label: 'Dashboard', icon: 'LayoutDashboard' },
   '/admin/universities': { label: 'Universities', icon: 'Building2' },
-  '/admin/departments': { label: 'Departments', icon: 'Briefcase' },
+  '/admin/masters': { label: 'Departments', icon: 'Briefcase' },
   '/admin/subjects': { label: 'Subjects', icon: 'BookOpen' },
   '/admin/sessions': { label: 'Sessions & Projects', icon: 'Calendar' },
   '/admin/papers': { label: 'Papers', icon: 'FileText' },
@@ -143,7 +143,7 @@ export default function PaperDetail() {
 - [ ] `/admin/users` - Contains user information
 
 ### Priority 2 (Medium Security)
-- [ ] `/admin/departments` - Department management
+- [ ] `/admin/masters` - Department management
 - [ ] `/admin/subjects` - Subject management
 - [ ] `/admin/sessions` - Session management
 
@@ -176,7 +176,7 @@ export default function UniversityManagement() {
       {universities.map(uni => (
         <div key={uni.universityId}>
           <h3>{uni.universityName}</h3>
-          <a href={`/admin/departments?universityId=${uni.universityId}`}>
+          <a href={`/admin/masters?universityId=${uni.universityId}`}>
             View Departments
           </a>
         </div>
@@ -198,7 +198,7 @@ export default function UniversityManagement() {
       {universities.map(uni => (
         <div key={uni.universityId}>
           <h3>{uni.universityName}</h3>
-          <a href={`/admin/departments?universityId=${encryptId(uni.universityId)}`}>
+          <a href={`/admin/masters?universityId=${encryptId(uni.universityId)}`}>
             View Departments
           </a>
         </div>

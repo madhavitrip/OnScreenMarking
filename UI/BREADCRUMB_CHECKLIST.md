@@ -35,7 +35,7 @@ Use this checklist to add breadcrumbs to other pages in the application.
   ```jsx
   setBreadcrumb([
     { label: 'Universities', path: '/admin/universities', icon: 'Building2' },
-    { label: 'Departments', path: '/admin/departments', icon: 'Briefcase' }
+    { label: 'Departments', path: '/admin/masters', icon: 'Briefcase' }
   ]);
   ```
 
@@ -43,7 +43,7 @@ Use this checklist to add breadcrumbs to other pages in the application.
   ```jsx
   setBreadcrumb([
     { label: 'Universities', path: '/admin/universities', icon: 'Building2' },
-    { label: 'Departments', path: '/admin/departments', icon: 'Briefcase' },
+    { label: 'Departments', path: '/admin/masters', icon: 'Briefcase' },
     { label: 'Subjects', path: '/admin/subjects', icon: 'BookOpen' }
   ]);
   ```

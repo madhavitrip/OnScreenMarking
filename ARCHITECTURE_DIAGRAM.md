@@ -175,7 +175,7 @@
 │ Render Admin Routes                  │
 │ - /admin/dashboard                   │
 │ - /admin/universities                │
-│ - /admin/departments                 │
+│ - /admin/masters                 │
 │ - etc.                               │
 └──────┬───────────────────────────────┘
        │

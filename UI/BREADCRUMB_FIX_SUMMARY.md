@@ -196,7 +196,7 @@ export default function DepartmentManagement() {
   useEffect(() => {
     setBreadcrumb([
       { label: 'Universities', path: '/admin/universities', icon: 'Building2' },
-      { label: 'Departments', path: '/admin/departments', icon: 'Briefcase' }
+      { label: 'Departments', path: '/admin/masters', icon: 'Briefcase' }
     ]);
   }, []);
 

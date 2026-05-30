@@ -122,7 +122,7 @@
 ### Scenario 7: Coordinator Cannot Access Other Universities
 **Steps:**
 1. Login as coordinator (assigned to University 1)
-2. Try to access `/admin/departments?universityId=2`
+2. Try to access `/admin/masters?universityId=2`
 3. Try to call API with different university ID
 
 **Expected Results:**

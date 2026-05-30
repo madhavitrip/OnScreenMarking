@@ -57,7 +57,7 @@ export default function UniversityDashboard() {
       title: 'Departments',
       description: 'Manage academic departments',
       icon: <Building2 size={24} />,
-      path: `/admin/departments?universityId=${universityId}`,
+      path: `/admin/masters?universityId=${universityId}`,
       color: 'text-purple-400',
       bgColor: 'bg-purple-400/10',
       borderColor: 'border-purple-500/20'

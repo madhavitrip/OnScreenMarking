@@ -21,7 +21,6 @@ import { decryptId, encryptId } from "../utils/encryption";
 import subjectService from "../services/subjectService";
 import projectService from "../services/projectService";
 import paperService from "../services/paperService";
-import UniversityConfigHeader from "../components/UniversityConfigHeader";
 
 export default function PapersManagement() {
   const [searchParams] = useSearchParams();
@@ -84,7 +83,8 @@ export default function PapersManagement() {
 
       if (activeUniversityId) {
         const subs = await subjectService.getSubjectByUniversity(activeUniversityId);
-        const mappedSubs = (subs || []).map(s => ({ ...s, subjectName: s.subName || s.subjectName || '' }));
+        const subjectsArray = Array.isArray(subs) ? subs : (subs?.items || []);
+        const mappedSubs = subjectsArray.map(s => ({ ...s, subjectName: s.subName || s.subjectName || '' }));
         setSubjects(mappedSubs);
       } else {
         setSubjects([]);
@@ -130,7 +130,8 @@ export default function PapersManagement() {
       if (activeUniversityId) {
         try {
           const subs = await subjectService.getSubjectByUniversity(activeUniversityId);
-          const mappedSubs = (subs || []).map(s => ({ ...s, subjectName: s.subName || s.subjectName || '' }));
+          const subjectsArray = Array.isArray(subs) ? subs : (subs?.items || []);
+          const mappedSubs = subjectsArray.map(s => ({ ...s, subjectName: s.subName || s.subjectName || '' }));
           setSubjects(mappedSubs);
         } catch (err) {
           console.error("Failed to fetch subjects for university:", err);
@@ -365,7 +366,6 @@ export default function PapersManagement() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
         {/* University Sub-navigation Operations Hub */}
-        <UniversityConfigHeader />
 
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl mb-6 flex items-center gap-3">
