@@ -1,10 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import courseService from '../services/courseService';
 import departmentService from '../services/departmentService';
 import subjectService from '../services/subjectService';
+import { useTable } from '../services/tableService';
+import TablePagination from '../components/TablePagination';
 import UniversityConfigHeader from '../components/UniversityConfigHeader';
+import AddCourseModal from '../components/AddCourseModal';
+import AddSubjectModal from '../components/AddSubjectModal';
 import { 
   GraduationCap, 
   Layers, 
@@ -14,9 +18,7 @@ import {
   Trash2, 
   Plus, 
   BookOpen, 
-  X,
-  Info,
-  Check
+  Search
 } from 'lucide-react';
 
 export default function CourseManagement() {
@@ -25,11 +27,8 @@ export default function CourseManagement() {
   const { userType, universityId: userUniversityId } = useAuth();
   const activeUniversityId = userType === 'coordinator' ? userUniversityId : universityId;
 
-  const [courses, setCourses] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [allSubjects, setAllSubjects] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
   // Form State
@@ -46,36 +45,56 @@ export default function CourseManagement() {
   const [showSubjectModal, setShowSubjectModal] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [assignedSubjects, setAssignedSubjects] = useState([]);
+  
+  // Add Subject Modal State
+  const [showAddSubjectModal, setShowAddSubjectModal] = useState(false);
+  const [selectedDepartmentId, setSelectedDepartmentId] = useState(null);
+  const [selectedCourseId, setSelectedCourseId] = useState(null);
 
-  useEffect(() => {
-    if (activeUniversityId) {
-      fetchCoursesAndDepartments();
-    }
+  // Define fetch function for paginated courses
+  const fetchFn = useCallback((params) => {
+    return courseService.getAllCourses(params.departmentId || null, activeUniversityId, params);
   }, [activeUniversityId]);
 
-  const fetchCoursesAndDepartments = async () => {
-    try {
-      setLoading(true);
-      setError('');
-      
-      // Fetch departments first to populate selects
-      const depts = await departmentService.getDepartmentsByUniversity(activeUniversityId);
-      setDepartments(depts);
+  // Centralized hook for table states
+  const {
+    items: courses,
+    totalCount,
+    totalPages,
+    page,
+    setPage,
+    pageSize,
+    setPageSize,
+    search,
+    setSearch,
+    loading,
+    error,
+    setError,
+    filters,
+    setFilter,
+    refresh
+  } = useTable({
+    fetchFn,
+    initialParams: { pageSize: 10 }
+  });
 
-      // Fetch courses
-      const courseList = await courseService.getAllCourses(null, activeUniversityId);
-      setCourses(courseList);
+  // Load static departments and subjects for selects with pageSize: 0 (return all)
+  useEffect(() => {
+    if (activeUniversityId) {
+      const loadStaticData = async () => {
+        try {
+          const depts = await departmentService.getDepartmentsByUniversity(activeUniversityId, { pageSize: 0 });
+          setDepartments(depts?.items || depts || []);
 
-      // Fetch all subjects for association
-      const subjects = await subjectService.getSubjectByUniversity(activeUniversityId);
-      setAllSubjects(subjects);
-    } catch (err) {
-      console.error(err);
-      setError('Failed to fetch courses or departments. Please try again.');
-    } finally {
-      setLoading(false);
+          const subjects = await subjectService.getSubjectByUniversity(activeUniversityId, { pageSize: 0 });
+          setAllSubjects(subjects?.items || subjects || []);
+        } catch (err) {
+          console.error('Failed to load static selections:', err);
+        }
+      };
+      loadStaticData();
     }
-  };
+  }, [activeUniversityId]);
 
   const handleEdit = (course) => {
     setFormData({
@@ -99,133 +118,133 @@ export default function CourseManagement() {
     setShowFormModal(true);
   };
 
-  const handleFormSubmit = async (e) => {
-    e.preventDefault();
-    if (!formData.name.trim()) {
-      setError('Course name is required.');
-      return;
-    }
-    if (!formData.departmentId) {
-      setError('Please select a department.');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError('');
-      if (editingId) {
-        await courseService.updateCourse(editingId, formData);
-        setSuccess('Course updated successfully!');
-      } else {
-        await courseService.createCourse(formData);
-        setSuccess('Course created successfully!');
-      }
-      setShowFormModal(false);
-      fetchCoursesAndDepartments();
-      
-      // Clear success message after 3s
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (err) {
-      console.error(err);
-      setError(err.message || 'Failed to save course.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleDelete = async (courseId) => {
     if (!window.confirm('Are you sure you want to delete this course? All associated data will be removed.')) {
       return;
     }
 
     try {
-      setLoading(true);
       setError('');
       await courseService.deleteCourse(courseId);
       setSuccess('Course deleted successfully!');
-      fetchCoursesAndDepartments();
+      refresh();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       console.error(err);
       setError('Failed to delete course.');
-    } finally {
-      setLoading(false);
     }
   };
 
-  // Many-to-Many Subject Assignment
-  const handleOpenSubjectModal = async (course) => {
-    setSelectedCourse(course);
-    setError('');
-    try {
-      setLoading(true);
-      const subjects = await courseService.getCourseSubjects(course.id);
-      setAssignedSubjects(subjects.map(s => s.subjectId));
-      setShowSubjectModal(true);
-    } catch (err) {
-      console.error(err);
-      setError('Failed to load subjects for this course.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleToggleSubject = async (subjectId) => {
-    const isAssigned = assignedSubjects.includes(subjectId);
-    try {
-      setError('');
-      if (isAssigned) {
-        await courseService.removeSubjectFromCourse(selectedCourse.id, subjectId);
-        setAssignedSubjects(prev => prev.filter(id => id !== subjectId));
-      } else {
-        await courseService.addSubjectToCourse(selectedCourse.id, subjectId);
-        setAssignedSubjects(prev => [...prev, subjectId]);
-      }
-      fetchCoursesAndDepartments();
-    } catch (err) {
-      console.error(err);
-      setError('Failed to update subject mapping.');
-    }
+  const handleOpenAddSubject = (course) => {
+    setSelectedDepartmentId(course.departmentId);
+    setSelectedCourseId(course.id);
+    setShowAddSubjectModal(true);
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/50 p-6 md:p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-slate-50/50 p-4 md:p-6 w-full max-w-none">
+      <div className="w-full space-y-3">
         {/* University Header Navigation */}
         <UniversityConfigHeader />
 
-        {/* Dashboard Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
-          <div>
-            <div className="flex items-center gap-2 text-indigo-600 font-extrabold text-xs uppercase tracking-widest mb-1.5">
-              <Layers size={14} />
-              <span>Academic Programs</span>
+        {/* Unified Dashboard Header & Filters Panel */}
+        <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-1 text-indigo-600 font-extrabold text-[10px] uppercase tracking-widest leading-none mb-1">
+                <Layers size={11} />
+                <span>Academic Programs</span>
+              </div>
+              <h1 className="text-xl font-black text-slate-900 tracking-tight leading-none flex items-center gap-1.5">
+                <span>Courses Management</span>
+              </h1>
+              <p className="text-slate-500 text-[10px] mt-0.5">Configure degrees, branches, and map subjects to academic courses</p>
             </div>
-            <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">Courses Management</h1>
-            <p className="text-slate-500 text-xs mt-1">Configure degrees, branches, and map subjects to academic courses</p>
+            <button
+              onClick={handleOpenAddModal}
+              className="flex items-center justify-center gap-1.5 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-650 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all duration-200 cursor-pointer shadow-sm hover:shadow self-start sm:self-center shrink-0"
+            >
+              <Plus size={14} />
+              <span>Add New Course</span>
+            </button>
           </div>
-          <button
-            onClick={handleOpenAddModal}
-            className="flex items-center justify-center gap-2 px-5 py-3 bg-gradient-to-r from-blue-600 to-indigo-650 hover:from-blue-700 hover:to-indigo-700 text-white rounded-2xl font-bold text-xs uppercase tracking-wider transition-all duration-200 cursor-pointer shadow-md hover:shadow-lg self-start sm:self-center shrink-0"
-          >
-            <Plus size={16} />
-            <span>Add New Course</span>
-          </button>
-        </div>
 
-        {/* Feedback Messages */}
-        {error && (
-          <div className="flex items-center gap-3 bg-rose-50 border border-rose-100 text-rose-700 px-5 py-4 rounded-2xl text-xs font-semibold shadow-sm animate-fade-in">
-            <XCircle size={16} className="shrink-0 text-rose-500" />
-            <span>{error}</span>
+          {/* Filters Row */}
+          <div className="flex flex-col md:flex-row gap-3 pt-2 border-t border-slate-100">
+            {/* Search bar */}
+            <div className="flex-1 flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-150">
+              <Search size={14} className="text-slate-400 shrink-0" />
+              <input
+                type="text"
+                placeholder="Search courses by name..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full bg-transparent text-slate-800 placeholder-slate-400 font-semibold text-[11px] focus:outline-none"
+              />
+              {search && (
+                <button
+                  onClick={() => setSearch('')}
+                  className="text-[9px] font-black uppercase text-slate-400 hover:text-slate-655 transition cursor-pointer"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+
+            {/* Filters */}
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Department Filter */}
+              <select
+                value={filters.departmentId || ''}
+                onChange={(e) => setFilter('departmentId', e.target.value)}
+                className="px-2.5 py-1.5 bg-slate-50 border border-slate-150 rounded-xl font-bold text-[10px] text-slate-700 focus:outline-none cursor-pointer"
+              >
+                <option value="">All Departments</option>
+                {departments.map((dept) => (
+                  <option key={dept.departmentId} value={dept.departmentId}>
+                    {dept.name}
+                  </option>
+                ))}
+              </select>
+
+              {/* Level Filter */}
+              <select
+                value={filters.type || ''}
+                onChange={(e) => setFilter('type', e.target.value)}
+                className="px-2.5 py-1.5 bg-slate-50 border border-slate-150 rounded-xl font-bold text-[10px] text-slate-700 focus:outline-none cursor-pointer"
+              >
+                <option value="">All Levels</option>
+                <option value="UG">UG</option>
+                <option value="PG">PG</option>
+                <option value="Diploma">Diploma</option>
+              </select>
+
+              {/* Status Filter */}
+              <select
+                value={filters.isActive === undefined ? '' : filters.isActive}
+                onChange={(e) => setFilter('isActive', e.target.value)}
+                className="px-2.5 py-1.5 bg-slate-50 border border-slate-150 rounded-xl font-bold text-[10px] text-slate-700 focus:outline-none cursor-pointer"
+              >
+                <option value="">All Statuses</option>
+                <option value="true">Active Only</option>
+                <option value="false">Inactive Only</option>
+              </select>
+
+              {(filters.departmentId || filters.type || filters.isActive) && (
+                <button
+                  onClick={() => {
+                    setFilter('departmentId', '');
+                    setFilter('type', '');
+                    setFilter('isActive', '');
+                  }}
+                  className="text-[9px] font-black uppercase text-rose-500 hover:text-rose-700 transition cursor-pointer"
+                >
+                  Reset
+                </button>
+              )}
+            </div>
           </div>
-        )}
-        {success && (
-          <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-100 text-emerald-700 px-5 py-4 rounded-2xl text-xs font-semibold shadow-sm animate-fade-in">
-            <CheckCircle2 size={16} className="shrink-0 text-emerald-500" />
-            <span>{success}</span>
-          </div>
-        )}
+        </div>
 
         {/* Main List */}
         <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
@@ -243,12 +262,21 @@ export default function CourseManagement() {
                 <h3 className="font-extrabold text-sm text-slate-900 uppercase tracking-wide">No Courses Configured</h3>
                 <p className="text-xs text-slate-400">Establish degrees or branches of study to associate with subjects.</p>
               </div>
-              <button
-                onClick={handleOpenAddModal}
-                className="px-4 py-2 text-[10px] font-black uppercase tracking-wider text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl transition cursor-pointer"
-              >
-                Create Your First Course
-              </button>
+              {search ? (
+                <button
+                  onClick={() => setSearch('')}
+                  className="px-4 py-2 text-[10px] font-black uppercase tracking-wider text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl transition cursor-pointer"
+                >
+                  Clear Search
+                </button>
+              ) : (
+                <button
+                  onClick={handleOpenAddModal}
+                  className="px-4 py-2 text-[10px] font-black uppercase tracking-wider text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl transition cursor-pointer"
+                >
+                  Create Your First Course
+                </button>
+              )}
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -322,11 +350,12 @@ export default function CourseManagement() {
                       <td className="px-6 py-5 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-2">
                           <button
-                            onClick={() => handleOpenSubjectModal(course)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-55 text-indigo-700 border border-indigo-150 hover:bg-indigo-100 hover:text-indigo-800 rounded-xl font-bold text-[10px] uppercase tracking-wider transition cursor-pointer"
+                            onClick={() => handleOpenAddSubject(course)}
+                            className="flex items-center gap-1 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 hover:text-indigo-800 rounded-xl font-bold text-[10px] uppercase tracking-wider border border-indigo-150 transition cursor-pointer text-indigo-700"
+                            title="Add Subject to Course"
                           >
                             <BookOpen size={12} />
-                            <span>Map Subjects</span>
+                            <span>Add Subject</span>
                           </button>
                           <button
                             onClick={() => handleEdit(course)}
@@ -348,184 +377,49 @@ export default function CourseManagement() {
                   ))}
                 </tbody>
               </table>
+
+              {/* Standard Centralized Table Pagination */}
+              <TablePagination
+                page={page}
+                totalPages={totalPages}
+                totalCount={totalCount}
+                pageSize={pageSize}
+                setPage={setPage}
+                setPageSize={setPageSize}
+              />
             </div>
           )}
         </div>
       </div>
 
       {/* Course Modal Form */}
-      {showFormModal && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-xl max-w-md w-full overflow-hidden animate-zoom-in">
-            <div className="flex items-center justify-between px-6 py-5 bg-slate-50 border-b border-slate-100">
-              <h2 className="text-base font-black text-slate-950 uppercase tracking-wider">
-                {editingId ? 'Edit Academic Course' : 'Create New Course'}
-              </h2>
-              <button 
-                onClick={() => setShowFormModal(false)}
-                className="w-8 h-8 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-slate-950 hover:border-slate-300 transition flex items-center justify-center cursor-pointer shadow-sm"
-              >
-                <X size={16} />
-              </button>
-            </div>
-            
-            <form onSubmit={handleFormSubmit} className="p-6 space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Course Title / Name</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Bachelor of Computer Applications"
-                  value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition"
-                />
-              </div>
+      <AddCourseModal
+        isOpen={showFormModal}
+        onClose={() => setShowFormModal(false)}
+        onSuccess={(msg) => {
+          setSuccess(msg);
+          refresh();
+          setTimeout(() => setSuccess(''), 3000);
+        }}
+        editingId={editingId}
+        initialData={formData}
+        activeUniversityId={activeUniversityId}
+        departments={departments}
+      />
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Degree Level</label>
-                  <select
-                    value={formData.type}
-                    onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value }))}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition cursor-pointer"
-                  >
-                    <option value="UG">Undergraduate (UG)</option>
-                    <option value="PG">Postgraduate (PG)</option>
-                    <option value="Diploma">Diploma</option>
-                    <option value="PhD">Doctorate (PhD)</option>
-                  </select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Department</label>
-                  <select
-                    value={formData.departmentId}
-                    onChange={(e) => setFormData(prev => ({ ...prev, departmentId: parseInt(e.target.value, 10) }))}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition cursor-pointer"
-                  >
-                    {departments.map((d) => (
-                      <option key={d.departmentId} value={d.departmentId}>
-                        {d.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-150/70 select-none">
-                <input
-                  type="checkbox"
-                  id="isActive"
-                  checked={formData.isActive}
-                  onChange={(e) => setFormData(prev => ({ ...prev, isActive: e.target.checked }))}
-                  className="w-4 h-4 text-indigo-650 border-slate-200 rounded focus:ring-indigo-500 focus:outline-none cursor-pointer"
-                />
-                <label htmlFor="isActive" className="text-xs font-bold text-slate-700 cursor-pointer">
-                  Activate this course for registrations and mapping
-                </label>
-              </div>
-
-              <div className="flex items-center gap-2 pt-2 justify-end">
-                <button
-                  type="button"
-                  onClick={() => setShowFormModal(false)}
-                  className="px-4 py-3 bg-slate-50 hover:bg-slate-100 text-slate-650 border border-slate-200 rounded-xl font-bold text-xs uppercase tracking-wider transition cursor-pointer shadow-sm"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="px-5 py-3 bg-gradient-to-r from-blue-600 to-indigo-650 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-bold text-xs uppercase tracking-wider transition cursor-pointer shadow-md hover:shadow-lg disabled:opacity-50"
-                >
-                  {loading ? 'Saving...' : 'Save Course'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Subject Mapping Modal */}
-      {showSubjectModal && selectedCourse && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-xl max-w-lg w-full overflow-hidden animate-zoom-in">
-            <div className="flex items-center justify-between px-6 py-5 bg-slate-50 border-b border-slate-100">
-              <div>
-                <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest block mb-0.5">Subject Association</span>
-                <h2 className="text-base font-black text-slate-950 uppercase tracking-wider leading-none">
-                  {selectedCourse.name}
-                </h2>
-              </div>
-              <button 
-                onClick={() => setShowSubjectModal(false)}
-                className="w-8 h-8 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-slate-950 hover:border-slate-300 transition flex items-center justify-center cursor-pointer shadow-sm"
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-4">
-              <div className="flex items-start gap-2.5 p-3.5 bg-blue-50/50 border border-blue-100 rounded-2xl text-[11px] text-blue-700 font-semibold shadow-sm">
-                <Info size={16} className="shrink-0 text-blue-500 mt-0.5" />
-                <p>Toggle subjects below to immediately map or unmap them from the program. Mapped subjects will appear in curriculum selection.</p>
-              </div>
-
-              <div className="max-h-[300px] overflow-y-auto border border-slate-100 rounded-2xl divide-y divide-slate-100">
-                {allSubjects.length === 0 ? (
-                  <div className="p-8 text-center text-slate-400 font-bold text-xs uppercase tracking-wide">
-                    No subjects exist for mapping
-                  </div>
-                ) : (
-                  allSubjects.map((subject) => {
-                    const isAssigned = assignedSubjects.includes(subject.subjectId);
-                    return (
-                      <div 
-                        key={subject.subjectId}
-                        onClick={() => handleToggleSubject(subject.subjectId)}
-                        className={`flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50/80 transition-colors ${
-                          isAssigned ? 'bg-indigo-50/20' : ''
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={`w-8 h-8 rounded-lg border flex items-center justify-center transition-all ${
-                            isAssigned 
-                              ? 'bg-indigo-600 border-indigo-600 text-white' 
-                              : 'bg-white border-slate-200 text-transparent'
-                          }`}>
-                            <Check size={14} strokeWidth={3} />
-                          </div>
-                          <div>
-                            <span className="font-extrabold text-slate-900 block leading-tight">{subject.subName}</span>
-                            <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider mt-0.5">{subject.subCode}</span>
-                          </div>
-                        </div>
-                        <span className={`px-2 py-1 rounded-md font-bold text-[9px] uppercase border ${
-                          isAssigned 
-                            ? 'bg-indigo-50 border-indigo-150 text-indigo-700' 
-                            : 'bg-slate-100 border-slate-200 text-slate-500'
-                        }`}>
-                          {isAssigned ? 'Assigned' : 'Not Assigned'}
-                        </span>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-
-              <div className="flex justify-end pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowSubjectModal(false)}
-                  className="px-5 py-3 bg-gradient-to-r from-blue-600 to-indigo-650 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-bold text-xs uppercase tracking-wider transition cursor-pointer shadow-md hover:shadow-lg"
-                >
-                  Done
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Add Subject Modal */}
+      <AddSubjectModal
+        isOpen={showAddSubjectModal}
+        onClose={() => setShowAddSubjectModal(false)}
+        onSuccess={(msg) => {
+          setSuccess(msg);
+          refresh();
+          setTimeout(() => setSuccess(''), 3000);
+        }}
+        activeUniversityId={activeUniversityId}
+        departments={departments}
+        initialData={{ departmentId: selectedDepartmentId, courseId: selectedCourseId }}
+      />
     </div>
   );
 }

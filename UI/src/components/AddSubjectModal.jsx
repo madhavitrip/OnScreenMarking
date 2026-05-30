@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import subjectService from '../services/subjectService';
+import courseService from '../services/courseService';
 
 export default function AddSubjectModal({
   isOpen,
@@ -14,46 +15,23 @@ export default function AddSubjectModal({
   const [subName, setSubName] = useState('');
   const [subCode, setSubCode] = useState('');
   const [status, setStatus] = useState(true);
-  const [selectedDepartments, setSelectedDepartments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Fetch subject department mapping on edit
   useEffect(() => {
-    const loadSubjectDepartments = async () => {
-      if (editingId) {
-        try {
-          const depts = await subjectService.getSubjectDepartments(editingId, activeUniversityId);
-          setSelectedDepartments(depts.map(d => d.departmentId));
-        } catch (err) {
-          console.error('Failed to load subject departments:', err);
-        }
-      }
-    };
-
     if (editingId && initialData) {
       setSubName(initialData.subName || '');
       setSubCode(initialData.subCode || '');
       setStatus(initialData.status !== undefined ? initialData.status : true);
-      loadSubjectDepartments();
     } else {
       setSubName('');
       setSubCode('');
       setStatus(true);
-      setSelectedDepartments(initialData?.departmentId ? [parseInt(initialData.departmentId)] : []);
     }
     setError('');
-  }, [editingId, initialData, isOpen, activeUniversityId]);
+  }, [editingId, initialData, isOpen]);
 
   if (!isOpen) return null;
-
-  const toggleDepartment = (deptId) => {
-    setSelectedDepartments(prev =>
-      prev.includes(deptId)
-        ? prev.filter(id => id !== deptId)
-        : [...prev, deptId]
-    );
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -61,8 +39,11 @@ export default function AddSubjectModal({
       setError('Subject name is required');
       return;
     }
-    if (selectedDepartments.length === 0) {
-      setError('Please select at least one department');
+
+    // Determine the department ID to map this subject to.
+    const deptId = initialData?.departmentId || (departments && departments[0]?.departmentId);
+    if (!deptId) {
+      setError('No active department associated to map this subject');
       return;
     }
 
@@ -70,51 +51,28 @@ export default function AddSubjectModal({
       setLoading(true);
       setError('');
 
+      const payload = {
+        subjectName: subName.trim(),
+        subjectCode: subCode.trim(),
+        isActive: status,
+        departmentId: parseInt(deptId, 10)
+      };
+
       if (editingId) {
-        // Update subject details
-        const updatePayload = {
-          subjectName: subName.trim(),
-          subjectCode: subCode.trim(),
-          isActive: status,
-          departmentId: selectedDepartments[0]
-        };
-        await subjectService.updateSubject(editingId, updatePayload);
-
-        // Sync departments
-        const existingDepts = await subjectService.getSubjectDepartments(editingId, activeUniversityId);
-        const existingDeptIds = existingDepts.map(d => d.departmentId);
-
-        // Add
-        for (const deptId of selectedDepartments) {
-          if (!existingDeptIds.includes(deptId)) {
-            await subjectService.addDepartmentToSubject(editingId, deptId);
-          }
-        }
-
-        // Remove
-        for (const deptId of existingDeptIds) {
-          if (!selectedDepartments.includes(deptId)) {
-            await subjectService.removeDepartmentFromSubject(editingId, deptId);
-          }
-        }
-
+        await subjectService.updateSubject(editingId, payload);
         onSuccess('Subject updated successfully');
       } else {
-        // Create subject
-        const createPayload = {
-          subjectName: subName.trim(),
-          subjectCode: subCode.trim(),
-          isActive: status,
-          departmentId: selectedDepartments[0]
-        };
-        const newSubject = await subjectService.createSubject(createPayload);
-
-        // Add remaining departments
-        for (let i = 1; i < selectedDepartments.length; i++) {
-          await subjectService.addDepartmentToSubject(newSubject.subjectId, selectedDepartments[i]);
+        const newSubject = await subjectService.createSubject(payload);
+        
+        // If a course ID context was passed, map this new subject to that course immediately
+        if (initialData?.courseId) {
+          const subjectId = newSubject.subjectId || newSubject.id;
+          if (subjectId) {
+            await courseService.addSubjectToCourse(initialData.courseId, subjectId);
+          }
         }
-
-        onSuccess('Subject created successfully');
+        
+        onSuccess('Subject created and mapped to course successfully');
       }
 
       onClose();
@@ -183,29 +141,6 @@ export default function AddSubjectModal({
                   className="w-full text-xs font-bold text-slate-700 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:ring-1 focus:ring-blue-500 outline-none transition-all"
                   placeholder="e.g. CS-201"
                 />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
-                Departments ({selectedDepartments.length} selected)
-              </label>
-              <div className="grid grid-cols-2 gap-2.5 bg-slate-50 p-3 rounded-xl border border-slate-100 max-h-40 overflow-y-auto">
-                {departments.length === 0 ? (
-                  <p className="text-xs text-slate-400 font-medium col-span-2 py-2 text-center">No departments available</p>
-                ) : (
-                  departments.map((dept) => (
-                    <label key={dept.departmentId} className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={selectedDepartments.includes(dept.departmentId)}
-                        onChange={() => toggleDepartment(dept.departmentId)}
-                        className="w-3.5 h-3.5 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
-                      />
-                      <span className="text-[11px] font-semibold text-slate-700 leading-none">{dept.name}</span>
-                    </label>
-                  ))
-                )}
               </div>
             </div>
 

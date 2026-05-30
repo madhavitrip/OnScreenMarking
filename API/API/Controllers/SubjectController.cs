@@ -20,8 +20,11 @@ namespace API.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Subject>>> GetSubjects(
-    [FromQuery] int? departmentId = null)
+        public async Task<IActionResult> GetSubjects(
+            [FromQuery] int? departmentId = null,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string search = "")
         {
             try
             {
@@ -29,6 +32,8 @@ namespace API.Controllers
                     .Where(s => s.Status)
                     .Include(s => s.DepartmentSubjects)
                         .ThenInclude(ds => ds.Department)
+                    .Include(s => s.CourseSubjects)
+                        .ThenInclude(cs => cs.Course)
                     .Include(s => s.SubjectPapers)
                         .ThenInclude(sp => sp.Paper)
                     .Include(s => s.ExaminerExpertises)
@@ -41,11 +46,38 @@ namespace API.Controllers
                             ds.DepartmentId == departmentId.Value));
                 }
 
-                var subjects = await query
-                    .OrderBy(s => s.SubName)
-                    .ToListAsync();
+                if (!string.IsNullOrWhiteSpace(search))
+                {
+                    query = query.Where(s => s.SubName.Contains(search) || s.SubCode.Contains(search));
+                }
 
-                return Ok(subjects);
+                var totalCount = await query.CountAsync();
+
+                query = query.OrderBy(s => s.SubName);
+
+                List<Subject> subjects;
+                if (pageSize > 0)
+                {
+                    subjects = await query
+                        .Skip((page - 1) * pageSize)
+                        .Take(pageSize)
+                        .ToListAsync();
+                }
+                else
+                {
+                    subjects = await query.ToListAsync();
+                }
+
+                var totalPages = pageSize > 0 ? (int)Math.Ceiling((double)totalCount / pageSize) : 1;
+
+                return Ok(new
+                {
+                    items = subjects,
+                    totalCount = totalCount,
+                    page = page,
+                    pageSize = pageSize,
+                    totalPages = totalPages
+                });
             }
             catch (Exception ex)
             {
@@ -111,8 +143,11 @@ namespace API.Controllers
         }
         [HttpGet("University")]
         [AllowAnonymous]
-        public async Task<ActionResult<IEnumerable<Subject>>> GetSubjectByUniversity(
-      [FromQuery] int universityId)
+        public async Task<IActionResult> GetSubjectByUniversity(
+            [FromQuery] int universityId,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string search = "")
         {
             try
             {
@@ -132,19 +167,51 @@ namespace API.Controllers
                     .ToListAsync();
 
                 // Get subjects mapped to those departments
-                var subjects = await _context.Subjects
+                var query = _context.Subjects
                     .Where(s =>
                         s.Status &&
                         s.DepartmentSubjects.Any(ds =>
                             departmentIds.Contains(ds.DepartmentId)))
                     .Include(s => s.DepartmentSubjects)
                         .ThenInclude(ds => ds.Department)
+                    .Include(s => s.CourseSubjects)
+                        .ThenInclude(cs => cs.Course)
                     .Include(s => s.SubjectPapers)
                         .ThenInclude(sp => sp.Paper)
-                    .OrderBy(s => s.SubName)
-                    .ToListAsync();
+                    .AsQueryable();
 
-                return Ok(subjects);
+                if (!string.IsNullOrWhiteSpace(search))
+                {
+                    query = query.Where(s => s.SubName.Contains(search) || s.SubCode.Contains(search));
+                }
+
+                var totalCount = await query.CountAsync();
+
+                query = query.OrderBy(s => s.SubName);
+
+                List<Subject> subjects;
+                if (pageSize > 0)
+                {
+                    subjects = await query
+                        .Skip((page - 1) * pageSize)
+                        .Take(pageSize)
+                        .ToListAsync();
+                }
+                else
+                {
+                    subjects = await query.ToListAsync();
+                }
+
+                var totalPages = pageSize > 0 ? (int)Math.Ceiling((double)totalCount / pageSize) : 1;
+
+                return Ok(new
+                {
+                    items = subjects,
+                    totalCount = totalCount,
+                    page = page,
+                    pageSize = pageSize,
+                    totalPages = totalPages
+                });
             }
             catch (Exception ex)
             {
