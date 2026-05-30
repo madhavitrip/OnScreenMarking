@@ -25,6 +25,7 @@ import subjectService from "../services/subjectService";
 import roleService from "../services/roleService";
 import AssignRoleModal from "../components/RoleManagement/AssignRoleModal";
 import UniversityConfigHeader from "../components/UniversityConfigHeader";
+import departmentService from "../services/departmentService";
 
 export default function UsersManagement() {
   const [searchParams] = useSearchParams();

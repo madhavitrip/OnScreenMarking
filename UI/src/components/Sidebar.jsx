@@ -37,7 +37,9 @@ const Sidebar = () => {
     if (userType === 'admin') {
       items.push({ icon: <Home size={20} />, label: 'Dashboard', path: '/admin/dashboard' });
       items.push({ icon: <School size={20} />, label: 'Universities', path: '/admin/universities' });
+      items.push({ icon: <Building2 size={20} />, label: 'Colleges', path: '/admin/colleges' });
       items.push({ icon: <Building2 size={20} />, label: 'Departments', path: '/admin/departments' });
+      items.push({ icon: <GraduationCap size={20} />, label: 'Courses', path: '/admin/courses' });
       items.push({ icon: <BookOpen size={20} />, label: 'Subjects', path: '/admin/subjects' });
       items.push({ icon: <Calendar size={20} />, label: 'Sessions & Projects', path: '/admin/sessions' });
       items.push({ icon: <FileText size={20} />, label: 'Papers', path: '/admin/papers' });
@@ -55,6 +57,7 @@ const Sidebar = () => {
     } else if (userType === 'coordinator') {
       items.push({ icon: <Home size={20} />, label: 'Dashboard', path: '/coordinator/dashboard' });
       items.push({ icon: <Building2 size={20} />, label: 'Departments', path: '/departments' });
+      items.push({ icon: <GraduationCap size={20} />, label: 'Courses', path: '/courses' });
       items.push({ icon: <BookOpen size={20} />, label: 'Subjects', path: '/subjects' });
       items.push({ icon: <Calendar size={20} />, label: 'Sessions & Projects', path: '/sessions' });
       items.push({ icon: <FileText size={20} />, label: 'Papers', path: '/papers' });

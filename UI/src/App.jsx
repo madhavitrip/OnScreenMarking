@@ -103,12 +103,24 @@ function AppRoutes() {
           element={userType === 'admin' ? <UniversityManagement /> : <Navigate to="/" replace />} 
         />
         <Route 
+          path="/admin/colleges" 
+          element={userType === 'admin' ? <CollegeManagement /> : <Navigate to="/" replace />} 
+        />
+        <Route 
           path="/admin/departments" 
           element={userType === 'admin' ? <DepartmentManagement /> : <Navigate to="/" replace />} 
         />
         <Route 
           path="/departments" 
           element={userType === 'coordinator' ? <DepartmentManagement /> : <Navigate to="/" replace />} 
+        />
+        <Route 
+          path="/admin/courses" 
+          element={userType === 'admin' ? <CourseManagement /> : <Navigate to="/" replace />} 
+        />
+        <Route 
+          path="/courses" 
+          element={userType === 'coordinator' ? <CourseManagement /> : <Navigate to="/" replace />} 
         />
         <Route 
           path="/admin/subjects" 

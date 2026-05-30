@@ -17,12 +17,17 @@ const Navbar = () => {
     if (userType === 'admin') {
       links.push({ label: 'Dashboard', path: '/admin/dashboard' });
       links.push({ label: 'Universities', path: '/admin/universities' });
+      links.push({ label: 'Colleges', path: '/admin/colleges' });
+      links.push({ label: 'Departments', path: '/admin/departments' });
+      links.push({ label: 'Courses', path: '/admin/courses' });
+      links.push({ label: 'Subjects', path: '/admin/subjects' });
       links.push({ label: 'Sessions & Projects', path: '/admin/sessions' });
+      links.push({ label: 'Papers', path: '/admin/papers' });
       if (hasPermission("READ_USER")) {
         links.push({ label: 'Users', path: '/admin/users' });
       }
       if (hasPermission("READ_ROLE")) {
-        links.push({ label: 'Roles & Permissions', path: '/admin/role-management' });
+        links.push({ label: 'Roles', path: '/admin/role-management' });
       }
       if (hasPermission("VIEW_LOGS")) {
         links.push({ label: 'Attendance', path: '/admin/attendance' });
@@ -30,30 +35,22 @@ const Navbar = () => {
     } else if (userType === 'coordinator') {
       links.push({ label: 'Dashboard', path: '/coordinator/dashboard' });
       links.push({ label: 'Departments', path: '/departments' });
+      links.push({ label: 'Courses', path: '/courses' });
       links.push({ label: 'Subjects', path: '/subjects' });
       links.push({ label: 'Sessions & Projects', path: '/sessions' });
       links.push({ label: 'Papers', path: '/papers' });
-      links.push({ label: 'Allocations', path: '/allocate-scripts' });
+      if (hasPermission("READ_ALLOCATION")) {
+        links.push({ label: 'Allocations', path: '/allocate-scripts' });
+      }
       if (hasPermission("READ_USER")) {
         links.push({ label: 'Users', path: '/admin/users' });
       }
       if (hasPermission("READ_ROLE")) {
-        links.push({ label: 'Roles & Permissions', path: '/admin/role-management' });
+        links.push({ label: 'Roles', path: '/admin/role-management' });
       }
       if (hasPermission("VIEW_LOGS")) {
         links.push({ label: 'Attendance', path: '/admin/attendance' });
       }
-      return [
-        { label: 'Dashboard', path: '/admin/dashboard' },
-        { label: 'Universities', path: '/admin/universities' },
-        { label: 'Users', path: '/admin/users' },
-        { label: 'Attendance', path: '/admin/attendance' }
-      ];
-    } else if (userType === 'coordinator') {
-      return [
-        { label: 'Dashboard', path: '/coordinator/dashboard' },
-        { label: 'Sessions & Projects', path: '/sessions' },
-      ];
     } else if (userType === 'examiner') {
       links.push({ label: 'Dashboard', path: '/' });
       if (hasPermission("READ_SCRIPT")) {
@@ -79,7 +76,7 @@ const Navbar = () => {
       </div>
       
       {/* Horizontal Nav Links in Middle */}
-      <div className="hidden lg:flex items-center gap-1 mx-8 flex-1 justify-center">
+      <div className="hidden lg:flex flex-wrap items-center gap-1 mx-8 flex-1 justify-center">
         {getNavLinks().map((link) => (
           <NavLink
             key={link.path}
